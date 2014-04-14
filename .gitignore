@@ -1,0 +1,7 @@
+*~
+*.o
+lexer
+parser
+lex.yy.c
+parser.c
+parser.h
