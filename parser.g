@@ -81,7 +81,7 @@ int main(void) {
 rust : crate ;
 
 // 5. Crates and source
-crate : inner_attr* mod_item* { printf("crate!\n"); } ;
+crate : inner_attr* mod_item* ;
 
 // 6. Items and Attributes
 /// 6.1 Items
@@ -97,7 +97,6 @@ item_or_view_item
                  | item_impl
                  | item_struct
                  ]
-        { printf("item_or_view_item\n"); }
     ;
 
 /// 6.1.1 Type Parameters
@@ -201,12 +200,12 @@ stmt
     | item_or_view_item
     | expr
     ;
-let : LET pat [ ':' ty ]? [ '=' expr ]? { printf("let\n"); } ;
+let : LET pat [ ':' ty ]? [ '=' expr ]? ;
 
 /// 7.2 Expressions
-expr : binops [ [ '=' | BINOPEQ ] expr ]? { printf("expr\n"); } ;
+expr : binops [ [ '=' | BINOPEQ ] expr ]? ;
 bottom_expr
-    : [ '(' [ ')' | expr [ ',' expr ]* ')' ]
+    : '(' [ ')' | expr [ ',' expr ]* ')' ]
     | /* UNSAFE */ block // ambiguity: UNSAFE could start "unsafe fn" in item_or_view_item
 //    | lambda_expr // ambiguity with the trailing expr
 //    | proc_decl expr // ambiguity with the trailing expr
@@ -225,7 +224,6 @@ bottom_expr
            | '!' macro
            ]
     | lit_no_unit // regular 'lit' includes unit expr which is handled above
-] { printf("bottom_expr\n"); }
     ;
 
 /// 7.2.4 Structure expressions
@@ -255,14 +253,13 @@ vec_elems1 : ',' vec_elems? ;
 /// 7.2.9 Index expressions - handled by dot_or_call_expr
 /// 7.2.10 Unary operator expressions
 prefix_expr
-    : [ '!' prefix_expr
+    : '!' prefix_expr
     | '-' prefix_expr
     | '*' prefix_expr
     | '&' /* LIFETIME? */ MUT? prefix_expr // ambiguity: lifetime after & may be a loop label
     | '~' prefix_expr
     | BOX prefix_expr // ambiguity: what to do with box ( expr? )?
     | dot_or_call_expr
- ] { printf("prefix_expr\n"); }
     ;
 
 /// 7.2.11 binary operator expressions
@@ -338,7 +335,7 @@ return_expr : RETURN /* expr? */ ; // ambiguity with trailing expr?
 
 // 8.1 Types
 ty
-    : [ '(' [ ')' | ty [ ',' ty ]+ ')' ]
+    : '(' [ ')' | ty [ ',' ty ]+ ')' ]
     | '~' ty
     | '*' MUT? ty
     | '[' ty fixed_vstore ']'
@@ -349,7 +346,6 @@ ty
     | proc_type
     | path
     | '_'
-] { printf("ty\n"); }
     ;
 
 /// 8.1.3 Tuple types - handled in ty
