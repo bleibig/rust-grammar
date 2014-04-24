@@ -4,7 +4,7 @@ ifeq ($(shell uname),Darwin)
 	LDFLAGS=-ll
 endif
 
-all: lexer parser
+all: lexer parser rlex
 
 lexer: lexer_main.o lexer.o tokens.o
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -30,5 +30,8 @@ parser: parser.o lexer.o
 parser.c: parser.g
 	LLnextgen $< --generate-lexer-wrapper=no --verbose
 
+rlex: rlex.rs
+	rustc $<
+
 clean:
-	rm -rf *.o lexer parser lex.yy.c parser.c parser.h
+	rm -rf *.o lexer parser rlex lex.yy.c parser.c parser.h

@@ -3,34 +3,34 @@
 
 extern char *yytext;
 
-void print_token(enum Token token) {
+void print_token(int token) {
   switch (token) {
-  case ';':
-  case ',':
-  case '.':
-  case '(':
-  case ')':
-  case '{':
-  case '}':
-  case '[':
-  case ']':
-  case '@':
-  case '#':
-  case '~':
-  case ':':
-  case '$':
-  case '=':
-  case '!':
-  case '<':
-  case '>':
-  case '-':
-  case '&':
-  case '|':
-  case '+':
-  case '*':
-  case '/':
-  case '^':
-  case '%':  printf("%c", token); break;
+  case ';': printf("SEMI"); break;
+  case ',': printf("COMMA"); break;
+  case '.': printf("DOT"); break;
+  case '(': printf("LPAREN"); break;
+  case ')': printf("RPAREN"); break;
+  case '{': printf("LBRACE"); break;
+  case '}': printf("RBRACE"); break;
+  case '[': printf("LBRACKET"); break;
+  case ']': printf("RBRACKET"); break;
+  case '@': printf("AT"); break;
+  case '#': printf("POUND"); break;
+  case '~': printf("TILDE"); break;
+  case ':': printf("COLON"); break;
+  case '$': printf("DOLLAR"); break;
+  case '=': printf("EQ"); break;
+  case '!': printf("NOT"); break;
+  case '<': printf("LT"); break;
+  case '>': printf("GT"); break;
+  case '-': printf("BINOP(MINUS)"); break;
+  case '&': printf("AND"); break;
+  case '|': printf("OR"); break;
+  case '+': printf("BINOP(PLUS)"); break;
+  case '*': printf("BINOP(STAR)"); break;
+  case '/': printf("BINOP(SLASH)"); break;
+  case '^': printf("BINOP(CARET)"); break;
+  case '%': printf("BINOP(PERCENT)"); break;
   case SHL: printf("SHL"); break;
   case LE: printf("LE"); break;
   case EQEQ: printf("EQEQ"); break;
@@ -41,7 +41,7 @@ void print_token(enum Token token) {
   case BINOPEQ: printf("BINOPEQ(%s)", yytext); break;
   case DOTDOT: printf("DOTDOT"); break;
   case DOTDOTDOT: printf("DOTDOTDOT"); break;
-  case MOD_SEP: printf("SEP"); break;
+  case MOD_SEP: printf("MOD_SEP"); break;
   case RARROW: printf("RARROW"); break;
   case FAT_ARROW: printf("ARROW"); break;
   case LIT_CHAR: printf("LIT_CHAR(%s)", yytext); break;
@@ -54,44 +54,44 @@ void print_token(enum Token token) {
   case IDENT: printf("IDENT(%s)", yytext); break;
   case UNDERSCORE: printf("UNDERSCORE"); break;
   case LIFETIME: printf("LIFETIME(%s)", yytext); break;
-  case SELF: printf("SELF"); break;
-  case STATIC: printf("STATIC"); break;
-  case AS: printf("AS"); break;
-  case BREAK: printf("BREAK"); break;
-  case CRATE: printf("CRATE"); break;
-  case ELSE: printf("ELSE"); break;
-  case ENUM: printf("ENUM"); break;
-  case EXTERN: printf("EXTERN"); break;
-  case FALSE: printf("FALSE"); break;
-  case FN: printf("FN"); break;
-  case FOR: printf("FOR"); break;
-  case IF: printf("IF"); break;
-  case IMPL: printf("IMPL"); break;
-  case IN: printf("IN"); break;
-  case LET: printf("LET"); break;
-  case LOOP: printf("LOOP"); break;
-  case MATCH: printf("MATCH"); break;
-  case MOD: printf("MOD"); break;
-  case MUT: printf("MUT"); break;
-  case ONCE: printf("ONCE"); break;
-  case PRIV: printf("PRIV"); break;
-  case PUB: printf("PUB"); break;
-  case REF: printf("REF"); break;
-  case RETURN: printf("RETURN"); break;
-  case STRUCT: printf("STRUCT"); break;
-  case SUPER: printf("SUPER"); break;
-  case TRUE: printf("TRUE"); break;
-  case TRAIT: printf("TRAIT"); break;
-  case TYPE: printf("TYPE"); break;
-  case UNSAFE: printf("UNSAFE"); break;
-  case USE: printf("USE"); break;
-  case WHILE: printf("WHILE"); break;
-  case CONTINUE: printf("CONTINUE"); break;
-  case PROC: printf("PROC"); break;
-  case BOX: printf("BOX"); break;
-  case TYPEOF: printf("TYPEOF"); break;
-  case SHEBANG: printf("SHEBANG"); break;
-  case STATIC_LIFETIME: printf("STATIC_LIFETIME"); break;
+  case SELF: printf("IDENT(self)"); break;
+  case STATIC: printf("IDENT(static)"); break;
+  case AS: printf("IDENT(as)"); break;
+  case BREAK: printf("IDENT(break)"); break;
+  case CRATE: printf("IDENT(crate)"); break;
+  case ELSE: printf("else"); break;
+  case ENUM: printf("IDENT(enum)"); break;
+  case EXTERN: printf("IDENT(extern)"); break;
+  case FALSE: printf("IDENT(false)"); break;
+  case FN: printf("IDENT(fn)"); break;
+  case FOR: printf("IDENT(for)"); break;
+  case IF: printf("IDENT(if)"); break;
+  case IMPL: printf("IDENT(impl)"); break;
+  case IN: printf("IDENT(in)"); break;
+  case LET: printf("IDENT(let)"); break;
+  case LOOP: printf("IDENT(loop)"); break;
+  case MATCH: printf("IDENT(match)"); break;
+  case MOD: printf("IDENT(mod)"); break;
+  case MUT: printf("IDENT(mut)"); break;
+  case ONCE: printf("IDENT(once)"); break;
+  case PRIV: printf("IDENT(priv)"); break;
+  case PUB: printf("IDENT(pub)"); break;
+  case REF: printf("IDENT(ref)"); break;
+  case RETURN: printf("IDENT(return)"); break;
+  case STRUCT: printf("IDENT(struct)"); break;
+  case SUPER: printf("IDENT(super)"); break;
+  case TRUE: printf("IDENT(true)"); break;
+  case TRAIT: printf("IDENT(trait)"); break;
+  case TYPE: printf("IDENT(type)"); break;
+  case UNSAFE: printf("IDENT(unsafe)"); break;
+  case USE: printf("IDENT(use)"); break;
+  case WHILE: printf("IDENT(while)"); break;
+  case CONTINUE: printf("IDENT(continue)"); break;
+  case PROC: printf("IDENT(proc)"); break;
+  case BOX: printf("IDENT(box)"); break;
+  case TYPEOF: printf("IDENT(typeof)"); break;
+  case SHEBANG: printf("IDENT(pound)\nNOT"); break;
+  case STATIC_LIFETIME: printf("LIFETIME('static)"); break;
   default: printf("can't print token %d", token);
   }
   printf("\n");

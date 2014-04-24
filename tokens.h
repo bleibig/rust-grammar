@@ -68,4 +68,4 @@ enum Token {
   STATIC_LIFETIME
 };
 
-void print_token(enum Token token);
+void print_token(int token);
