@@ -150,12 +150,14 @@ item_type : TYPE IDENT generics? '=' ty ';' ;
 /// 6.1.5 Structures
 item_struct
     : STRUCT IDENT generics? [ '{' struct_decl_field '}'
-                             | '(' [ outer_attr* ty [ ',' outer_attr* ty ]* ] ')'
+                             | '(' [ struct_tuple_field ]? ')' ';'
                              | ';'
                              ]
     ;
-struct_decl_field : outer_attr* [ PRIV | PUB ]? single_struct_field [ ',' single_struct_field ]* ;
-single_struct_field : IDENT ':' ty ;
+struct_decl_field : outer_attr* [ PRIV | PUB ]? IDENT ':' ty struct_decl_field_sep? ;
+struct_decl_field_sep : ',' struct_decl_field? ;
+struct_tuple_field : outer_attr* ty struct_tuple_field_sep? ;
+struct_tuple_field_sep : ',' struct_tuple_field? ;
 
 /// 6.1.6 Enumerations
 item_enum : ENUM generics? '{' enum_def '}' ;

@@ -9,7 +9,7 @@ fi
 
 for f in test/*.rs; do
     echo "testing $f"
-    $PARSER < $f > $f.out
+    $PARSER < $f > $f.out 2>&1
     if [[ $(wc -l $f.out | awk '{ print $1 }') -ne 0 ]]; then
         echo "$f did not successfully parse"
     fi
