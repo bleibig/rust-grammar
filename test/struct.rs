@@ -7,4 +7,3 @@ struct s<t, t2, t3> (t, t2, t3,);
 struct s (#[x] #[y] t);
 struct s (#[x] #[y] t, #[z] t2);
 struct s;
-struct s %

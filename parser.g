@@ -154,13 +154,13 @@ item_struct
                              | ';'
                              ]
     ;
-struct_decl_field : outer_attr* [ PRIV | PUB ]? IDENT ':' ty struct_decl_field_sep? ;
+struct_decl_field : outer_attr* visibility IDENT ':' ty struct_decl_field_sep? ;
 struct_decl_field_sep : ',' struct_decl_field? ;
 struct_tuple_field : outer_attr* ty struct_tuple_field_sep? ;
 struct_tuple_field_sep : ',' struct_tuple_field? ;
 
 /// 6.1.6 Enumerations
-item_enum : ENUM generics? '{' enum_def '}' ;
+item_enum : ENUM IDENT generics? '{' enum_def? '}' ;
 enum_def
     : outer_attr* visibility IDENT [ '{' struct_decl_field '}'
                                    | '(' ty [ ',' ty ]* ')'
