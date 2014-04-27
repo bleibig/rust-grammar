@@ -33,5 +33,8 @@ parser.c: parser.g
 rlex: rlex.rs
 	rustc $<
 
+check: lexer parser
+	./testparser.sh
+
 clean:
 	rm -rf *.o lexer parser rlex lex.yy.c parser.c parser.h

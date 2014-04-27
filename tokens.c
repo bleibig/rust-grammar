@@ -79,7 +79,6 @@ void print_token(int token) {
   case REF: printf("IDENT(ref)"); break;
   case RETURN: printf("IDENT(return)"); break;
   case STRUCT: printf("IDENT(struct)"); break;
-  case SUPER: printf("IDENT(super)"); break;
   case TRUE: printf("IDENT(true)"); break;
   case TRAIT: printf("IDENT(trait)"); break;
   case TYPE: printf("IDENT(type)"); break;

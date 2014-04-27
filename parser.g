@@ -98,6 +98,7 @@ item_or_view_item
                  | item_struct
                  ]
     ;
+visibility : [ PUB | PRIV ]? ;
 
 /// 6.1.1 Type Parameters
 ty_param : IDENT bounds? [ '=' ty ]? ;
@@ -107,7 +108,6 @@ bound : STATIC_LIFETIME | ty ;
 /// 6.1.2 Modules
 item_mod : MOD IDENT [ ';' | '{' inner_attr* mod_item* '}' ] ;
 mod_item : outer_attr* item_or_view_item ;
-visibility : [ PUB | PRIV ]? ;
 
 /// 6.2.1.1 Extern crate declarations
 item_extern_crate : IDENT [ '=' STR ]? ';' ;
@@ -132,7 +132,9 @@ item_foreign_fn : FN IDENT generics? fn_decl_allow_variadic ';' ;
 /// 6.1.3 Functions
 item_fn : FN IDENT generics? fn_decl inner_attrs_and_block ;
 inner_attrs_and_block : '{' inner_attr* block_tail '}' ;
-generics : '<' lifetimes? [ ty_param [ ',' ty_param ]* ]? '>' ;
+generics : '<' lifetime_or_ty_param_list '>' ;
+lifetime_or_ty_param_list : LIFETIME [ ',' lifetime_or_ty_param_list ]? | ty_param_list ;
+ty_param_list : ty_param [ ',' ty_param ]* ;
 lifetimes : LIFETIME [ ',' LIFETIME ]* ;
 fn_decl : fn_args ret_ty ;
 fn_decl_allow_variadic : fn_args_allow_variadic ret_ty ;
@@ -156,13 +158,14 @@ struct_decl_field : outer_attr* [ PRIV | PUB ]? single_struct_field [ ',' single
 single_struct_field : IDENT ':' ty ;
 
 /// 6.1.6 Enumerations
-item_enum : ENUM generics? '{' enum_def [ ',' enum_def ]* '}' ;
+item_enum : ENUM generics? '{' enum_def '}' ;
 enum_def
     : outer_attr* visibility IDENT [ '{' struct_decl_field '}'
                                    | '(' ty [ ',' ty ]* ')'
                                    | '=' expr
-                                   ]?
+                                   ]? enum_def_sep?
     ;
+enum_def_sep : ',' enum_def? ;
 
 /// 6.1.7 Static items
 item_const : STATIC MUT? IDENT ':' ty '=' expr ';' ;
@@ -323,8 +326,7 @@ pat
     | '(' [ pat [ ',' pat]* ]? ')'
     | '[' pat_vec_elements ']'
     | '-'? number // [ DOTDOT [ path | literal_maybe_minus ] ]? // ambiguity here with ident patterns
-    | MUT IDENT [ '@' pat ]?
-    | REF MUT? IDENT [ '@' pat ]?
+    | REF? MUT? IDENT [ '@' pat ]?
     // can_be_enum_or_struct ... ( [ < { ::
     ;
 pat_vec_elements : pat [ [ ',' pat_vec_elements ]? | DOTDOT IDENT [ ',' pat_vec_elements_no_slice ]? ] ;

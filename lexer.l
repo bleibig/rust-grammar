@@ -57,8 +57,8 @@ priv     { return PRIV; }
 pub      { return PUB; }
 ref      { return REF; }
 return   { return RETURN; }
+self     { return SELF; }
 struct   { return STRUCT; }
-super    { return SUPER; }
 true     { return TRUE; }
 trait    { return TRAIT; }
 type     { return TYPE; }
