@@ -101,7 +101,8 @@ item_or_view_item
 visibility : [ PUB | PRIV ]? ;
 
 /// 6.1.1 Type Parameters
-ty_param : IDENT bounds? [ '=' ty ]? ;
+ty_param : unsized? IDENT bounds? [ '=' ty ]? ;
+unsized : TYPE ;
 bounds : ':' [ bound [ '+' bound ]* ]? ;
 bound : STATIC_LIFETIME | ty ;
 
