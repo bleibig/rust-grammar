@@ -104,7 +104,7 @@ visibility : [ PUB | PRIV ]? ;
 ty_param : unsized? IDENT bounds? [ '=' ty ]? ;
 unsized : TYPE ;
 bounds : ':' [ bound [ '+' bound ]* ]? ;
-bound : STATIC_LIFETIME | ty ;
+bound : STATIC_LIFETIME | trait_ref ;
 
 /// 6.1.2 Modules
 item_mod : MOD IDENT [ ';' | '{' inner_attr* mod_item* '}' ] ;
@@ -375,7 +375,7 @@ ty_fn_decl : [ '<' lifetimes '>' ]? fn_args ret_ty ;
 
 /// 8.1.10 Closure types
 ty_closure : UNSAFE? ONCE? '<' lifetimes '>' [ OROR | '|' arg_general [ ',' arg_general ]* '|' ] ret_ty ;
-proc_type : PROC [ '<' lifetimes '>' ]? fn_args /* bounds? */ ret_ty ; // ambiguity with bounds?
+proc_type : PROC [ '<' lifetimes '>' ]? fn_args bounds? ret_ty ;
 
 /// Macros
 
