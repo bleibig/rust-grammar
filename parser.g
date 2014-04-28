@@ -185,7 +185,8 @@ item_const : STATIC MUT? IDENT ':' ty '=' expr ';' ;
 
 /// 6.1.8 Traits
 item_trait : TRAIT IDENT generics? [ ':' trait_ref_list ]? trait_methods ;
-trait_ref_list : path [ '+' path ]* ;
+trait_ref_list : trait_ref [ '+' trait_ref ]* ;
+trait_ref : path_lifetime_and_types_without_colons ;
 trait_methods : '{' outer_attr* visibility UNSAFE? FN IDENT generics? fn_decl [ ';' | inner_attrs_and_block ] ;
 
 /// 6.1.9 Implementations
