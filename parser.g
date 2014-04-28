@@ -113,6 +113,16 @@ mod_item : outer_attr* item_or_view_item ;
 /// 6.2.1.1 Extern crate declarations
 item_extern_crate : IDENT [ '=' STR ]? ';' ;
 
+// syntax::parse::parser::{PathParsingMode, parse_path}
+path_no_types_allowed                  : IDENT [ MOD_SEP IDENT ]+ ;
+path_lifetime_and_types_without_colons : IDENT [ MOD_SEP IDENT [ '<' lifetimes_or_tys '>' ]? ]+ ;
+path_lifetime_and_types_with_colons    : IDENT [ MOD_SEP [ IDENT | '<' lifetimes_or_tys '>' ] ]+ ;
+path_lifetime_and_types_and_bounds     : IDENT [ MOD_SEP IDENT bounds?  [ '<' lifetimes_or_tys '>' ]? ]+ ;
+
+// syntax::parse::parser::{parse_generic_values_after_lt, parse_lifetimes}
+lifetimes_or_tys : '<' lifetime_or_ty [',' lifetime_or_ty ]* '>' ;
+lifetime_or_ty : [ LIFETIME | ty ] ;
+
 /// 6.2.1.2 Use declarations
 item_use : USE view_path ';' ;
 view_path : IDENT [ '=' non_global_path | view_path_mods ]? ;
