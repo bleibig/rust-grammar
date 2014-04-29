@@ -101,9 +101,10 @@ item_or_view_item
 visibility : [ PUB | PRIV ]? ;
 
 /// 6.1.1 Type Parameters
-ty_param : IDENT bounds? [ '=' ty ]? ;
+ty_param : unsized? IDENT bounds? [ '=' ty ]? ;
+unsized : TYPE ;
 bounds : ':' [ bound [ '+' bound ]* ]? ;
-bound : STATIC_LIFETIME | ty ;
+bound : STATIC_LIFETIME | trait_ref ;
 
 /// 6.1.2 Modules
 item_mod : MOD IDENT [ ';' | '{' inner_attr* mod_item* '}' ] ;
@@ -111,6 +112,16 @@ mod_item : outer_attr* item_or_view_item ;
 
 /// 6.2.1.1 Extern crate declarations
 item_extern_crate : IDENT [ '=' STR ]? ';' ;
+
+// syntax::parse::parser::{PathParsingMode, parse_path}
+path_no_types_allowed                  : IDENT [ MOD_SEP IDENT ]+ ;
+path_lifetime_and_types_without_colons : IDENT [ MOD_SEP IDENT [ '<' lifetimes_or_tys '>' ]? ]+ ;
+path_lifetime_and_types_with_colons    : IDENT [ MOD_SEP [ IDENT | '<' lifetimes_or_tys '>' ] ]+ ;
+path_lifetime_and_types_and_bounds     : IDENT [ MOD_SEP IDENT bounds?  [ '<' lifetimes_or_tys '>' ]? ]+ ;
+
+// syntax::parse::parser::{parse_generic_values_after_lt, parse_lifetimes}
+lifetimes_or_tys : '<' lifetime_or_ty [',' lifetime_or_ty ]* '>' ;
+lifetime_or_ty : [ LIFETIME | ty ] ;
 
 /// 6.2.1.2 Use declarations
 item_use : USE view_path ';' ;
@@ -174,7 +185,8 @@ item_const : STATIC MUT? IDENT ':' ty '=' expr ';' ;
 
 /// 6.1.8 Traits
 item_trait : TRAIT IDENT generics? [ ':' trait_ref_list ]? trait_methods ;
-trait_ref_list : path [ '+' path ]* ;
+trait_ref_list : trait_ref [ '+' trait_ref ]* ;
+trait_ref : path_lifetime_and_types_without_colons ;
 trait_methods : '{' outer_attr* visibility UNSAFE? FN IDENT generics? fn_decl [ ';' | inner_attrs_and_block ] ;
 
 /// 6.1.9 Implementations
@@ -363,7 +375,7 @@ ty_fn_decl : [ '<' lifetimes '>' ]? fn_args ret_ty ;
 
 /// 8.1.10 Closure types
 ty_closure : UNSAFE? ONCE? '<' lifetimes '>' [ OROR | '|' arg_general [ ',' arg_general ]* '|' ] ret_ty ;
-proc_type : PROC [ '<' lifetimes '>' ]? fn_args /* bounds? */ ret_ty ; // ambiguity with bounds?
+proc_type : PROC [ '<' lifetimes '>' ]? fn_args bounds? ret_ty ;
 
 /// Macros
 
