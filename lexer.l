@@ -36,7 +36,10 @@ usuf (u6|u16|u32|u64|u)
 
 _        { return UNDERSCORE; }
 as       { return AS; }
+box      { return BOX; }
 break    { return BREAK; }
+continue { return CONTINUE; }
+crate    { return CRATE; }
 else     { return ELSE; }
 enum     { return ENUM; }
 extern   { return EXTERN; }
@@ -53,21 +56,19 @@ mod      { return MOD; }
 mut      { return MUT; }
 once     { return ONCE; }
 priv     { return PRIV; }
+proc     { return PROC; }
 pub      { return PUB; }
 ref      { return REF; }
 return   { return RETURN; }
 self     { return SELF; }
 struct   { return STRUCT; }
-true     { return TRUE; }
 trait    { return TRAIT; }
+true     { return TRUE; }
 type     { return TYPE; }
+typeof   { return TYPEOF; }
 unsafe   { return UNSAFE; }
 use      { return USE; }
 while    { return WHILE; }
-continue { return CONTINUE; }
-proc     { return PROC; }
-box      { return BOX; }
-typeof   { return TYPEOF; }
 
 [a-zA-Z_][a-zA-Z0-9_]*      { return IDENT; }
 
