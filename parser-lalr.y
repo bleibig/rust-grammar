@@ -94,12 +94,24 @@ extern struct node *mk_node(char const *name, int n, ...);
 // foo' is shifted. Similarly, IDENT needs to be lower than '{' so
 // that 'foo {' is shifted when trying to decide if we've got a
 // struct-construction expr (esp. in contexts like 'if foo { .')
-
 %nonassoc CONTINUE
 %nonassoc IDENT
 %nonassoc '('
 %nonassoc '{'
+
+// Binops and their precedence
+%left '='
+%left OROR
+%left ANDAND
+%left EQEQ NE
+%left '<' '>' LE GE
+%left '|'
+%left '^'
+%left '&'
+%left SHL SHR
 %left '+' '-'
+%left AS
+%left '*' '/' '%'
 
 %start rust
 
@@ -109,12 +121,10 @@ rust
 : crate                                      { $$ = mk_node("crate", 0); }
 ;
 
-// 5. Crates and source
 crate
 : maybe_inner_attrs maybe_mod_items          { $$ = $2; }
 ;
 
-/// 6.3 Attributes
 maybe_inner_attrs
 : inner_attrs
 | /* empty */
@@ -188,7 +198,6 @@ stmt
 | expr
 ;
 
-// Things that can be an expr or a stmt, no semi required.
 expr_stmt
 : expr_match
 | expr_if
@@ -218,7 +227,7 @@ match_body
 
 maybe_guard
 : IF expr
-| // empty
+| /* empty */
 ;
 
 expr_if
@@ -266,24 +275,69 @@ pat
 : IDENT
 ;
 
+maybe_tys
+: tys
+| /* empty */
+;
+
 tys
 : ty
 | tys ',' ty
 ;
 
 ty
-: path
+: path_generic_args_without_colons
 | '~' ty
 | '*' maybe_mut ty
-| '(' tys ')'
+| '(' maybe_tys ')'
+| '&' maybe_lifetime maybe_mut ty
+| TYPEOF '(' expr ')'
+| ty_bare_fn
+| proc_type
+| '_'
+;
+
+ty_bare_fn
+: maybe_extern_abi maybe_unsafe FN ty_fn_decl
+;
+
+maybe_unsafe
+: UNSAFE
+| /* empty */
+;
+
+maybe_extern_abi
+: EXTERN maybe_abi
+| /* empty */
+;
+
+maybe_abi
+: str
+| /* empty */
+;
+
+ty_fn_decl
+: maybe_generic_params fn_params ret_ty
+;
+
+ty_closure
+: maybe_unsafe maybe_once maybe_generic_params '|' params '|' ret_ty
+| maybe_unsafe maybe_once maybe_generic_params OROR ret_ty
+;
+
+maybe_once
+: ONCE
+| /* empty */
+;
+
+proc_type
+: PROC maybe_generic_params fn_params maybe_bounds ret_ty
 ;
 
 maybe_mut
 : MUT
 | /* empty */
 ;
-
-path:
 
 maybe_exprs
 : exprs
@@ -299,7 +353,26 @@ expr
 : lit
 | IDENT                            { $$ = mk_node("ident", 0); }
 | IDENT struct_expr                { $$ = mk_node("struct", 1, $1); }
+| expr '=' expr                    { $$ = mk_node("=", 2, $1, $2); }
+| expr OROR expr                   { $$ = mk_node("||", 2, $1, $2); }
+| expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $2); }
+| expr EQEQ expr                   { $$ = mk_node("==", 2, $1, $2); }
+| expr NE expr                     { $$ = mk_node("!=", 2, $1, $2); }
+| expr '<' expr                    { $$ = mk_node("<", 2, $1, $2); }
+| expr '>' expr                    { $$ = mk_node(">", 2, $1, $2); }
+| expr LE expr                     { $$ = mk_node("<=", 2, $1, $2); }
+| expr GE expr                     { $$ = mk_node(">=", 2, $1, $2); }
+| expr '|' expr                    { $$ = mk_node("|", 2, $1, $2); }
+| expr '^' expr                    { $$ = mk_node("^", 2, $1, $2); }
+| expr '&' expr                    { $$ = mk_node("&", 2, $1, $2); }
+| expr SHL expr                    { $$ = mk_node("<<", 2, $1, $2); }
+| expr SHR expr                    { $$ = mk_node(">>", 2, $1, $2); }
 | expr '+' expr                    { $$ = mk_node("+", 2, $1, $2); }
+| expr '-' expr                    { $$ = mk_node("-", 2, $1, $2); }
+| expr AS expr                     { $$ = mk_node("as", 2, $1, $2); }
+| expr '*' expr                    { $$ = mk_node("*", 2, $1, $2); }
+| expr '/' expr                    { $$ = mk_node("/", 2, $1, $2); }
+| expr '%' expr                    { $$ = mk_node("%", 2, $1, $2); }
 | expr '(' maybe_exprs ')'         { $$ = mk_node("call", 1, $1); }
 | CONTINUE                         { $$ = mk_node("continue", 0); }
 | CONTINUE IDENT                   { $$ = mk_node("continue-label", 0); }
@@ -327,7 +400,66 @@ default_field_init
 ;
 
 item_or_view_item
-: item_fn
+: visibility item_fn
+| visibility item_extern_block
+;
+
+item_extern_block
+: EXTERN CRATE item_extern_crate
+| EXTERN maybe_abi item_fn
+| EXTERN maybe_abi '{' item_foreign_mod '}'
+;
+
+item_extern_crate
+: IDENT ';'
+| IDENT '=' str ';'
+;
+
+item_foreign_mod
+: maybe_inner_attrs maybe_foreign_items
+;
+
+maybe_foreign_items
+: foreign_items
+| /* empty */
+;
+
+foreign_items
+: foreign_item
+| foreign_items foreign_item
+;
+
+foreign_item
+: visibility STATIC item_foreign_static
+| visibility FN item_foreign_fn
+| visibility UNSAFE item_foreign_fn
+;
+
+item_foreign_static
+: maybe_mut IDENT ':' ty ';'
+;
+
+item_foreign_fn
+: FN IDENT maybe_generic_params fn_decl_allow_variadic ';'
+;
+
+fn_decl_allow_variadic
+: fn_params_allow_variadic ret_ty
+;
+
+fn_params_allow_variadic
+: '(' param fn_params_allow_variadic_tail ')'
+| '(' ')'
+;
+
+fn_params_allow_variadic_tail
+: ',' DOTDOTDOT
+| ',' param fn_params_allow_variadic_tail
+;
+
+visibility
+: PUB
+| /* empty */
 ;
 
 item_fn
@@ -335,24 +467,24 @@ item_fn
 ;
 
 fn_decl
-: fn_args ret_ty
+: fn_params ret_ty
 ;
 
-fn_args
-: '(' maybe_args_general ')'
+fn_params
+: '(' maybe_params ')'
 ;
 
-maybe_args_general
-: args_general
+maybe_params
+: params
 | /* empty */
 ;
 
-args_general
-: arg_general
-| args_general ',' arg_general
+params
+: param
+| params ',' param
 ;
 
-arg_general
+param
 : pat ':' ty
 ;
 
@@ -399,33 +531,34 @@ ty_params
 | ty_params ',' ty_param
 ;
 
-
-// syntax::parse::parser::{PathParsingMode, parse_path}
-path_no_types_allowed                  : IDENT mod_sep_idents ;
-path_lifetime_and_types_without_colons : IDENT mod_sep_ident_generic_args ;
-path_lifetime_and_types_with_colons    : IDENT mod_sep_ident_or_generic_args ;
-path_lifetime_and_types_and_bounds     : IDENT mod_sep_ident_bounds_generic_args ;
-
-mod_sep_idents
-: MOD_SEP IDENT
-| mod_sep_idents MOD_SEP IDENT
+// A path with no type parameters; e.g. `foo::bar::Baz`
+path_no_types_allowed
+: IDENT
+| path_no_types_allowed MOD_SEP IDENT
 ;
 
-mod_sep_ident_generic_args
-: MOD_SEP IDENT maybe_generic_args
-| mod_sep_ident_generic_args MOD_SEP IDENT maybe_generic_args
+// A path with a lifetime and type parameters, with no double colons
+// before the type parameters; e.g. `foo::bar<'a>::Baz<T>`
+path_generic_args_without_colons
+: IDENT maybe_generic_args
+| path_generic_args_without_colons MOD_SEP IDENT maybe_generic_args
 ;
 
-mod_sep_ident_or_generic_args
-: MOD_SEP IDENT
-| MOD_SEP generic_args
-| mod_sep_ident_or_generic_args MOD_SEP IDENT
-| mod_sep_ident_or_generic_args MOD_SEP generic_args
+// A path with a lifetime and type parameters with double colons before
+// the type parameters; e.g. `foo::bar::<'a>::Baz::<T>`
+path_generic_args_with_colons
+: IDENT
+| maybe_generic_args
+| path_generic_args_with_colons MOD_SEP IDENT
+| path_generic_args_with_colons MOD_SEP maybe_generic_args
 ;
 
-mod_sep_ident_bounds_generic_args
-: MOD_SEP IDENT maybe_bounds maybe_generic_args
-| mod_sep_ident_bounds_generic_args MOD_SEP IDENT maybe_bounds maybe_generic_args
+// A path with a lifetime and type parameters with bounds before the last
+// set of type parameters only; e.g. `foo::bar<'a>::Baz:X+Y<T>` This
+// form does not use extra double colons.
+path_generic_args_and_bounds
+: IDENT maybe_bounds maybe_generic_args
+| path_generic_args_and_bounds MOD_SEP IDENT maybe_bounds maybe_generic_args
 ;
 
 maybe_generic_args
@@ -480,6 +613,11 @@ lifetime_or_ty
 | ty
 ;
 
+maybe_lifetime
+: LIFETIME
+| /* empty */
+;
+
 maybe_lifetimes
 : lifetimes
 | /* empty */
@@ -490,8 +628,11 @@ lifetimes
 | lifetimes ',' LIFETIME
 ;
 
-
 trait_ref
-: mod_sep_ident_generic_args
+: path_generic_args_without_colons
 ;
-%%
+
+str
+: LIT_STR
+| LIT_STR_RAW
+;
