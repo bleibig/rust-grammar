@@ -228,10 +228,8 @@ bottom_expr
 //    | proc_decl expr // ambiguity with the trailing expr
     | SELF
     | if_expr
-    | for_expr
     | while_expr
-    | LIFETIME ':' [ for_expr | loop_expr ]
-    | loop_expr
+    | [ LIFETIME ':' ]? [ for_expr | loop_expr ]
     | continue_expr
     | match_expr
     | vec_expr

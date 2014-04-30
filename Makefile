@@ -48,7 +48,7 @@ parser-lalr.tab.c parser-lalr.tab.h: parser-lalr.y
 rlex: rlex.rs
 	rustc $<
 
-check: lexer parser
+check: lexer parser parser-lalr
 	./testparser.sh
 
 clean:
