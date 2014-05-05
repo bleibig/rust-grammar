@@ -4,7 +4,7 @@ ifeq ($(shell uname),Darwin)
 	LDFLAGS=-ll
 endif
 
-all: lexer parser parser-lalr rlex
+all: lexer parser parser-lalr rlex rparse
 
 lexer: lexer_main.o lexer.o tokens.o
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -46,6 +46,9 @@ parser-lalr.tab.c parser-lalr.tab.h: parser-lalr.y
 	bison $< -d -v
 
 rlex: rlex.rs
+	rustc $<
+
+rparse: rparse.rs
 	rustc $<
 
 check: lexer parser parser-lalr

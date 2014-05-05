@@ -90,16 +90,7 @@ extern struct node *mk_node(char const *name, int n, ...);
 // all potential ambiguities are scrutinized and eliminated manually.
 %expect 0
 
-// CONTINUE needs to be lower-precedence than IDENT so that 'continue
-// foo' is shifted. Similarly, IDENT needs to be lower than '{' so
-// that 'foo {' is shifted when trying to decide if we've got a
-// struct-construction expr (esp. in contexts like 'if foo { .')
-%nonassoc CONTINUE
-%nonassoc IDENT
-%nonassoc '('
-%nonassoc '{'
-
-// Binops and their precedence
+// Binops & unops, and their precedences
 %left '='
 %left OROR
 %left ANDAND
@@ -112,6 +103,18 @@ extern struct node *mk_node(char const *name, int n, ...);
 %left '+' '-'
 %left AS
 %left '*' '/' '%'
+%nonassoc '~'
+
+// CONTINUE needs to be lower-precedence than IDENT so that 'continue
+// foo' is shifted. Similarly, IDENT needs to be lower than '{' so
+// that 'foo {' is shifted when trying to decide if we've got a
+// struct-construction expr (esp. in contexts like 'if foo { .')
+%nonassoc CONTINUE
+%nonassoc IDENT
+
+%nonassoc '('
+%nonassoc '{' '}'
+%nonassoc ';'
 
 %start rust
 
@@ -178,82 +181,13 @@ mod_item
 : maybe_outer_attrs item_or_view_item    { $$ = $2; }
 ;
 
-lit
-: LIT_CHAR
-| LIT_INT
-| LIT_UINT
-| LIT_INT_UNSUFFIXED
-| LIT_FLOAT
-| LIT_FLOAT_UNSUFFIXED
-| LIT_STR
-| LIT_STR_RAW
-| TRUE
-| FALSE
+nonblock_item
+: visibility static
 ;
 
-stmt
-: let
-| item_or_view_item
-| expr_stmt
-| expr
-;
-
-expr_stmt
-: expr_match
-| expr_if
-| expr_while
-| expr_loop
-| expr_for
-;
-
-expr_match
-: MATCH expr '{' match_clauses '}'
-| MATCH expr '{' match_clauses ',' '}'
-;
-
-match_clauses
-: match_clause
-| match_clauses ',' match_clause
-;
-
-match_clause
-: pats_or maybe_guard FAT_ARROW match_body
-;
-
-match_body
-: expr
-| expr_stmt
-;
-
-maybe_guard
-: IF expr
-| /* empty */
-;
-
-expr_if
-: IF expr block
-| IF expr block ELSE block_or_if
-;
-
-block_or_if
-: block
-| expr_if
-;
-
-expr_while
-: WHILE expr block
-;
-
-expr_loop
-: LOOP block
-;
-
-expr_for
-: FOR expr IN expr block
-;
-
-let
-: LET pat maybe_ty_ascription maybe_init_expr
+block_item
+: visibility item_fn
+| visibility item_extern_block
 ;
 
 maybe_ty_ascription
@@ -336,66 +270,6 @@ proc_type
 
 maybe_mut
 : MUT
-| /* empty */
-;
-
-maybe_exprs
-: exprs
-| /* empty */
-;
-
-exprs
-: expr
-| exprs ',' expr
-;
-
-expr
-: lit
-| IDENT                            { $$ = mk_node("ident", 0); }
-| IDENT struct_expr                { $$ = mk_node("struct", 1, $1); }
-| expr '=' expr                    { $$ = mk_node("=", 2, $1, $2); }
-| expr OROR expr                   { $$ = mk_node("||", 2, $1, $2); }
-| expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $2); }
-| expr EQEQ expr                   { $$ = mk_node("==", 2, $1, $2); }
-| expr NE expr                     { $$ = mk_node("!=", 2, $1, $2); }
-| expr '<' expr                    { $$ = mk_node("<", 2, $1, $2); }
-| expr '>' expr                    { $$ = mk_node(">", 2, $1, $2); }
-| expr LE expr                     { $$ = mk_node("<=", 2, $1, $2); }
-| expr GE expr                     { $$ = mk_node(">=", 2, $1, $2); }
-| expr '|' expr                    { $$ = mk_node("|", 2, $1, $2); }
-| expr '^' expr                    { $$ = mk_node("^", 2, $1, $2); }
-| expr '&' expr                    { $$ = mk_node("&", 2, $1, $2); }
-| expr SHL expr                    { $$ = mk_node("<<", 2, $1, $2); }
-| expr SHR expr                    { $$ = mk_node(">>", 2, $1, $2); }
-| expr '+' expr                    { $$ = mk_node("+", 2, $1, $2); }
-| expr '-' expr                    { $$ = mk_node("-", 2, $1, $2); }
-| expr AS expr                     { $$ = mk_node("as", 2, $1, $2); }
-| expr '*' expr                    { $$ = mk_node("*", 2, $1, $2); }
-| expr '/' expr                    { $$ = mk_node("/", 2, $1, $2); }
-| expr '%' expr                    { $$ = mk_node("%", 2, $1, $2); }
-| expr '(' maybe_exprs ')'         { $$ = mk_node("call", 1, $1); }
-| CONTINUE                         { $$ = mk_node("continue", 0); }
-| CONTINUE IDENT                   { $$ = mk_node("continue-label", 0); }
-| UNSAFE block                     { $$ = mk_node("unsafe-block", 0); }
-| block                            { $$ = mk_node("block", 0); }
-;
-
-struct_expr
-: '{' field_inits default_field_init '}'
-;
-
-field_inits
-: field_init
-| field_inits ',' field_init
-;
-
-field_init
-: maybe_mut IDENT ':' expr
-;
-
-default_field_init
-: ','
-| ',' DOTDOT expr
 | /* empty */
 ;
 
@@ -492,24 +366,6 @@ ret_ty
 : RARROW '!'
 | RARROW ty
 | /* empty */
-;
-
-inner_attrs_and_block
-: '{' maybe_inner_attrs maybe_stmts '}'   { $$ = $2; }
-;
-
-block
-: '{' maybe_stmts '}'
-;
-
-maybe_stmts
-: stmts
-| /* empty */
-;
-
-stmts
-: stmts stmt
-| stmt
 ;
 
 maybe_generic_params
@@ -630,6 +486,233 @@ lifetimes
 
 trait_ref
 : path_generic_args_without_colons
+;
+
+
+///////////////////////////////////////////////////////////////////////
+//////////// dynamic part: statements, expressions, values ////////////
+///////////////////////////////////////////////////////////////////////
+
+inner_attrs_and_block
+: '{' maybe_inner_attrs stmts '}'   { $$ = $2; }
+;
+
+block
+: '{' stmts '}'
+;
+
+// There are two sub-grammars within a "stmts: exprs" derivation
+// depending on whether each stmt-expr is a block-expr form; this is to
+// handle the "semicolon rule" for stmt sequencing that permits
+// writing
+//
+//     if foo { bar } 10
+//
+// as a sequence of two stmts (one if-expr stmt, one lit-10-expr
+// stmt). Unfortunately by permitting juxtaposition of exprs in
+// sequence like that, the non-block expr grammar has to have a
+// second limited sub-grammar that excludes the prefix exprs that
+// are ambiguous with binops. That is to say:
+//
+//     {10} - 1
+//
+// should parse as (progn (progn 10) (- 1)) not (- (progn 10) 1), that
+// is to say, two statements rather than one, at least according to
+// the mainline rust parser.
+//
+// So we wind up with a 3-way split in exprs that occur in stmt lists:
+// block, nonblock-prefix, and nonblock-nonprefix.
+//
+// In non-stmts contexts, expr can relax this trichotomy.
+
+stmts
+: stmts block_stmt
+| stmts block_stmt nonblock_prefix_stmt
+| stmts nonblock_nonprefix_stmt
+| stmts nonblock_nonprefix_stmt ';'
+| stmts nonblock_nonprefix_stmt ';' nonblock_prefix_stmt
+| nonblock_prefix_stmt
+| /* empty */
+;
+
+nonblock_nonprefix_stmt
+: let
+| nonblock_item
+| nonblock_nonprefix_expr
+;
+
+nonblock_prefix_stmt
+: nonblock_prefix_expr
+;
+
+block_stmt
+: block_item
+| block_expr
+;
+
+maybe_exprs
+: exprs
+| /* empty */
+;
+
+exprs
+: expr
+| exprs ',' expr
+;
+
+nonblock_nonprefix_expr
+: lit
+| IDENT                                               { $$ = mk_node("ident", 0); }
+| IDENT struct_expr                                   { $$ = mk_node("struct", 1, $1); }
+| nonblock_nonprefix_expr '=' expr                    { $$ = mk_node("=", 2, $1, $2); }
+| nonblock_nonprefix_expr OROR expr                   { $$ = mk_node("||", 2, $1, $2); }
+| nonblock_nonprefix_expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $2); }
+| nonblock_nonprefix_expr EQEQ expr                   { $$ = mk_node("==", 2, $1, $2); }
+| nonblock_nonprefix_expr NE expr                     { $$ = mk_node("!=", 2, $1, $2); }
+| nonblock_nonprefix_expr '<' expr                    { $$ = mk_node("<", 2, $1, $2); }
+| nonblock_nonprefix_expr '>' expr                    { $$ = mk_node(">", 2, $1, $2); }
+| nonblock_nonprefix_expr LE expr                     { $$ = mk_node("<=", 2, $1, $2); }
+| nonblock_nonprefix_expr GE expr                     { $$ = mk_node(">=", 2, $1, $2); }
+| nonblock_nonprefix_expr '|' expr                    { $$ = mk_node("|", 2, $1, $2); }
+| nonblock_nonprefix_expr '^' expr                    { $$ = mk_node("^", 2, $1, $2); }
+| nonblock_nonprefix_expr '&' expr                    { $$ = mk_node("&", 2, $1, $2); }
+| nonblock_nonprefix_expr SHL expr                    { $$ = mk_node("<<", 2, $1, $2); }
+| nonblock_nonprefix_expr SHR expr                    { $$ = mk_node(">>", 2, $1, $2); }
+| nonblock_nonprefix_expr '+' expr                    { $$ = mk_node("+", 2, $1, $2); }
+| nonblock_nonprefix_expr '-' expr                    { $$ = mk_node("-", 2, $1, $2); }
+| nonblock_nonprefix_expr AS expr                     { $$ = mk_node("as", 2, $1, $2); }
+| nonblock_nonprefix_expr '*' expr                    { $$ = mk_node("*", 2, $1, $2); }
+| nonblock_nonprefix_expr '/' expr                    { $$ = mk_node("/", 2, $1, $2); }
+| nonblock_nonprefix_expr '%' expr                    { $$ = mk_node("%", 2, $1, $2); }
+| nonblock_nonprefix_expr '(' maybe_exprs ')'         { $$ = mk_node("call", 1, $1); }
+| CONTINUE                                            { $$ = mk_node("continue", 0); }
+| CONTINUE IDENT                                      { $$ = mk_node("continue-label", 0); }
+;
+
+expr
+: lit
+| IDENT                            { $$ = mk_node("ident", 0); }
+| IDENT struct_expr                { $$ = mk_node("struct", 1, $1); }
+| expr '=' expr                    { $$ = mk_node("=", 2, $1, $2); }
+| expr OROR expr                   { $$ = mk_node("||", 2, $1, $2); }
+| expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $2); }
+| expr EQEQ expr                   { $$ = mk_node("==", 2, $1, $2); }
+| expr NE expr                     { $$ = mk_node("!=", 2, $1, $2); }
+| expr '<' expr                    { $$ = mk_node("<", 2, $1, $2); }
+| expr '>' expr                    { $$ = mk_node(">", 2, $1, $2); }
+| expr LE expr                     { $$ = mk_node("<=", 2, $1, $2); }
+| expr GE expr                     { $$ = mk_node(">=", 2, $1, $2); }
+| expr '|' expr                    { $$ = mk_node("|", 2, $1, $2); }
+| expr '^' expr                    { $$ = mk_node("^", 2, $1, $2); }
+| expr '&' expr                    { $$ = mk_node("&", 2, $1, $2); }
+| expr SHL expr                    { $$ = mk_node("<<", 2, $1, $2); }
+| expr SHR expr                    { $$ = mk_node(">>", 2, $1, $2); }
+| expr '+' expr                    { $$ = mk_node("+", 2, $1, $2); }
+| expr '-' expr                    { $$ = mk_node("-", 2, $1, $2); }
+| expr AS expr                     { $$ = mk_node("as", 2, $1, $2); }
+| expr '*' expr                    { $$ = mk_node("*", 2, $1, $2); }
+| expr '/' expr                    { $$ = mk_node("/", 2, $1, $2); }
+| expr '%' expr                    { $$ = mk_node("%", 2, $1, $2); }
+| expr '(' maybe_exprs ')'         { $$ = mk_node("call", 1, $1); }
+| CONTINUE                         { $$ = mk_node("continue", 0); }
+| CONTINUE IDENT                   { $$ = mk_node("continue-label", 0); }
+| block_expr
+;
+
+nonblock_prefix_expr
+: '-' expr                         { $$ = mk_node("-", 1, $1); }
+| '*' expr                         { $$ = mk_node("*", 1, $1); }
+| '~' expr                         { $$ = mk_node("~", 1, $1); }
+;
+
+struct_expr
+: '{' field_inits default_field_init '}'
+;
+
+field_inits
+: field_init
+| field_inits ',' field_init
+;
+
+field_init
+: maybe_mut IDENT ':' expr
+;
+
+default_field_init
+: ','
+| ',' DOTDOT expr
+| /* empty */
+;
+
+block_expr
+: expr_match
+| expr_if
+| expr_while
+| expr_loop
+| expr_for
+| UNSAFE block                     { $$ = mk_node("unsafe-block", 1, $1); }
+| block                            { $$ = mk_node("block", 1, $1); }
+;
+
+expr_match
+: MATCH expr '{' match_clauses '}'
+| MATCH expr '{' match_clauses ',' '}'
+;
+
+match_clauses
+: match_clause
+| match_clauses ',' match_clause
+;
+
+match_clause
+: pats_or maybe_guard FAT_ARROW expr
+;
+
+maybe_guard
+: IF expr
+| /* empty */
+;
+
+expr_if
+: IF expr block
+| IF expr block ELSE block_or_if
+;
+
+block_or_if
+: block
+| expr_if
+;
+
+expr_while
+: WHILE expr block
+;
+
+expr_loop
+: LOOP block
+;
+
+expr_for
+: FOR expr IN expr block
+;
+
+let
+: LET pat maybe_ty_ascription maybe_init_expr ';'
+;
+
+static
+: STATIC pat ':' ty '=' expr ';'
+
+lit
+: LIT_CHAR
+| LIT_INT
+| LIT_UINT
+| LIT_INT_UNSUFFIXED
+| LIT_FLOAT
+| LIT_FLOAT_UNSUFFIXED
+| LIT_STR
+| LIT_STR_RAW
+| TRUE
+| FALSE
 ;
 
 str
