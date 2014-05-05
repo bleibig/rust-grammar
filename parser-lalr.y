@@ -4,6 +4,7 @@ struct node;
 extern int yylex();
 extern void yyerror(char const *s);
 extern struct node *mk_node(char const *name, int n, ...);
+extern struct node *ext_node(struct node *nd, int n, ...);
 %}
 %debug
 
@@ -121,7 +122,7 @@ extern struct node *mk_node(char const *name, int n, ...);
 %%
 
 rust
-: crate                                      { $$ = mk_node("crate", 0); }
+: crate                                      { $$ = mk_node("crate", 1, $1); }
 ;
 
 crate
@@ -173,8 +174,8 @@ maybe_mod_items
 ;
 
 mod_items
-: mod_item
-| mod_items mod_item
+: mod_item                               { $$ = mk_node("mod-items", 1, $1); }
+| mod_items mod_item                     { $$ = ext_node($1, 1, $2); }
 ;
 
 mod_item
@@ -186,7 +187,7 @@ nonblock_item
 ;
 
 block_item
-: visibility item_fn
+: visibility item_fn                     { $$ = $2; }
 | visibility item_extern_block
 ;
 
@@ -274,8 +275,8 @@ maybe_mut
 ;
 
 item_or_view_item
-: visibility item_fn
-| visibility item_extern_block
+: visibility item_fn                          { $$ = $2; }
+| visibility item_extern_block                { $$ = $2; }
 ;
 
 item_extern_block
@@ -337,7 +338,7 @@ visibility
 ;
 
 item_fn
-: FN IDENT maybe_generic_params fn_decl inner_attrs_and_block  { $$ = mk_node("fn", 1, $3); }
+: FN IDENT maybe_generic_params fn_decl inner_attrs_and_block  { $$ = mk_node("fn", 1, $5); }
 ;
 
 fn_decl
@@ -494,11 +495,11 @@ trait_ref
 ///////////////////////////////////////////////////////////////////////
 
 inner_attrs_and_block
-: '{' maybe_inner_attrs stmts '}'   { $$ = $2; }
+: '{' maybe_inner_attrs stmts '}'   { $$ = $3; }
 ;
 
 block
-: '{' stmts '}'
+: '{' stmts '}'                     { $$ = mk_node("block", 1, $2); }
 ;
 
 // There are two sub-grammars within a "stmts: exprs" derivation
@@ -526,13 +527,13 @@ block
 // In non-stmts contexts, expr can relax this trichotomy.
 
 stmts
-: stmts block_stmt
-| stmts block_stmt nonblock_prefix_stmt
-| stmts nonblock_nonprefix_stmt
-| stmts nonblock_nonprefix_stmt ';'
-| stmts nonblock_nonprefix_stmt ';' nonblock_prefix_stmt
-| nonblock_prefix_stmt
-| /* empty */
+: stmts block_stmt                                            { $$ = ext_node($1, 1, $2); }
+| stmts block_stmt nonblock_prefix_stmt                       { $$ = ext_node($1, 2, $2, $3); }
+| stmts nonblock_nonprefix_stmt                               { $$ = ext_node($1, 1, $2); }
+| stmts nonblock_nonprefix_stmt ';'                           { $$ = ext_node($1, 1, $2); }
+| stmts nonblock_nonprefix_stmt ';' nonblock_prefix_stmt      { $$ = ext_node($1, 2, $2, $3); }
+| nonblock_prefix_stmt                                        { $$ = mk_node("stmts", 1, $1); }
+| /* empty */                                                 { $$ = mk_node("stmts", 0); }
 ;
 
 nonblock_nonprefix_stmt
@@ -552,39 +553,39 @@ block_stmt
 
 maybe_exprs
 : exprs
-| /* empty */
+| /* empty */                                                 { $$ = mk_node("(no-expr)", 0); }
 ;
 
 exprs
-: expr
-| exprs ',' expr
+: expr                                                        { $$ = mk_node("exprs", 1, $1); }
+| exprs ',' expr                                              { $$ = ext_node($1, 1, $2); }
 ;
 
 nonblock_nonprefix_expr
 : lit
 | IDENT                                               { $$ = mk_node("ident", 0); }
-| IDENT struct_expr                                   { $$ = mk_node("struct", 1, $1); }
-| nonblock_nonprefix_expr '=' expr                    { $$ = mk_node("=", 2, $1, $2); }
-| nonblock_nonprefix_expr OROR expr                   { $$ = mk_node("||", 2, $1, $2); }
-| nonblock_nonprefix_expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $2); }
-| nonblock_nonprefix_expr EQEQ expr                   { $$ = mk_node("==", 2, $1, $2); }
-| nonblock_nonprefix_expr NE expr                     { $$ = mk_node("!=", 2, $1, $2); }
-| nonblock_nonprefix_expr '<' expr                    { $$ = mk_node("<", 2, $1, $2); }
-| nonblock_nonprefix_expr '>' expr                    { $$ = mk_node(">", 2, $1, $2); }
-| nonblock_nonprefix_expr LE expr                     { $$ = mk_node("<=", 2, $1, $2); }
-| nonblock_nonprefix_expr GE expr                     { $$ = mk_node(">=", 2, $1, $2); }
-| nonblock_nonprefix_expr '|' expr                    { $$ = mk_node("|", 2, $1, $2); }
-| nonblock_nonprefix_expr '^' expr                    { $$ = mk_node("^", 2, $1, $2); }
-| nonblock_nonprefix_expr '&' expr                    { $$ = mk_node("&", 2, $1, $2); }
-| nonblock_nonprefix_expr SHL expr                    { $$ = mk_node("<<", 2, $1, $2); }
-| nonblock_nonprefix_expr SHR expr                    { $$ = mk_node(">>", 2, $1, $2); }
-| nonblock_nonprefix_expr '+' expr                    { $$ = mk_node("+", 2, $1, $2); }
-| nonblock_nonprefix_expr '-' expr                    { $$ = mk_node("-", 2, $1, $2); }
-| nonblock_nonprefix_expr AS expr                     { $$ = mk_node("as", 2, $1, $2); }
-| nonblock_nonprefix_expr '*' expr                    { $$ = mk_node("*", 2, $1, $2); }
-| nonblock_nonprefix_expr '/' expr                    { $$ = mk_node("/", 2, $1, $2); }
-| nonblock_nonprefix_expr '%' expr                    { $$ = mk_node("%", 2, $1, $2); }
-| nonblock_nonprefix_expr '(' maybe_exprs ')'         { $$ = mk_node("call", 1, $1); }
+| IDENT struct_expr                                   { $$ = mk_node("struct", 1, $2); }
+| nonblock_nonprefix_expr '=' expr                    { $$ = mk_node("=", 2, $1, $3); }
+| nonblock_nonprefix_expr OROR expr                   { $$ = mk_node("||", 2, $1, $3); }
+| nonblock_nonprefix_expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $3); }
+| nonblock_nonprefix_expr EQEQ expr                   { $$ = mk_node("==", 2, $1, $3); }
+| nonblock_nonprefix_expr NE expr                     { $$ = mk_node("!=", 2, $1, $3); }
+| nonblock_nonprefix_expr '<' expr                    { $$ = mk_node("<", 2, $1, $3); }
+| nonblock_nonprefix_expr '>' expr                    { $$ = mk_node(">", 2, $1, $3); }
+| nonblock_nonprefix_expr LE expr                     { $$ = mk_node("<=", 2, $1, $3); }
+| nonblock_nonprefix_expr GE expr                     { $$ = mk_node(">=", 2, $1, $3); }
+| nonblock_nonprefix_expr '|' expr                    { $$ = mk_node("|", 2, $1, $3); }
+| nonblock_nonprefix_expr '^' expr                    { $$ = mk_node("^", 2, $1, $3); }
+| nonblock_nonprefix_expr '&' expr                    { $$ = mk_node("&", 2, $1, $3); }
+| nonblock_nonprefix_expr SHL expr                    { $$ = mk_node("<<", 2, $1, $3); }
+| nonblock_nonprefix_expr SHR expr                    { $$ = mk_node(">>", 2, $1, $3); }
+| nonblock_nonprefix_expr '+' expr                    { $$ = mk_node("+", 2, $1, $3); }
+| nonblock_nonprefix_expr '-' expr                    { $$ = mk_node("-", 2, $1, $3); }
+| nonblock_nonprefix_expr AS expr                     { $$ = mk_node("as", 2, $1, $3); }
+| nonblock_nonprefix_expr '*' expr                    { $$ = mk_node("*", 2, $1, $3); }
+| nonblock_nonprefix_expr '/' expr                    { $$ = mk_node("/", 2, $1, $3); }
+| nonblock_nonprefix_expr '%' expr                    { $$ = mk_node("%", 2, $1, $3); }
+| nonblock_nonprefix_expr '(' maybe_exprs ')'         { $$ = mk_node("call", 2, $1, $3); }
 | CONTINUE                                            { $$ = mk_node("continue", 0); }
 | CONTINUE IDENT                                      { $$ = mk_node("continue-label", 0); }
 ;
@@ -592,37 +593,37 @@ nonblock_nonprefix_expr
 expr
 : lit
 | IDENT                            { $$ = mk_node("ident", 0); }
-| IDENT struct_expr                { $$ = mk_node("struct", 1, $1); }
-| expr '=' expr                    { $$ = mk_node("=", 2, $1, $2); }
-| expr OROR expr                   { $$ = mk_node("||", 2, $1, $2); }
-| expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $2); }
-| expr EQEQ expr                   { $$ = mk_node("==", 2, $1, $2); }
-| expr NE expr                     { $$ = mk_node("!=", 2, $1, $2); }
-| expr '<' expr                    { $$ = mk_node("<", 2, $1, $2); }
-| expr '>' expr                    { $$ = mk_node(">", 2, $1, $2); }
-| expr LE expr                     { $$ = mk_node("<=", 2, $1, $2); }
-| expr GE expr                     { $$ = mk_node(">=", 2, $1, $2); }
-| expr '|' expr                    { $$ = mk_node("|", 2, $1, $2); }
-| expr '^' expr                    { $$ = mk_node("^", 2, $1, $2); }
-| expr '&' expr                    { $$ = mk_node("&", 2, $1, $2); }
-| expr SHL expr                    { $$ = mk_node("<<", 2, $1, $2); }
-| expr SHR expr                    { $$ = mk_node(">>", 2, $1, $2); }
-| expr '+' expr                    { $$ = mk_node("+", 2, $1, $2); }
-| expr '-' expr                    { $$ = mk_node("-", 2, $1, $2); }
-| expr AS expr                     { $$ = mk_node("as", 2, $1, $2); }
-| expr '*' expr                    { $$ = mk_node("*", 2, $1, $2); }
-| expr '/' expr                    { $$ = mk_node("/", 2, $1, $2); }
-| expr '%' expr                    { $$ = mk_node("%", 2, $1, $2); }
-| expr '(' maybe_exprs ')'         { $$ = mk_node("call", 1, $1); }
+| IDENT struct_expr                { $$ = mk_node("struct", 1, $2); }
+| expr '=' expr                    { $$ = mk_node("=", 2, $1, $3); }
+| expr OROR expr                   { $$ = mk_node("||", 2, $1, $3); }
+| expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $3); }
+| expr EQEQ expr                   { $$ = mk_node("==", 2, $1, $3); }
+| expr NE expr                     { $$ = mk_node("!=", 2, $1, $3); }
+| expr '<' expr                    { $$ = mk_node("<", 2, $1, $3); }
+| expr '>' expr                    { $$ = mk_node(">", 2, $1, $3); }
+| expr LE expr                     { $$ = mk_node("<=", 2, $1, $3); }
+| expr GE expr                     { $$ = mk_node(">=", 2, $1, $3); }
+| expr '|' expr                    { $$ = mk_node("|", 2, $1, $3); }
+| expr '^' expr                    { $$ = mk_node("^", 2, $1, $3); }
+| expr '&' expr                    { $$ = mk_node("&", 2, $1, $3); }
+| expr SHL expr                    { $$ = mk_node("<<", 2, $1, $3); }
+| expr SHR expr                    { $$ = mk_node(">>", 2, $1, $3); }
+| expr '+' expr                    { $$ = mk_node("+", 2, $1, $3); }
+| expr '-' expr                    { $$ = mk_node("-", 2, $1, $3); }
+| expr AS expr                     { $$ = mk_node("as", 2, $1, $3); }
+| expr '*' expr                    { $$ = mk_node("*", 2, $1, $3); }
+| expr '/' expr                    { $$ = mk_node("/", 2, $1, $3); }
+| expr '%' expr                    { $$ = mk_node("%", 2, $1, $3); }
+| expr '(' maybe_exprs ')'         { $$ = mk_node("call", 2, $1, $3); }
 | CONTINUE                         { $$ = mk_node("continue", 0); }
 | CONTINUE IDENT                   { $$ = mk_node("continue-label", 0); }
-| block_expr
+| block_expr                       { $$ = $1 }
 ;
 
 nonblock_prefix_expr
-: '-' expr                         { $$ = mk_node("-", 1, $1); }
-| '*' expr                         { $$ = mk_node("*", 1, $1); }
-| '~' expr                         { $$ = mk_node("~", 1, $1); }
+: '-' expr                         { $$ = mk_node("-", 1, $2); }
+| '*' expr                         { $$ = mk_node("*", 1, $2); }
+| '~' expr                         { $$ = mk_node("~", 1, $2); }
 ;
 
 struct_expr
@@ -650,8 +651,8 @@ block_expr
 | expr_while
 | expr_loop
 | expr_for
-| UNSAFE block                     { $$ = mk_node("unsafe-block", 1, $1); }
-| block                            { $$ = mk_node("block", 1, $1); }
+| UNSAFE block                     { $$ = mk_node("unsafe", 1, $1); }
+| block
 ;
 
 expr_match
@@ -703,19 +704,19 @@ static
 : STATIC pat ':' ty '=' expr ';'
 
 lit
-: LIT_CHAR
-| LIT_INT
-| LIT_UINT
-| LIT_INT_UNSUFFIXED
-| LIT_FLOAT
-| LIT_FLOAT_UNSUFFIXED
-| LIT_STR
-| LIT_STR_RAW
-| TRUE
-| FALSE
+: LIT_CHAR                   { $$ = mk_node("lit-char", 0); }
+| LIT_INT                    { $$ = mk_node("lit-int", 0); }
+| LIT_UINT                   { $$ = mk_node("lit-uint", 0); }
+| LIT_INT_UNSUFFIXED         { $$ = mk_node("lit-int", 0); }
+| LIT_FLOAT                  { $$ = mk_node("lit-float", 0); }
+| LIT_FLOAT_UNSUFFIXED       { $$ = mk_node("lit-float", 0); }
+| LIT_STR                    { $$ = mk_node("lit-str", 0); }
+| LIT_STR_RAW                { $$ = mk_node("lit-str", 0); }
+| TRUE                       { $$ = mk_node("lit-true", 0); }
+| FALSE                      { $$ = mk_node("lit-false", 0); }
 ;
 
 str
-: LIT_STR
-| LIT_STR_RAW
+: LIT_STR                    { $$ = mk_node("lit-str", 0); }
+| LIT_STR_RAW                { $$ = mk_node("lit-str", 0); }
 ;
