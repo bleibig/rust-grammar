@@ -13,13 +13,13 @@ fn filter_json(j: &mut json::Json) {
     match *j {
         json::Object(ref mut ob) => {
             // remove
-            ob.pop(&~"span");
-            ob.pop(&~"id");
+            ob.pop(&"span".to_owned());
+            ob.pop(&"id".to_owned());
             let mut kv : Option<(~str,~[Json])> = None;
-            match ob.find(&~"node") {
+            match ob.find(&"node".to_owned()) {
                 Some(&json::Object(ref ob2)) => {
-                    match (ob2.find(&~"variant"),
-                           ob2.find(&~"fields")) {
+                    match (ob2.find(&"variant".to_owned()),
+                           ob2.find(&"fields".to_owned())) {
                         (Some(&String(ref s)), Some(&List(ref ls))) => {
                             kv = Some((s.clone(), ls.clone()));
                         }
@@ -31,7 +31,7 @@ fn filter_json(j: &mut json::Json) {
             match kv {
                 None => (),
                 Some((k, v)) => {
-                    ob.pop(&~"node");
+                    ob.pop(&"node".to_owned());
                     ob.insert(k, List(v));
                 }
             }
@@ -59,8 +59,8 @@ fn main() {
 
             // JSON-ify, meaning "encode then re-parse as just json", ugh.
             let ast_str = json::Encoder::str_encode(&cr);
-            let mut p = json::Parser::new(ast_str.chars());
-            let mut j = p.parse().unwrap();
+            let mut b = json::Builder::new(ast_str.chars());
+            let mut j = b.build().ok().unwrap();
 
             filter_json(&mut j);
 

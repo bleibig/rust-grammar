@@ -10,7 +10,6 @@ use rustc::driver::driver;
 use rustc::driver::session;
 
 use std::io;
-use std::char;
 
 /* This is a simple standalone lexer based on rustc's lexer. The main
  * difference is a custom to_str function for tokens that prints in
@@ -22,7 +21,7 @@ fn token_to_str(tok: token::Token) -> ~str {
     match tok {
         token::LIT_CHAR(c) => {
             let mut res = StrBuf::from_str("'");
-            char::from_u32(c).unwrap().escape_default(|c| {
+            c.escape_default(|c| {
                 res.push_char(c);
             });
             res.push_char('\'');
@@ -70,7 +69,7 @@ fn main() {
             Ok(line) => {
                 let options = session::basic_options();
                 let session = driver::build_session(options, None);
-                let filemap = parse::string_to_filemap(&session.parse_sess, line, ~"<n/a>");
+                let filemap = parse::string_to_filemap(&session.parse_sess, line, "<n/a>".to_owned());
                 let mut lexer = lexer::new_string_reader(session.diagnostic(), filemap);
 
                 while !lexer.is_eof() {

@@ -55,7 +55,7 @@ check: lexer parser parser-lalr
 	./testparser.sh
 
 clean:
-	rm -rf *.o lexer parser rlex lex.yy.c \
+	rm -rf *.o lexer parser rlex rparse lex.yy.c \
                    parser.c parser.h \
                    parser-lalr.tab.c parser-lalr.tab.h \
                    parser-lalr.output parser-lalr
