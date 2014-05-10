@@ -277,6 +277,8 @@ maybe_mut
 item_or_view_item
 : visibility item_fn                          { $$ = $2; }
 | visibility item_extern_block                { $$ = $2; }
+| visibility item_struct                      { $$ = $2; }
+| visibility item_enum                        { $$ = $2; }
 ;
 
 item_extern_block
@@ -489,6 +491,62 @@ trait_ref
 : path_generic_args_without_colons
 ;
 
+// structs
+item_struct
+: STRUCT IDENT maybe_generic_params struct_args     { $$ = mk_node("struct", 0); }
+;
+
+struct_args
+: '{' struct_decl_fields '}'
+| '{' struct_decl_fields ',' '}'
+| '(' ')' ';'
+| '(' struct_tuple_fields ')' ';'
+| '(' struct_tuple_fields ',' ')' ';'
+| ';'
+;
+
+struct_decl_fields
+: struct_decl_field
+| struct_decl_fields ',' struct_decl_field
+| /* empty */
+;
+
+struct_decl_field
+: maybe_outer_attrs visibility IDENT ':' ty
+;
+
+struct_tuple_fields
+: struct_tuple_field
+| struct_tuple_fields ',' struct_tuple_field
+;
+
+struct_tuple_field
+: maybe_outer_attrs ty
+;
+
+// enums
+item_enum
+: ENUM IDENT maybe_generic_params '{' enum_defs '}'     { $$ = mk_node("enum", 0); }
+| ENUM IDENT maybe_generic_params '{' enum_defs ',' '}' { $$ = mk_node("enum", 0); }
+;
+
+enum_defs
+: enum_def
+| enum_defs ',' enum_def
+| /* empty */
+;
+
+enum_def
+: maybe_outer_attrs visibility IDENT enum_args
+;
+
+enum_args
+: '{' struct_decl_fields '}'
+| '{' struct_decl_fields ',' '}'
+| '(' maybe_tys ')'
+| '=' expr
+| /* empty */
+;
 
 ///////////////////////////////////////////////////////////////////////
 //////////// dynamic part: statements, expressions, values ////////////
