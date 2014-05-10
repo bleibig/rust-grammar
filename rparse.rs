@@ -6,6 +6,7 @@ use rustc::driver::driver;
 use rustc::driver::session;
 use std::io;
 use std::io::Reader;
+use std::vec::FromVec;
 use serialize::json;
 use serialize::json::{Json, List, String, Object};
 
@@ -21,7 +22,7 @@ fn filter_json(j: &mut json::Json) {
                     match (ob2.find(&"variant".to_owned()),
                            ob2.find(&"fields".to_owned())) {
                         (Some(&String(ref s)), Some(&List(ref ls))) => {
-                            kv = Some((s.clone(), ls.clone()));
+                            kv = Some((s.clone(), FromVec::from_vec(ls.clone())));
                         }
                         _ => ()
                     }
@@ -32,7 +33,7 @@ fn filter_json(j: &mut json::Json) {
                 None => (),
                 Some((k, v)) => {
                     ob.pop(&"node".to_owned());
-                    ob.insert(k, List(v));
+                    ob.insert(k, List(Vec::from_slice(v)));
                 }
             }
             for (_, v) in ob.mut_iter() {

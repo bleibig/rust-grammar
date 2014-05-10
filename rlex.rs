@@ -69,7 +69,9 @@ fn main() {
             Ok(line) => {
                 let options = session::basic_options();
                 let session = driver::build_session(options, None);
-                let filemap = parse::string_to_filemap(&session.parse_sess, line, "<n/a>".to_owned());
+                let filemap = parse::string_to_filemap(&session.parse_sess,
+                                                       StrBuf::from_owned_str(line),
+                                                       StrBuf::from_str("<n/a>"));
                 let mut lexer = lexer::new_string_reader(session.diagnostic(), filemap);
 
                 while !lexer.is_eof() {
