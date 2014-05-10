@@ -275,7 +275,8 @@ maybe_mut
 ;
 
 item_or_view_item
-: visibility item_fn                          { $$ = $2; }
+: visibility item_use                         { $$ = $2; }
+| visibility item_fn                          { $$ = $2; }
 | visibility item_extern_block                { $$ = $2; }
 | visibility item_struct                      { $$ = $2; }
 | visibility item_enum                        { $$ = $2; }
@@ -339,6 +340,23 @@ visibility
 | /* empty */
 ;
 
+item_use
+: USE path_no_types_allowed ';'                              { $$ = mk_node("use", 0); }
+| USE path_no_types_allowed MOD_SEP '{' maybe_idents '}' ';' { $$ = mk_node("use", 0); }
+| USE path_no_types_allowed MOD_SEP '*' ';'                  { $$ = mk_node("use", 0); }
+| USE IDENT '=' path_no_types_allowed ';'                    { $$ = mk_node("use", 0); }
+;
+
+maybe_idents
+: idents
+| /* empty */
+;
+
+idents
+: IDENT
+| idents ',' IDENT
+;
+
 item_fn
 : FN IDENT maybe_generic_params fn_decl inner_attrs_and_block  { $$ = mk_node("fn", 1, $5); }
 ;
@@ -377,7 +395,9 @@ maybe_generic_params
 ;
 
 generic_params
-: '<' maybe_lifetimes maybe_ty_params '>'
+: '<' lifetimes '>'
+| '<' lifetimes ',' ty_params '>'
+| '<' ty_params '>'
 ;
 
 maybe_ty_params
