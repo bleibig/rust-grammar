@@ -110,11 +110,20 @@ extern struct node *ext_node(struct node *nd, int n, ...);
 // foo' is shifted. Similarly, IDENT needs to be lower than '{' so
 // that 'foo {' is shifted when trying to decide if we've got a
 // struct-construction expr (esp. in contexts like 'if foo { .')
-%nonassoc CONTINUE
+%nonassoc CONTINUE BREAK
 %nonassoc IDENT
 
-%nonassoc '('
+// RETURN needs to be lower-precedence than all the block-expr
+// starting keywords, so that juxtapositioning them in a stmts
+// like 'return if foo { 10 } else { 22 }' shifts 'if' rather
+// than reducing a no-argument return.
+%nonassoc RETURN
+%nonassoc FOR IF LOOP MATCH UNSAFE WHILE
+
 %nonassoc '{' '}'
+%nonassoc '[' ']'
+%nonassoc '(' ')'
+%left '.'
 %nonassoc ';'
 
 %start rust
@@ -179,16 +188,12 @@ mod_items
 ;
 
 mod_item
-: maybe_outer_attrs item_or_view_item    { $$ = $2; }
-;
-
-nonblock_item
-: visibility static
+: maybe_outer_attrs visibility item_or_view_item    { $$ = $3; }
 ;
 
 block_item
-: visibility item_fn                     { $$ = $2; }
-| visibility item_extern_block
+: item_fn
+| item_extern_block
 ;
 
 maybe_ty_ascription
@@ -222,33 +227,22 @@ tys
 
 ty
 : path_generic_args_without_colons
-| '~' ty
+| BOX ty
 | '*' maybe_mut ty
 | '(' maybe_tys ')'
 | '&' maybe_lifetime maybe_mut ty
 | TYPEOF '(' expr ')'
 | ty_bare_fn
 | proc_type
+| ty_closure
 | '_'
 ;
 
 ty_bare_fn
-: maybe_extern_abi maybe_unsafe FN ty_fn_decl
-;
-
-maybe_unsafe
-: UNSAFE
-| /* empty */
-;
-
-maybe_extern_abi
-: EXTERN maybe_abi
-| /* empty */
-;
-
-maybe_abi
-: str
-| /* empty */
+:                         FN ty_fn_decl
+|                  UNSAFE FN ty_fn_decl
+| EXTERN maybe_abi        FN ty_fn_decl
+| EXTERN maybe_abi UNSAFE FN ty_fn_decl
 ;
 
 ty_fn_decl
@@ -256,8 +250,10 @@ ty_fn_decl
 ;
 
 ty_closure
-: maybe_unsafe maybe_once maybe_generic_params '|' params '|' ret_ty
-| maybe_unsafe maybe_once maybe_generic_params OROR ret_ty
+: UNSAFE maybe_once maybe_generic_params '|' params '|' ret_ty
+|        maybe_once maybe_generic_params '|' params '|' ret_ty
+| UNSAFE maybe_once maybe_generic_params OROR ret_ty
+|        maybe_once maybe_generic_params OROR ret_ty
 ;
 
 maybe_once
@@ -275,17 +271,36 @@ maybe_mut
 ;
 
 item_or_view_item
-: visibility item_use                         { $$ = $2; }
-| visibility item_fn                          { $$ = $2; }
-| visibility item_extern_block                { $$ = $2; }
-| visibility item_struct                      { $$ = $2; }
-| visibility item_enum                        { $$ = $2; }
+: item_use
+| item_fn
+| item_extern_block
+| item_struct
+| item_enum
+;
+
+view_item
+: USE view_paths ';'
+;
+
+view_paths
+: view_path
+| view_paths ',' view_path
+;
+
+view_path
+: path_no_types_allowed
+| path_no_types_allowed '{' idents '}'
 ;
 
 item_extern_block
 : EXTERN CRATE item_extern_crate
 | EXTERN maybe_abi item_fn
 | EXTERN maybe_abi '{' item_foreign_mod '}'
+;
+
+maybe_abi
+: str
+| /* empty */
 ;
 
 item_extern_crate
@@ -381,6 +396,15 @@ params
 
 param
 : pat ':' ty
+;
+
+inferrable_params
+: inferrable_param
+| inferrable_params ',' inferrable_param
+;
+
+inferrable_param
+: pat maybe_ty_ascription
 ;
 
 ret_ty
@@ -573,11 +597,11 @@ enum_args
 ///////////////////////////////////////////////////////////////////////
 
 inner_attrs_and_block
-: '{' maybe_inner_attrs stmts '}'   { $$ = $3; }
+: '{' maybe_inner_attrs stmts '}'        { $$ = $3; }
 ;
 
 block
-: '{' stmts '}'                     { $$ = mk_node("block", 1, $2); }
+: '{' stmts '}'               { $$ = mk_node("block", 1, $2); }
 ;
 
 // There are two sub-grammars within a "stmts: exprs" derivation
@@ -605,33 +629,28 @@ block
 // In non-stmts contexts, expr can relax this trichotomy.
 
 stmts
-: stmts block_stmt                                            { $$ = ext_node($1, 1, $2); }
-| stmts block_stmt nonblock_prefix_stmt                       { $$ = ext_node($1, 2, $2, $3); }
-| stmts nonblock_nonprefix_stmt                               { $$ = ext_node($1, 1, $2); }
-| stmts nonblock_nonprefix_stmt ';'                           { $$ = ext_node($1, 1, $2); }
-| stmts nonblock_nonprefix_stmt ';' nonblock_prefix_stmt      { $$ = ext_node($1, 2, $2, $3); }
-| nonblock_prefix_stmt                                        { $$ = mk_node("stmts", 1, $1); }
-| /* empty */                                                 { $$ = mk_node("stmts", 0); }
+: stmts let                                        { $$ = ext_node($1, 1, $2); }
+| stmts let nonblock_expr_stmt                     { $$ = ext_node($1, 2, $2, $3); }
+| stmts static                                     { $$ = ext_node($1, 1, $2); }
+| stmts static nonblock_expr_stmt                  { $$ = ext_node($1, 2, $2, $3); }
+| stmts block_item                                 { $$ = ext_node($1, 1, $2); }
+| stmts block_item nonblock_expr_stmt              { $$ = ext_node($1, 2, $2, $3); }
+| stmts block_expr                                 { $$ = ext_node($1, 1, $2); }
+| stmts block_expr nonblock_expr_stmt              { $$ = ext_node($1, 2, $2, $3); }
+| stmts ';'
+| stmts ';' nonblock_expr_stmt                     { $$ = ext_node($1, 1, $3); }
+| nonblock_expr_stmt                               { $$ = mk_node("stmts", 1, $1); }
+| /* empty */                                      { $$ = mk_node("stmts", 0); }
 ;
 
-nonblock_nonprefix_stmt
-: let
-| nonblock_item
-| nonblock_nonprefix_expr
-;
-
-nonblock_prefix_stmt
+nonblock_expr_stmt
 : nonblock_prefix_expr
-;
-
-block_stmt
-: block_item
-| block_expr
+| nonblock_nonprefix_expr
 ;
 
 maybe_exprs
 : exprs
-| /* empty */                                                 { $$ = mk_node("(no-expr)", 0); }
+| /* empty */
 ;
 
 exprs
@@ -641,8 +660,17 @@ exprs
 
 nonblock_nonprefix_expr
 : lit
-| IDENT                                               { $$ = mk_node("ident", 0); }
-| IDENT struct_expr                                   { $$ = mk_node("struct", 1, $2); }
+| path_generic_args_without_colons '{' field_inits default_field_init '}'
+| nonblock_nonprefix_expr '.' IDENT
+| nonblock_nonprefix_expr '[' expr ']'
+| nonblock_nonprefix_expr '(' maybe_exprs ')'
+| '(' maybe_exprs ')'
+| CONTINUE                                            { $$ = mk_node("continue", 0); }
+| CONTINUE IDENT                                      { $$ = mk_node("continue-label", 0); }
+| RETURN                                              { $$ = mk_node("return", 0); }
+| RETURN expr                                         { $$ = mk_node("return-expr", 1, $2); }
+| BREAK                                               { $$ = mk_node("break", 0); }
+| BREAK IDENT                                         { $$ = mk_node("break-ident", 0); }
 | nonblock_nonprefix_expr '=' expr                    { $$ = mk_node("=", 2, $1, $3); }
 | nonblock_nonprefix_expr OROR expr                   { $$ = mk_node("||", 2, $1, $3); }
 | nonblock_nonprefix_expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $3); }
@@ -663,15 +691,21 @@ nonblock_nonprefix_expr
 | nonblock_nonprefix_expr '*' expr                    { $$ = mk_node("*", 2, $1, $3); }
 | nonblock_nonprefix_expr '/' expr                    { $$ = mk_node("/", 2, $1, $3); }
 | nonblock_nonprefix_expr '%' expr                    { $$ = mk_node("%", 2, $1, $3); }
-| nonblock_nonprefix_expr '(' maybe_exprs ')'         { $$ = mk_node("call", 2, $1, $3); }
-| CONTINUE                                            { $$ = mk_node("continue", 0); }
-| CONTINUE IDENT                                      { $$ = mk_node("continue-label", 0); }
 ;
 
 expr
 : lit
-| IDENT                            { $$ = mk_node("ident", 0); }
-| IDENT struct_expr                { $$ = mk_node("struct", 1, $2); }
+| path_generic_args_without_colons '{' field_inits default_field_init '}'
+| expr '.' IDENT
+| expr '[' expr ']'
+| expr '(' maybe_exprs ')'        { $$ = mk_node("call", 2, $1, $3); }
+| '(' maybe_exprs ')'
+| CONTINUE                                            { $$ = mk_node("continue", 0); }
+| CONTINUE IDENT                                      { $$ = mk_node("continue-label", 0); }
+| RETURN                                              { $$ = mk_node("return", 0); }
+| RETURN expr                                         { $$ = mk_node("return-expr", 1, $2); }
+| BREAK                                               { $$ = mk_node("break", 0); }
+| BREAK IDENT                                         { $$ = mk_node("break-ident", 0); }
 | expr '=' expr                    { $$ = mk_node("=", 2, $1, $3); }
 | expr OROR expr                   { $$ = mk_node("||", 2, $1, $3); }
 | expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $3); }
@@ -692,16 +726,20 @@ expr
 | expr '*' expr                    { $$ = mk_node("*", 2, $1, $3); }
 | expr '/' expr                    { $$ = mk_node("/", 2, $1, $3); }
 | expr '%' expr                    { $$ = mk_node("%", 2, $1, $3); }
-| expr '(' maybe_exprs ')'         { $$ = mk_node("call", 2, $1, $3); }
-| CONTINUE                         { $$ = mk_node("continue", 0); }
-| CONTINUE IDENT                   { $$ = mk_node("continue-label", 0); }
-| block_expr                       { $$ = $1 }
+| block_expr
+| lambda_expr
 ;
 
 nonblock_prefix_expr
 : '-' expr                         { $$ = mk_node("-", 1, $2); }
 | '*' expr                         { $$ = mk_node("*", 1, $2); }
 | '~' expr                         { $$ = mk_node("~", 1, $2); }
+| lambda_expr
+;
+
+lambda_expr
+: OROR expr                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
+| '|' inferrable_params '|' expr   { $$ = mk_node("lambda", 2, $2, $4); }
 ;
 
 struct_expr
