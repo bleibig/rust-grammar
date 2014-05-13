@@ -6,11 +6,11 @@
   // This is lacking the folowing:
   // * Raw strings (they're not capable of being parsed by a
   //   regular-expression, though flex may allow some way around that)
-  // * Doc comments (they don't have much of a significance to the 
-  //   grammar and can just be treated as regulra comments)
+  // * Doc comments (they don't have much of a significance to the
+  //   grammar and can just be treated as regular comments)
   //
   // This adds the following tokens not specified in the rust lexer:
-  // * SHEBANG "#!" - this is neccesary to avoid first/first conficts 
+  // * SHEBANG "#!" - this is neccesary to avoid first/first conficts
   //   with attribute parsing
 
 %}
