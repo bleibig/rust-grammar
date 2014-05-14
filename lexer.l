@@ -17,6 +17,8 @@ static int saw_non_hash;
 
 %}
 
+%option stack
+
 %x str
 %x rawstr
 %x rawstr_esc
@@ -34,10 +36,10 @@ usuf (u6|u16|u32|u64|u)
 \/\/                  { BEGIN(linecomment); }
 <linecomment>\n       { BEGIN(INITIAL); }
 <linecomment>[^\n]*   { }
-\/\*                  { BEGIN(blockcomment); }
-<blockcomment>[^*]*   { }
-<blockcomment>\*+[^/] { }
-<blockcomment>\*\/    { BEGIN(INITIAL); }
+\/\*                  { yy_push_state(blockcomment); }
+<blockcomment>\/\*    { yy_push_state(blockcomment); }
+<blockcomment>\*\/    { yy_pop_state(); }
+<blockcomment>.   { }
 
 _        { return UNDERSCORE; }
 as       { return AS; }
