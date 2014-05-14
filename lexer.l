@@ -4,8 +4,6 @@
 
   // # Notes
   // This is lacking the folowing:
-  // * Raw strings (they're not capable of being parsed by a
-  //   regular-expression, though flex may allow some way around that)
   // * Doc comments (they don't have much of a significance to the
   //   grammar and can just be treated as regular comments)
   //
@@ -13,9 +11,16 @@
   // * SHEBANG "#!" - this is neccesary to avoid first/first conficts
   //   with attribute parsing
 
+static int num_hashes;
+static int end_hashes;
+static int saw_non_hash;
+
 %}
 
 %x str
+%x rawstr
+%x rawstr_esc
+
 %x ltorchar
 %x linecomment
 %x blockcomment
@@ -133,6 +138,54 @@ while    { return WHILE; }
 <ltorchar>\\U[0-9a-fA-F]{8}\x27  { BEGIN(INITIAL); return LIT_CHAR; }
 <ltorchar>.\x27                  { BEGIN(INITIAL); return LIT_CHAR; }
 <ltorchar><<EOF>>                { BEGIN(INITIAL); return -1; }
+
+
+r\x22           { BEGIN(rawstr); yymore(); }
+<rawstr>\x22    { BEGIN(INITIAL); return LIT_STR_RAW; }
+<rawstr>.       { yymore(); }
+<rawstr><<EOF>> { return -1; }
+
+r/#             {
+    BEGIN(rawstr_esc);
+    yymore();
+    num_hashes = 0;
+    saw_non_hash = 0;
+    end_hashes = 0;
+}
+
+<rawstr_esc># {
+    if (!saw_non_hash) {
+        num_hashes++;
+    } else if (end_hashes != 0) {
+        end_hashes++;
+        if (end_hashes == num_hashes) {
+            BEGIN(INITIAL);
+            return LIT_STR_RAW;
+        }
+    }
+    yymore();
+}
+
+<rawstr_esc>\x22# {
+    end_hashes = 1;
+    if (end_hashes == num_hashes) {
+        BEGIN(INITIAL);
+        return LIT_STR_RAW;
+    }
+    yymore();
+}
+
+<rawstr_esc>. {
+    if (!saw_non_hash) {
+        saw_non_hash = 1;
+    }
+    if (end_hashes != 0) {
+        end_hashes = 0;
+    }
+    yymore();
+}
+
+<rawstr_esc><<EOF>> { return -1; }
 
 \x22                     { BEGIN(str); yymore(); }
 <str>\x22                { BEGIN(INITIAL); return LIT_STR; }

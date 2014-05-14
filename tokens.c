@@ -51,6 +51,7 @@ void print_token(int token) {
   case LIT_FLOAT: printf("LIT_FLOAT(%s)", yytext); break;
   case LIT_FLOAT_UNSUFFIXED: printf("LIT_FLOAT_UNSUFFIXED(%s)", yytext); break;
   case LIT_STR: printf("LIT_STR(%s)", yytext); break;
+  case LIT_STR_RAW: printf("LIT_STR_RAW(%s)", yytext); break;
   case IDENT: printf("IDENT(%s)", yytext); break;
   case UNDERSCORE: printf("UNDERSCORE"); break;
   case LIFETIME: printf("LIFETIME(%s)", yytext); break;
