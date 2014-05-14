@@ -90,7 +90,7 @@ void print_token(int token) {
   case PROC: printf("IDENT(proc)"); break;
   case BOX: printf("IDENT(box)"); break;
   case TYPEOF: printf("IDENT(typeof)"); break;
-  case SHEBANG: printf("IDENT(pound)\nNOT"); break;
+  case SHEBANG: printf("POUND\nNOT"); break;
   case STATIC_LIFETIME: printf("LIFETIME('static)"); break;
   default: printf("can't print token %d", token);
   }

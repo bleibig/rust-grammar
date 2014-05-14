@@ -22,7 +22,8 @@ static int saw_non_hash;
 %x str
 %x rawstr
 %x rawstr_esc
-
+%x pound
+%x shebang_or_attr
 %x ltorchar
 %x linecomment
 %x blockcomment
@@ -110,8 +111,12 @@ while    { return WHILE; }
 \[     { return '['; }
 \]     { return ']'; }
 @      { return '@'; }
-#!     { return SHEBANG; }
-#      { return '#'; }
+#      { BEGIN(pound); }
+<pound>! { BEGIN(shebang_or_attr); }
+<shebang_or_attr>\[ { BEGIN(INITIAL); yyless(0); return SHEBANG; }
+<shebang_or_attr>[^[\n]*\n  { BEGIN(INITIAL); }
+<pound>. { BEGIN(INITIAL); yyless(1); return '#'; }
+
 ~      { return '~'; }
 ::     { return MOD_SEP; }
 :      { return ':'; }
