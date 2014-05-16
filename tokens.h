@@ -61,6 +61,7 @@ enum Token {
   PROC,
   BOX,
   TYPEOF,
+  DOC_COMMENT,
 
   // not in rustc:
   SHEBANG,
