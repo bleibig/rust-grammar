@@ -5,7 +5,7 @@ code, circa 0.10ish. The purpose is to create a testable LL(1) grammar
 specification for rust issue #2234. It contains a lexer specification
 for flex and a grammar specification for
 [LLnextgen](http://os.ghalkes.nl/LLnextgen/), and together they work
-to gether to create a parser for Rust code. There is also a LALR
+to gether to create a parser for Rust code. There is also a LALR(1)
 parser written for the [GNU
 Bison](https://www.gnu.org/software/bison/) tool, as an alternative
 specification for the grammar.
@@ -42,9 +42,9 @@ generally correspond with with `parse_*` functions in rustc's
 `parser.rs`. Note that the grammar intentionally omits obsolete
 syntax.
 
-## LALR (bison) Parser
+## LALR(1) (bison) Parser
 
-The grammar for the LALR parser is specified in `parser-lalr.y`. In
+The grammar for the LALR(1) parser is specified in `parser-lalr.y`. In
 addition to being a recognizer for Rust, the parser from this grammar
 also builds an AST in an s-expression format and prints it stdout.
 
