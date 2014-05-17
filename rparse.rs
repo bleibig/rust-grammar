@@ -12,9 +12,14 @@ use serialize::json::{Json, List, String, Object};
 use rustc::driver::{driver, session, config};
 
 fn filter_json(j: &mut json::Json) {
+    let mut replace = None;
+
     match *j {
         json::Object(ref mut ob) => {
             // remove
+            ob.pop(&StrBuf::from_str("lifetimes"));
+            ob.pop(&StrBuf::from_str("global"));
+            ob.pop(&StrBuf::from_str("types"));
             ob.pop(&StrBuf::from_str("span"));
             ob.pop(&StrBuf::from_str("id"));
             let mut kv : Option<(StrBuf,~[Json])> = None;
@@ -45,8 +50,15 @@ fn filter_json(j: &mut json::Json) {
             for v in ls.mut_iter() {
                 filter_json(v)
             }
+            if ls.len() == 1 {
+                replace = Some(ls.as_slice()[0].clone())
+            }
         }
         _ => ()
+    }
+    match replace {
+        None => (),
+        Some(jj) => *j = jj
     }
 }
 
