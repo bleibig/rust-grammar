@@ -4,7 +4,9 @@ struct node;
 extern int yylex();
 extern void yyerror(char const *s);
 extern struct node *mk_node(char const *name, int n, ...);
+extern struct node *mk_atom(char *text);
 extern struct node *ext_node(struct node *nd, int n, ...);
+extern char *yytext;
 %}
 %debug
 
@@ -167,9 +169,9 @@ outer_attr
 ;
 
 meta_item
-: IDENT
-| IDENT '=' lit
-| IDENT '(' meta_seq ')'
+: ident
+| ident '=' lit
+| ident '(' meta_seq ')'
 ;
 
 meta_seq
@@ -212,7 +214,7 @@ pats_or
 ;
 
 pat
-: IDENT
+: ident
 ;
 
 maybe_tys
@@ -304,8 +306,8 @@ maybe_abi
 ;
 
 item_extern_crate
-: IDENT ';'
-| IDENT '=' str ';'
+: ident ';'
+| ident '=' str ';'
 ;
 
 item_foreign_mod
@@ -329,11 +331,11 @@ foreign_item
 ;
 
 item_foreign_static
-: maybe_mut IDENT ':' ty ';'
+: maybe_mut ident ':' ty ';'
 ;
 
 item_foreign_fn
-: FN IDENT maybe_generic_params fn_decl_allow_variadic ';'
+: FN ident maybe_generic_params fn_decl_allow_variadic ';'
 ;
 
 fn_decl_allow_variadic
@@ -359,7 +361,7 @@ item_use
 : USE path_no_types_allowed ';'                              { $$ = mk_node("use", 0); }
 | USE path_no_types_allowed MOD_SEP '{' maybe_idents '}' ';' { $$ = mk_node("use", 0); }
 | USE path_no_types_allowed MOD_SEP '*' ';'                  { $$ = mk_node("use", 0); }
-| USE IDENT '=' path_no_types_allowed ';'                    { $$ = mk_node("use", 0); }
+| USE ident '=' path_no_types_allowed ';'                    { $$ = mk_node("use", 0); }
 ;
 
 maybe_idents
@@ -368,12 +370,12 @@ maybe_idents
 ;
 
 idents
-: IDENT
-| idents ',' IDENT
+: ident
+| idents ',' ident
 ;
 
 item_fn
-: FN IDENT maybe_generic_params fn_decl inner_attrs_and_block  { $$ = mk_node("fn", 1, $5); }
+: FN ident maybe_generic_params fn_decl inner_attrs_and_block  { $$ = mk_node("fn", 1, $5); }
 ;
 
 fn_decl
@@ -436,23 +438,23 @@ ty_params
 
 // A path with no type parameters; e.g. `foo::bar::Baz`
 path_no_types_allowed
-: IDENT
-| path_no_types_allowed MOD_SEP IDENT
+: ident
+| path_no_types_allowed MOD_SEP ident
 ;
 
 // A path with a lifetime and type parameters, with no double colons
 // before the type parameters; e.g. `foo::bar<'a>::Baz<T>`
 path_generic_args_without_colons
-: IDENT maybe_generic_args
-| path_generic_args_without_colons MOD_SEP IDENT maybe_generic_args
+: ident maybe_generic_args
+| path_generic_args_without_colons MOD_SEP ident maybe_generic_args
 ;
 
 // A path with a lifetime and type parameters with double colons before
 // the type parameters; e.g. `foo::bar::<'a>::Baz::<T>`
 path_generic_args_with_colons
-: IDENT
+: ident
 | maybe_generic_args
-| path_generic_args_with_colons MOD_SEP IDENT
+| path_generic_args_with_colons MOD_SEP ident
 | path_generic_args_with_colons MOD_SEP maybe_generic_args
 ;
 
@@ -460,8 +462,8 @@ path_generic_args_with_colons
 // set of type parameters only; e.g. `foo::bar<'a>::Baz:X+Y<T>` This
 // form does not use extra double colons.
 path_generic_args_and_bounds
-: IDENT maybe_bounds maybe_generic_args
-| path_generic_args_and_bounds MOD_SEP IDENT maybe_bounds maybe_generic_args
+: ident maybe_bounds maybe_generic_args
+| path_generic_args_and_bounds MOD_SEP ident maybe_bounds maybe_generic_args
 ;
 
 maybe_generic_args
@@ -474,7 +476,7 @@ generic_args
 ;
 
 ty_param
-: maybe_unsized IDENT maybe_bounds maybe_ty_default
+: maybe_unsized ident maybe_bounds maybe_ty_default
 ;
 
 maybe_unsized
@@ -537,7 +539,7 @@ trait_ref
 
 // structs
 item_struct
-: STRUCT IDENT maybe_generic_params struct_args     { $$ = mk_node("struct", 0); }
+: STRUCT ident maybe_generic_params struct_args     { $$ = mk_node("struct", 0); }
 ;
 
 struct_args
@@ -556,7 +558,7 @@ struct_decl_fields
 ;
 
 struct_decl_field
-: maybe_outer_attrs visibility IDENT ':' ty
+: maybe_outer_attrs visibility ident ':' ty
 ;
 
 struct_tuple_fields
@@ -570,8 +572,8 @@ struct_tuple_field
 
 // enums
 item_enum
-: ENUM IDENT maybe_generic_params '{' enum_defs '}'     { $$ = mk_node("enum", 0); }
-| ENUM IDENT maybe_generic_params '{' enum_defs ',' '}' { $$ = mk_node("enum", 0); }
+: ENUM ident maybe_generic_params '{' enum_defs '}'     { $$ = mk_node("enum", 0); }
+| ENUM ident maybe_generic_params '{' enum_defs ',' '}' { $$ = mk_node("enum", 0); }
 ;
 
 enum_defs
@@ -581,7 +583,7 @@ enum_defs
 ;
 
 enum_def
-: maybe_outer_attrs visibility IDENT enum_args
+: maybe_outer_attrs visibility ident enum_args
 ;
 
 enum_args
@@ -661,16 +663,16 @@ exprs
 nonblock_nonprefix_expr
 : lit
 | path_generic_args_without_colons '{' field_inits default_field_init '}'
-| nonblock_nonprefix_expr '.' IDENT
+| nonblock_nonprefix_expr '.' ident
 | nonblock_nonprefix_expr '[' expr ']'
 | nonblock_nonprefix_expr '(' maybe_exprs ')'
 | '(' maybe_exprs ')'
 | CONTINUE                                            { $$ = mk_node("continue", 0); }
-| CONTINUE IDENT                                      { $$ = mk_node("continue-label", 0); }
+| CONTINUE ident                                      { $$ = mk_node("continue-label", 0); }
 | RETURN                                              { $$ = mk_node("return", 0); }
 | RETURN expr                                         { $$ = mk_node("return-expr", 1, $2); }
 | BREAK                                               { $$ = mk_node("break", 0); }
-| BREAK IDENT                                         { $$ = mk_node("break-ident", 0); }
+| BREAK ident                                         { $$ = mk_node("break-ident", 0); }
 | nonblock_nonprefix_expr '=' expr                    { $$ = mk_node("=", 2, $1, $3); }
 | nonblock_nonprefix_expr OROR expr                   { $$ = mk_node("||", 2, $1, $3); }
 | nonblock_nonprefix_expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $3); }
@@ -696,16 +698,16 @@ nonblock_nonprefix_expr
 expr
 : lit
 | path_generic_args_without_colons '{' field_inits default_field_init '}'
-| expr '.' IDENT
+| expr '.' ident
 | expr '[' expr ']'
 | expr '(' maybe_exprs ')'        { $$ = mk_node("call", 2, $1, $3); }
 | '(' maybe_exprs ')'
 | CONTINUE                                            { $$ = mk_node("continue", 0); }
-| CONTINUE IDENT                                      { $$ = mk_node("continue-label", 0); }
+| CONTINUE ident                                      { $$ = mk_node("continue-label", 0); }
 | RETURN                                              { $$ = mk_node("return", 0); }
 | RETURN expr                                         { $$ = mk_node("return-expr", 1, $2); }
 | BREAK                                               { $$ = mk_node("break", 0); }
-| BREAK IDENT                                         { $$ = mk_node("break-ident", 0); }
+| BREAK ident                                         { $$ = mk_node("break-ident", 0); }
 | expr '=' expr                    { $$ = mk_node("=", 2, $1, $3); }
 | expr OROR expr                   { $$ = mk_node("||", 2, $1, $3); }
 | expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $3); }
@@ -752,7 +754,7 @@ field_inits
 ;
 
 field_init
-: maybe_mut IDENT ':' expr
+: maybe_mut ident ':' expr
 ;
 
 default_field_init
@@ -820,19 +822,23 @@ static
 : STATIC pat ':' ty '=' expr ';'
 
 lit
-: LIT_CHAR                   { $$ = mk_node("lit-char", 0); }
-| LIT_INT                    { $$ = mk_node("lit-int", 0); }
-| LIT_UINT                   { $$ = mk_node("lit-uint", 0); }
-| LIT_INT_UNSUFFIXED         { $$ = mk_node("lit-int", 0); }
-| LIT_FLOAT                  { $$ = mk_node("lit-float", 0); }
-| LIT_FLOAT_UNSUFFIXED       { $$ = mk_node("lit-float", 0); }
-| LIT_STR                    { $$ = mk_node("lit-str", 0); }
-| LIT_STR_RAW                { $$ = mk_node("lit-str", 0); }
-| TRUE                       { $$ = mk_node("lit-true", 0); }
-| FALSE                      { $$ = mk_node("lit-false", 0); }
+: LIT_CHAR                   { $$ = mk_node("lit-char", 1, mk_atom(yytext)); }
+| LIT_INT                    { $$ = mk_node("lit-int", 1, mk_atom(yytext)); }
+| LIT_UINT                   { $$ = mk_node("lit-uint", 1, mk_atom(yytext)); }
+| LIT_INT_UNSUFFIXED         { $$ = mk_node("lit-int", 1, mk_atom(yytext)); }
+| LIT_FLOAT                  { $$ = mk_node("lit-float", 1, mk_atom(yytext)); }
+| LIT_FLOAT_UNSUFFIXED       { $$ = mk_node("lit-float", 1, mk_atom(yytext)); }
+| LIT_STR                    { $$ = mk_node("lit-str", 1, mk_atom(yytext)); }
+| LIT_STR_RAW                { $$ = mk_node("lit-str-raw", 1, mk_atom(yytext)); }
+| TRUE                       { $$ = mk_node("lit-true", 1, mk_atom(yytext)); }
+| FALSE                      { $$ = mk_node("lit-false", 1, mk_atom(yytext)); }
 ;
 
 str
-: LIT_STR                    { $$ = mk_node("lit-str", 0); }
-| LIT_STR_RAW                { $$ = mk_node("lit-str", 0); }
+: LIT_STR                    { $$ = mk_node("lit-str", 1, mk_atom(yytext)); }
+| LIT_STR_RAW                { $$ = mk_node("lit-str-raw", 1, mk_atom(yytext)); }
+;
+
+ident
+: IDENT                      { $$ = mk_node("ident", 1, mk_atom(yytext)); }
 ;
