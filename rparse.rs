@@ -1,8 +1,14 @@
+#![allow(unused_must_use)]
+
 extern crate syntax;
 extern crate rustc;
 extern crate serialize;
+extern crate getopts;
+
+use getopts::{optflag,getopts};
 
 use std::io;
+use std::os;
 use std::io::Reader;
 use std::vec::FromVec;
 use std::strbuf::StrBuf;
@@ -62,7 +68,81 @@ fn filter_json(j: &mut json::Json) {
     }
 }
 
+static indent_step: int = 4;
+
+fn print_indent(indent: int) {
+    let mut out = io::stdout();
+    for i in range(0, indent) {
+        if i % indent_step == 0 {
+            out.write_str("|");
+        } else {
+            out.write_str(" ");
+        }
+    }
+}
+
+fn print_sexp(indent: int, j: &json::Json) {
+    let mut out = io::stdout();
+
+    match *j {
+
+        json::Object(ref ob) => {
+            {
+                for (k, v) in ob.iter() {
+                    print_indent(indent);
+                    out.write_str("(");
+                    out.write_str(k.to_str());
+                    out.write_str("\n");
+                    print_sexp(indent + indent_step, v);
+                    print_indent(indent);
+                    out.write_str(")\n");
+                }
+            }
+        }
+        json::List(ref ls) => {
+            print_indent(indent);
+            out.write_str("(\n");
+            for v in ls.iter() {
+                print_sexp(indent + indent_step, v);
+            }
+            print_indent(indent);
+            out.write_str(")\n");
+        }
+        json::String(ref s) => {
+            print_indent(indent);
+            out.write_str(s.to_str());
+            out.write_str("\n");
+        }
+        json::Null => {
+            print_indent(indent);
+            out.write_str("<nil>\n");
+        }
+        json::Boolean(true) => {
+            print_indent(indent);
+            out.write_str("true\n");
+        }
+        json::Boolean(false) => {
+            print_indent(indent);
+            out.write_str("false\n");
+        }
+        json::Number(n) => {
+            print_indent(indent);
+            out.write_str(n.to_str());
+            out.write_str("\n");
+        }
+    }
+}
+
 fn main() {
+
+    let args = os::args().move_iter().map(|s| StrBuf::from_owned_str(s)).collect::<Vec<StrBuf>>();
+    let opts = [ optflag("j", "", "dump output in JSON, not sexp") ];
+    let matches = match getopts(args.tail(), opts) {
+        Ok(m) => { m }
+        Err(f) => { fail!(f.to_err_msg()) }
+    };
+    let dump_json = matches.opt_present("j");
+
     match io::stdin().read_to_str() {
         Ok(text) => {
             let opt = config::basic_options();
@@ -78,9 +158,12 @@ fn main() {
             let mut j = b.build().ok().unwrap();
 
             filter_json(&mut j);
-
-            let mut writer = io::stdout();
-            let _ = j.to_pretty_writer(&mut writer as &mut io::Writer);
+            if dump_json {
+                let mut writer = io::stdout();
+                j.to_pretty_writer(&mut writer as &mut io::Writer);
+            } else {
+                print_sexp(0, &j);
+            }
         },
         Err(ioerr) => {
             fail!("I/O Error: {}", ioerr.desc);

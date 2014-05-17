@@ -68,7 +68,7 @@ supposed to successfully parse.
   the flex lexer works the same as rustc's lexer.
 
 * rparse: This tool reads rust code from stdin and uses rustc's parser
-  to print the AST to stdout in JSON format.
+  to print the AST to stdout in either s-expression or JSON format.
 
 ## Further work
 
