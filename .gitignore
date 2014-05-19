@@ -6,3 +6,9 @@ rlex
 lex.yy.c
 parser.c
 parser.h
+parser-lalr
+parser-lalr.output
+parser-lalr.tab.c
+parser-lalr.tab.h
+rparse
+

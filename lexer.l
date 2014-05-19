@@ -1,38 +1,69 @@
 %{
 
 #include <stdio.h>
+#include <ctype.h>
+
+#include "tokens.h"
 
   // # Notes
   // This is lacking the folowing:
-  // * Raw strings (they're not capable of being parsed by a
-  //   regular-expression, though flex may allow some way around that)
-  // * Doc comments (they don't have much of a significance to the 
-  //   grammar and can just be treated as regulra comments)
+  // * Doc comments (they don't have much of a significance to the
+  //   grammar and can just be treated as regular comments)
   //
   // This adds the following tokens not specified in the rust lexer:
-  // * SHEBANG "#!" - this is neccesary to avoid first/first conficts 
+  // * SHEBANG "#!" - this is neccesary to avoid first/first conficts
   //   with attribute parsing
+
+static int num_hashes;
+static int end_hashes;
+static int saw_non_hash;
 
 %}
 
+%option stack
+
 %x str
+%x rawstr
+%x rawstr_esc
+%x pound
+%x shebang_or_attr
 %x ltorchar
 %x linecomment
+%x doc_line
 %x blockcomment
+%x doc_block
 
 isuf (i8|i16|i32|i64|i)
-usuf (u6|u16|u32|u64|u)
+usuf (u8|u16|u32|u64|u)
 
 %%
 
 [ \n\t\r]             { }
-\/\/                  { BEGIN(linecomment); }
+
+\/\/(\/|!)            { BEGIN(doc_line); yymore(); }
+<doc_line>\n          { BEGIN(INITIAL); yyleng--; yytext[yyleng] = 0; return DOC_COMMENT; }
+<doc_line>[^\n]*      { yymore(); }
+
+\/\/|\/\/\/\/         { BEGIN(linecomment); }
 <linecomment>\n       { BEGIN(INITIAL); }
 <linecomment>[^\n]*   { }
-\/\*                  { BEGIN(blockcomment); }
-<blockcomment>[^*]*   { }
-<blockcomment>\*+[^/] { }
-<blockcomment>\*\/    { BEGIN(INITIAL); }
+
+\/\*(\*|\!)[^*]       { yy_push_state(INITIAL); yy_push_state(doc_block); yymore(); }
+<doc_block>\/\*       { yy_push_state(doc_block); yymore(); }
+<doc_block>\*\/       {
+    yy_pop_state();
+    if (yy_top_state() == doc_block) {
+        yymore();
+    } else {
+        return DOC_COMMENT;
+    }
+}
+<doc_block>(.|\n)     { yymore(); }
+
+\/\*                  { yy_push_state(blockcomment); }
+<blockcomment>\/\*    { yy_push_state(blockcomment); }
+<blockcomment>\*\/    { yy_pop_state(); }
+<blockcomment>(.|\n)   { }
 
 _        { return UNDERSCORE; }
 as       { return AS; }
@@ -85,11 +116,11 @@ while    { return WHILE; }
 [0-9][0-9_]*\.[0-9]*([eE][-\+]?[0-9]+)?(f32|f64)   { return LIT_FLOAT; }
 [0-9][0-9_]*(\.[0-9]*)?[eE][-\+]?[0-9]+            { return LIT_FLOAT_UNSUFFIXED; }
 [0-9][0-9_]*(\.[0-9]*)?[eE][-\+]?[0-9]+(f32|f64)   { return LIT_FLOAT; }
-
-0x[0-9a-fA-F_]+ { return LIT_INT; }
-0o[0-8_]+       { return LIT_INT; }
-0b[01_]+        { return LIT_INT; }
-[0-9][0-9_]*    { return LIT_INT; }
+[0-9][0-9_]*(f32|f64)                              { return LIT_FLOAT; }
+0x[0-9a-fA-F_]+ { return LIT_INT_UNSUFFIXED; }
+0o[0-8_]+       { return LIT_INT_UNSUFFIXED; }
+0b[01_]+        { return LIT_INT_UNSUFFIXED; }
+[0-9][0-9_]*    { return LIT_INT_UNSUFFIXED; }
 
 ;      { return ';'; }
 ,      { return ','; }
@@ -103,8 +134,12 @@ while    { return WHILE; }
 \[     { return '['; }
 \]     { return ']'; }
 @      { return '@'; }
-#!     { return SHEBANG; }
-#      { return '#'; }
+#      { BEGIN(pound); }
+<pound>! { BEGIN(shebang_or_attr); }
+<shebang_or_attr>\[ { BEGIN(INITIAL); yyless(0); return SHEBANG; }
+<shebang_or_attr>[^[\n]*\n  { BEGIN(INITIAL); }
+<pound>. { BEGIN(INITIAL); yyless(0); return '#'; }
+
 ~      { return '~'; }
 ::     { return MOD_SEP; }
 :      { return ':'; }
@@ -134,15 +169,84 @@ while    { return WHILE; }
 <ltorchar>.\x27                  { BEGIN(INITIAL); return LIT_CHAR; }
 <ltorchar><<EOF>>                { BEGIN(INITIAL); return -1; }
 
+
+r\x22           { BEGIN(rawstr); yymore(); }
+<rawstr>\x22    { BEGIN(INITIAL); return LIT_STR_RAW; }
+<rawstr>(.|\n)  { yymore(); }
+<rawstr><<EOF>> { return -1; }
+
+r/#             {
+    BEGIN(rawstr_esc);
+    yymore();
+    num_hashes = 0;
+    saw_non_hash = 0;
+    end_hashes = 0;
+}
+
+<rawstr_esc># {
+    if (!saw_non_hash) {
+        num_hashes++;
+    } else if (end_hashes != 0) {
+        end_hashes++;
+        if (end_hashes == num_hashes) {
+            BEGIN(INITIAL);
+            return LIT_STR_RAW;
+        }
+    }
+    yymore();
+}
+
+<rawstr_esc>\x22# {
+    end_hashes = 1;
+    if (end_hashes == num_hashes) {
+        BEGIN(INITIAL);
+        return LIT_STR_RAW;
+    }
+    yymore();
+}
+
+<rawstr_esc>(.|\n) {
+    if (!saw_non_hash) {
+        saw_non_hash = 1;
+    }
+    if (end_hashes != 0) {
+        end_hashes = 0;
+    }
+    yymore();
+}
+
+<rawstr_esc><<EOF>> { return -1; }
+
 \x22                     { BEGIN(str); yymore(); }
-<str>\x22                { BEGIN(INITIAL); return LIT_STR; }
-<str><<EOF>>             { return -1; }
-<str>\\[nrt\\\x27\x220]  { yymore(); }
-<str>\\x[0-9a-fA-F]{2}   { yymore(); }
-<str>\\u[0-9a-fA-F]{4}   { yymore(); }
-<str>\U[0-9a-fA-F]{8}    { yymore(); }
-<str>\\[^nrt\\\x27\x220] { return -1; }
-<str>.                   { yymore(); }
+<str>\x22                {
+    BEGIN(INITIAL);
+    // escaped newlines need to be removed.
+    for (int i = 0, j = yyleng, k = 0; i < j; i++) {
+        if (yytext[i] == '\\') {
+            if (yytext[i + 1] == '\n') {
+                k = i + 2;
+                // with an escaped newline, rustc will ignore all whitespace
+                // until the next non-whitespace character
+                for (; k < yyleng; k++) {
+                    if (!isblank(yytext[k])) {
+                        break;
+                    }
+                }
+                memmove(yytext + i, yytext + k, j - i);
+                j -= k - i;
+            }
+        }
+    }
+    return LIT_STR;
+}
+
+<str><<EOF>>               { return -1; }
+<str>\\[n\nrt\\\x27\x220]  { yymore(); }
+<str>\\x[0-9a-fA-F]{2}     { yymore(); }
+<str>\\u[0-9a-fA-F]{4}     { yymore(); }
+<str>\U[0-9a-fA-F]{8}      { yymore(); }
+<str>\\[^n\nrt\\\x27\x220] { return -1; }
+<str>(.|\n)                { yymore(); }
 
 -\>  { return RARROW; }
 -    { return '-'; }

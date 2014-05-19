@@ -2,13 +2,13 @@ extern crate syntax;
 extern crate rustc;
 extern crate serialize;
 
-use rustc::driver::driver;
-use rustc::driver::session;
 use std::io;
 use std::io::Reader;
 use std::vec::FromVec;
 use serialize::json;
 use serialize::json::{Json, List, String, Object};
+
+use rustc::driver::{driver, session, config};
 
 fn filter_json(j: &mut json::Json) {
     match *j {
@@ -52,9 +52,9 @@ fn filter_json(j: &mut json::Json) {
 fn main() {
     match io::stdin().read_to_str() {
         Ok(text) => {
-            let opt = session::basic_options();
-            let sess = driver::build_session(opt, None);
-            let cfg = driver::build_configuration(&sess);
+            let opt = config::basic_options();
+            let sess = session::build_session(opt, None);
+            let cfg = config::build_configuration(&sess);
             let input = driver::StrInput(text);
             let cr = driver::phase_1_parse_input(&sess, cfg, &input);
 
