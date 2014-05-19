@@ -274,6 +274,7 @@ item_or_view_item
 | item_extern_block
 | item_struct
 | item_enum
+| item_type
 | view_item
 ;
 
@@ -360,6 +361,10 @@ visibility
 idents
 : ident
 | idents ',' ident
+;
+
+item_type
+: TYPE ident maybe_generic_params '=' ty ';'
 ;
 
 item_fn
