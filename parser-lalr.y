@@ -273,25 +273,28 @@ maybe_mut
 ;
 
 item_or_view_item
-: item_use
-| item_fn
+: item_fn
 | item_extern_block
 | item_struct
 | item_enum
+| view_item
 ;
 
 view_item
-: USE view_paths ';'
+: USE view_paths ';'                          { $$ = mk_node("use", 1, $2); }
 ;
 
 view_paths
-: view_path
-| view_paths ',' view_path
+: view_path                                   { $$ = mk_node("view-paths", 0); }
+| view_paths ',' view_path                    { $$ = ext_node($1, 1, $3); }
 ;
 
 view_path
-: path_no_types_allowed
-| path_no_types_allowed '{' idents '}'
+: path_no_types_allowed                       { $$ = mk_node("use-one", 1, $1); }
+| path_no_types_allowed '{' idents '}'        { $$ = mk_node("use-multi", 2, $1, $3); }
+| path_no_types_allowed MOD_SEP '*' ';'       { $$ = mk_node("use-star", 1, $1); }
+| ident '=' path_no_types_allowed ';'         { $$ = mk_node("use-ident", 1, $1, $3); }
+
 ;
 
 item_extern_block
@@ -355,13 +358,6 @@ fn_params_allow_variadic_tail
 visibility
 : PUB
 | /* empty */
-;
-
-item_use
-: USE path_no_types_allowed ';'                              { $$ = mk_node("use", 0); }
-| USE path_no_types_allowed MOD_SEP '{' maybe_idents '}' ';' { $$ = mk_node("use", 0); }
-| USE path_no_types_allowed MOD_SEP '*' ';'                  { $$ = mk_node("use", 0); }
-| USE ident '=' path_no_types_allowed ';'                    { $$ = mk_node("use", 0); }
 ;
 
 maybe_idents
