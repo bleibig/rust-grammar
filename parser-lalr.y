@@ -77,6 +77,7 @@ extern char *yytext;
 %token SHEBANG
 %token STATIC_LIFETIME
 
+
  /*
    Quoting from the Bison manual:
 
@@ -229,16 +230,20 @@ tys
 ;
 
 ty
+: ty_prim
+| ty_closure
+| '(' maybe_tys ')'
+| '_'
+;
+
+ty_prim
 : path_generic_args_and_bounds
 | BOX ty
 | '*' maybe_mut ty
-| '(' maybe_tys ')'
 | '&' maybe_lifetime maybe_mut ty
 | TYPEOF '(' expr ')'
 | ty_bare_fn
-| proc_type
-| ty_closure
-| '_'
+| ty_proc
 ;
 
 ty_bare_fn
@@ -264,7 +269,7 @@ maybe_once
 | %empty
 ;
 
-proc_type
+ty_proc
 : PROC maybe_generic_params fn_params maybe_bounds ret_ty
 ;
 
@@ -280,6 +285,7 @@ item_or_view_item
 | item_enum
 | item_type
 | item_trait
+| item_impl
 | view_item
 ;
 
@@ -404,6 +410,41 @@ maybe_unsafe
 trait_method
 : attrs_and_vis maybe_unsafe FN ident maybe_generic_params fn_decl ';'
 | attrs_and_vis maybe_unsafe FN ident maybe_generic_params fn_decl inner_attrs_and_block
+;
+
+// There are two forms of impl:
+//
+// impl (<...>)? TY { ... }
+// impl (<...>)? TRAIT for TY { ... }
+//
+// Unfortunately since TY can begin with '<' itself -- as part of a
+// closure type -- there's an s/r conflict when we see '<' after IMPL:
+// should we reduce one of the early rules of TY (such as maybe_once)
+// or shall we continue shifting into the generic_params list for the
+// impl?
+//
+// The production parser disambiguates a different case here by
+// permitting / requiring the user to provide parens around types when
+// they are ambiguous with traits. We do the same here, regrettably,
+// by splitting ty into ty and ty_prim.
+item_impl
+: IMPL maybe_generic_params ty_prim '{' maybe_impl_methods '}'
+| IMPL maybe_generic_params '(' ty ')' '{' maybe_impl_methods '}'
+| IMPL maybe_generic_params trait_ref FOR ty '{' maybe_impl_methods '}'
+;
+
+maybe_impl_methods
+: impl_methods
+| %empty
+;
+
+impl_methods
+: impl_method
+| impl_methods impl_method
+;
+
+impl_method
+: attrs_and_vis maybe_unsafe FN ident maybe_generic_params inner_attrs_and_block
 ;
 
 item_fn
