@@ -139,7 +139,7 @@ crate
 
 maybe_inner_attrs
 : inner_attrs
-| /* empty */
+| %empty
 ;
 
 inner_attrs
@@ -153,7 +153,7 @@ inner_attr
 
 maybe_outer_attrs
 : outer_attrs
-| /* empty */
+| %empty
 ;
 
 outer_attrs
@@ -178,7 +178,7 @@ meta_seq
 
 maybe_mod_items
 : mod_items
-| /* empty */
+| %empty
 ;
 
 mod_items
@@ -197,12 +197,12 @@ block_item
 
 maybe_ty_ascription
 : ':' ty
-| /* empty */
+| %empty
 ;
 
 maybe_init_expr
 : '=' expr
-| /* empty */
+| %empty
 ;
 
 pats_or
@@ -216,7 +216,7 @@ pat
 
 maybe_tys
 : tys
-| /* empty */
+| %empty
 ;
 
 tys
@@ -257,7 +257,7 @@ ty_closure
 
 maybe_once
 : ONCE
-| /* empty */
+| %empty
 ;
 
 proc_type
@@ -266,7 +266,7 @@ proc_type
 
 maybe_mut
 : MUT
-| /* empty */
+| %empty
 ;
 
 item_or_view_item
@@ -302,7 +302,7 @@ item_extern_block
 
 maybe_abi
 : str
-| /* empty */
+| %empty
 ;
 
 item_extern_crate
@@ -316,7 +316,7 @@ item_foreign_mod
 
 maybe_foreign_items
 : foreign_items
-| /* empty */
+| %empty
 ;
 
 foreign_items
@@ -354,12 +354,7 @@ fn_params_allow_variadic_tail
 
 visibility
 : PUB
-| /* empty */
-;
-
-maybe_idents
-: idents
-| /* empty */
+| %empty
 ;
 
 idents
@@ -381,7 +376,7 @@ fn_params
 
 maybe_params
 : params
-| /* empty */
+| %empty
 ;
 
 params
@@ -405,23 +400,18 @@ inferrable_param
 ret_ty
 : RARROW '!'
 | RARROW ty
-| /* empty */
+| %empty
 ;
 
 maybe_generic_params
 : generic_params
-| /* empty */
+| %empty
 ;
 
 generic_params
 : '<' lifetimes '>'
 | '<' lifetimes ',' ty_params '>'
 | '<' ty_params '>'
-;
-
-maybe_ty_params
-: ty_params
-| /* empty */
 ;
 
 ty_params
@@ -490,7 +480,7 @@ ty_param
 
 maybe_unsized
 : unsized
-| /* empty */
+| %empty
 ;
 
 unsized
@@ -499,7 +489,7 @@ unsized
 
 maybe_bounds
 : ':' bounds
-| /* empty */
+| %empty
 ;
 
 bounds
@@ -514,7 +504,7 @@ bound
 
 maybe_ty_default
 : '=' ty
-| /* empty */
+| %empty
 ;
 
 lifetimes_or_tys
@@ -529,12 +519,7 @@ lifetime_or_ty
 
 maybe_lifetime
 : LIFETIME
-| /* empty */
-;
-
-maybe_lifetimes
-: lifetimes
-| /* empty */
+| %empty
 ;
 
 lifetimes
@@ -563,7 +548,7 @@ struct_args
 struct_decl_fields
 : struct_decl_field
 | struct_decl_fields ',' struct_decl_field
-| /* empty */
+| %empty
 ;
 
 struct_decl_field
@@ -588,7 +573,7 @@ item_enum
 enum_defs
 : enum_def
 | enum_defs ',' enum_def
-| /* empty */
+| %empty
 ;
 
 enum_def
@@ -600,7 +585,7 @@ enum_args
 | '{' struct_decl_fields ',' '}'
 | '(' maybe_tys ')'
 | '=' expr
-| /* empty */
+| %empty
 ;
 
 ///////////////////////////////////////////////////////////////////////
@@ -651,7 +636,7 @@ stmts
 | stmts ';'
 | stmts ';' nonblock_expr_stmt                     { $$ = ext_node($1, 1, $3); }
 | nonblock_expr_stmt                               { $$ = mk_node("stmts", 1, $1); }
-| /* empty */                                      { $$ = mk_node("stmts", 0); }
+| %empty                                      { $$ = mk_node("stmts", 0); }
 ;
 
 nonblock_expr_stmt
@@ -661,7 +646,7 @@ nonblock_expr_stmt
 
 maybe_exprs
 : exprs
-| /* empty */
+| %empty
 ;
 
 exprs
@@ -769,7 +754,7 @@ field_init
 default_field_init
 : ','
 | ',' DOTDOT expr
-| /* empty */
+| %empty
 ;
 
 block_expr
@@ -798,7 +783,7 @@ match_clause
 
 maybe_guard
 : IF expr
-| /* empty */
+| %empty
 ;
 
 expr_if
