@@ -658,7 +658,6 @@ exprs
 
 nonblock_nonprefix_expr
 : lit
-| path_generic_args_without_colons '{' field_inits default_field_init '}'
 | nonblock_nonprefix_expr '.' ident
 | nonblock_nonprefix_expr '[' expr ']'
 | nonblock_nonprefix_expr '(' maybe_exprs ')'
@@ -689,11 +688,11 @@ nonblock_nonprefix_expr
 | nonblock_nonprefix_expr '*' expr                    { $$ = mk_node("*", 2, $1, $3); }
 | nonblock_nonprefix_expr '/' expr                    { $$ = mk_node("/", 2, $1, $3); }
 | nonblock_nonprefix_expr '%' expr                    { $$ = mk_node("%", 2, $1, $3); }
+| struct_expr
 ;
 
 expr
 : lit
-| path_generic_args_without_colons '{' field_inits default_field_init '}'
 | expr '.' ident
 | expr '[' expr ']'
 | expr '(' maybe_exprs ')'        { $$ = mk_node("call", 2, $1, $3); }
@@ -724,6 +723,7 @@ expr
 | expr '*' expr                    { $$ = mk_node("*", 2, $1, $3); }
 | expr '/' expr                    { $$ = mk_node("/", 2, $1, $3); }
 | expr '%' expr                    { $$ = mk_node("%", 2, $1, $3); }
+| struct_expr
 | block_expr
 | lambda_expr
 ;
@@ -741,7 +741,7 @@ lambda_expr
 ;
 
 struct_expr
-: '{' field_inits default_field_init '}'
+: path_generic_args_without_colons '{' field_inits default_field_init '}'
 ;
 
 field_inits
