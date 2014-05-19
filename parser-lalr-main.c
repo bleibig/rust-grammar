@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define YYSTYPE struct node *
 
@@ -11,6 +12,7 @@ extern int yydebug;
 struct node {
   struct node *next;
   struct node *prev;
+  int own_string;
   char const *name;
   int n_elems;
   struct node *elems[];
@@ -27,6 +29,7 @@ struct node *mk_node(char const *name, int n, ...) {
 
   printf("# New %d-ary node: %s = %p\n", n, name, nd);
 
+  nd->own_string = 0;
   nd->prev = NULL;
   nd->next = nodes;
   if (nodes) {
@@ -46,6 +49,12 @@ struct node *mk_node(char const *name, int n, ...) {
   }
   va_end(ap);
   n_nodes++;
+  return nd;
+}
+
+struct node *mk_atom(char *name) {
+  struct node *nd = mk_node((char const *)strdup(name), 0);
+  nd->own_string = 1;
   return nd;
 }
 
@@ -84,21 +93,31 @@ struct node *ext_node(struct node *nd, int n, ...) {
   return nd;
 }
 
+int const indent_step = 4;
+
 void print_indent(int depth) {
-  while (depth--) {
-    printf(" ");
+  while (depth) {
+    if (depth-- % indent_step == 0) {
+      printf("|");
+    } else {
+      printf(" ");
+    }
   }
 }
 
 void print_node(struct node *n, int depth) {
   int i = 0;
   print_indent(depth);
-  printf("(%s\n", n->name);
-  for (i = 0; i < n->n_elems; ++i) {
-    print_node(n->elems[i], depth + 4);
+  if (n->n_elems == 0) {
+    printf("%s\n", n->name);
+  } else {
+    printf("(%s\n", n->name);
+    for (i = 0; i < n->n_elems; ++i) {
+      print_node(n->elems[i], depth + indent_step);
+    }
+    print_indent(depth);
+    printf(")\n");
   }
-  print_indent(depth);
-  printf(")\n");
 }
 
 int main() {
@@ -113,6 +132,9 @@ int main() {
   while (nodes) {
     tmp = nodes;
     nodes = tmp->next;
+    if (tmp->own_string) {
+      free((void*)tmp->name);
+    }
     free(tmp);
   }
   return ret;
