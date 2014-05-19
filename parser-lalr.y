@@ -93,6 +93,15 @@ extern char *yytext;
 // all potential ambiguities are scrutinized and eliminated manually.
 %expect 0
 
+// IDENT needs to be lower than '{' so that 'foo {' is shifted when
+// trying to decide if we've got a struct-construction expr (esp. in
+// contexts like 'if foo { .')
+//
+// IDENT also needs to be lower precedence than '<' so that '<' in
+// 'foo:bar . <' is shifted (in a trait reference occurring in a
+// bounds list), parsing as foo:(bar<baz>) rather than (foo:bar)<baz>.
+%precedence IDENT
+
 // Binops & unops, and their precedences
 %left '='
 %left OROR
@@ -106,27 +115,15 @@ extern char *yytext;
 %left '+' '-'
 %left AS
 %left '*' '/' '%'
-%nonassoc '~'
-
-// CONTINUE needs to be lower-precedence than IDENT so that 'continue
-// foo' is shifted. Similarly, IDENT needs to be lower than '{' so
-// that 'foo {' is shifted when trying to decide if we've got a
-// struct-construction expr (esp. in contexts like 'if foo { .')
-%nonassoc CONTINUE BREAK
-%nonassoc IDENT
 
 // RETURN needs to be lower-precedence than all the block-expr
 // starting keywords, so that juxtapositioning them in a stmts
 // like 'return if foo { 10 } else { 22 }' shifts 'if' rather
 // than reducing a no-argument return.
-%nonassoc RETURN
-%nonassoc FOR IF LOOP MATCH UNSAFE WHILE
+%precedence RETURN
+%precedence FOR IF LOOP MATCH UNSAFE WHILE
 
-%nonassoc '{' '}'
-%nonassoc '[' ']'
-%nonassoc '(' ')'
-%left '.'
-%nonassoc ';'
+%precedence '{' '[' '(' '.'
 
 %start rust
 
@@ -228,7 +225,7 @@ tys
 ;
 
 ty
-: path_generic_args_without_colons
+: path_generic_args_and_bounds
 | BOX ty
 | '*' maybe_mut ty
 | '(' maybe_tys ')'
@@ -433,6 +430,9 @@ ty_params
 ;
 
 // A path with no type parameters; e.g. `foo::bar::Baz`
+//
+// These show up in 'use' view-items, because these are processed
+// without respect to types.
 path_no_types_allowed
 : ident
 | path_no_types_allowed MOD_SEP ident
@@ -440,16 +440,29 @@ path_no_types_allowed
 
 // A path with a lifetime and type parameters, with no double colons
 // before the type parameters; e.g. `foo::bar<'a>::Baz<T>`
+//
+// These show up in "trait references", the components of
+// type-parameter bounds lists, as well as in the prefix of the
+// path_generic_args_and_bounds rule, which is the full form of a
+// named typed expression.
+//
+// They do not have (nor need) an extra '::' before '<' because
+// unlike in expr context, there are no "less-than" type exprs to
+// be ambiguous with.
 path_generic_args_without_colons
-: ident maybe_generic_args
-| path_generic_args_without_colons MOD_SEP ident maybe_generic_args
+: IDENT
+| IDENT '<' generic_args '>'
+| path_generic_args_without_colons MOD_SEP IDENT
+| path_generic_args_without_colons MOD_SEP IDENT '<' generic_args '>'
 ;
 
 // A path with a lifetime and type parameters with double colons before
 // the type parameters; e.g. `foo::bar::<'a>::Baz::<T>`
+//
+// These show up in expr context, in order to disambiguate from "less-than"
+// expressions.
 path_generic_args_with_colons
 : ident
-| maybe_generic_args
 | path_generic_args_with_colons MOD_SEP ident
 | path_generic_args_with_colons MOD_SEP maybe_generic_args
 ;
@@ -457,14 +470,14 @@ path_generic_args_with_colons
 // A path with a lifetime and type parameters with bounds before the last
 // set of type parameters only; e.g. `foo::bar<'a>::Baz:X+Y<T>` This
 // form does not use extra double colons.
+//
 path_generic_args_and_bounds
-: ident maybe_bounds maybe_generic_args
-| path_generic_args_and_bounds MOD_SEP ident maybe_bounds maybe_generic_args
+: path_generic_args_without_colons maybe_bounds maybe_generic_args
 ;
 
 maybe_generic_args
 : generic_args
-| /* empty */
+| %empty
 ;
 
 generic_args
@@ -741,7 +754,7 @@ lambda_expr
 ;
 
 struct_expr
-: path_generic_args_without_colons '{' field_inits default_field_init '}'
+: path_generic_args_with_colons '{' field_inits default_field_init '}'
 ;
 
 field_inits
