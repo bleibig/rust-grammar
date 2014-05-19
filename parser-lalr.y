@@ -186,8 +186,12 @@ mod_items
 | mod_items mod_item                     { $$ = ext_node($1, 1, $2); }
 ;
 
+attrs_and_vis
+: maybe_outer_attrs visibility
+;
+
 mod_item
-: maybe_outer_attrs visibility item_or_view_item    { $$ = $3; }
+: attrs_and_vis item_or_view_item    { $$ = $2; }
 ;
 
 block_item
@@ -275,6 +279,7 @@ item_or_view_item
 | item_struct
 | item_enum
 | item_type
+| item_trait
 | view_item
 ;
 
@@ -365,6 +370,40 @@ idents
 
 item_type
 : TYPE ident maybe_generic_params '=' ty ';'
+;
+
+item_trait
+: TRAIT ident maybe_generic_params maybe_supertraits '{' maybe_trait_methods '}'
+;
+
+maybe_supertraits
+: ':' supertraits
+| %empty
+;
+
+supertraits
+: trait_ref
+| supertraits '+' trait_ref
+;
+
+maybe_trait_methods
+: trait_methods
+| %empty
+;
+
+trait_methods
+: trait_method
+| trait_methods trait_method
+;
+
+maybe_unsafe
+: UNSAFE
+| %empty
+;
+
+trait_method
+: attrs_and_vis maybe_unsafe FN ident maybe_generic_params fn_decl ';'
+| attrs_and_vis maybe_unsafe FN ident maybe_generic_params fn_decl inner_attrs_and_block
 ;
 
 item_fn
@@ -557,7 +596,7 @@ struct_decl_fields
 ;
 
 struct_decl_field
-: maybe_outer_attrs visibility ident ':' ty
+: attrs_and_vis ident ':' ty
 ;
 
 struct_tuple_fields
@@ -582,7 +621,7 @@ enum_defs
 ;
 
 enum_def
-: maybe_outer_attrs visibility ident enum_args
+: attrs_and_vis ident enum_args
 ;
 
 enum_args
