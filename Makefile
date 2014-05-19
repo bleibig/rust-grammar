@@ -1,5 +1,5 @@
 CC=clang
-LDFLAGS=-lfl
+LDFLAGS=-lfl -lm
 ifeq ($(shell uname),Darwin)
 	LDFLAGS=-ll
 endif
