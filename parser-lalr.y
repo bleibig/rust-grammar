@@ -39,7 +39,6 @@ extern char *yytext;
 // keywords
 %token SELF
 %token STATIC
-%token SUPER
 %token AS
 %token BREAK
 %token CRATE
@@ -73,6 +72,7 @@ extern char *yytext;
 %token PROC
 %token BOX
 %token TYPEOF
+%token DOC_COMMENT
 
 %token SHEBANG
 %token STATIC_LIFETIME

@@ -64,6 +64,7 @@
 %token PROC;
 %token BOX;
 %token TYPEOF;
+%token DOC_COMMENT;
 
 %token SHEBANG;
 %token STATIC_LIFETIME;
