@@ -77,6 +77,7 @@ extern char *yytext;
 %token SHEBANG
 %token STATIC_LIFETIME
 
+
  /*
    Quoting from the Bison manual:
 
@@ -93,6 +94,15 @@ extern char *yytext;
 // all potential ambiguities are scrutinized and eliminated manually.
 %expect 0
 
+// IDENT needs to be lower than '{' so that 'foo {' is shifted when
+// trying to decide if we've got a struct-construction expr (esp. in
+// contexts like 'if foo { .')
+//
+// IDENT also needs to be lower precedence than '<' so that '<' in
+// 'foo:bar . <' is shifted (in a trait reference occurring in a
+// bounds list), parsing as foo:(bar<baz>) rather than (foo:bar)<baz>.
+%precedence IDENT
+
 // Binops & unops, and their precedences
 %left '='
 %left OROR
@@ -106,27 +116,15 @@ extern char *yytext;
 %left '+' '-'
 %left AS
 %left '*' '/' '%'
-%nonassoc '~'
-
-// CONTINUE needs to be lower-precedence than IDENT so that 'continue
-// foo' is shifted. Similarly, IDENT needs to be lower than '{' so
-// that 'foo {' is shifted when trying to decide if we've got a
-// struct-construction expr (esp. in contexts like 'if foo { .')
-%nonassoc CONTINUE BREAK
-%nonassoc IDENT
 
 // RETURN needs to be lower-precedence than all the block-expr
 // starting keywords, so that juxtapositioning them in a stmts
 // like 'return if foo { 10 } else { 22 }' shifts 'if' rather
 // than reducing a no-argument return.
-%nonassoc RETURN
-%nonassoc FOR IF LOOP MATCH UNSAFE WHILE
+%precedence RETURN
+%precedence FOR IF LOOP MATCH UNSAFE WHILE
 
-%nonassoc '{' '}'
-%nonassoc '[' ']'
-%nonassoc '(' ')'
-%left '.'
-%nonassoc ';'
+%precedence '{' '[' '(' '.'
 
 %start rust
 
@@ -142,7 +140,7 @@ crate
 
 maybe_inner_attrs
 : inner_attrs
-| /* empty */
+| %empty
 ;
 
 inner_attrs
@@ -156,7 +154,7 @@ inner_attr
 
 maybe_outer_attrs
 : outer_attrs
-| /* empty */
+| %empty
 ;
 
 outer_attrs
@@ -181,7 +179,7 @@ meta_seq
 
 maybe_mod_items
 : mod_items
-| /* empty */
+| %empty
 ;
 
 mod_items
@@ -189,8 +187,12 @@ mod_items
 | mod_items mod_item                     { $$ = ext_node($1, 1, $2); }
 ;
 
+attrs_and_vis
+: maybe_outer_attrs visibility
+;
+
 mod_item
-: maybe_outer_attrs visibility item_or_view_item    { $$ = $3; }
+: attrs_and_vis item_or_view_item    { $$ = $2; }
 ;
 
 block_item
@@ -200,12 +202,12 @@ block_item
 
 maybe_ty_ascription
 : ':' ty
-| /* empty */
+| %empty
 ;
 
 maybe_init_expr
 : '=' expr
-| /* empty */
+| %empty
 ;
 
 pats_or
@@ -214,12 +216,66 @@ pats_or
 ;
 
 pat
-: ident
+: '_'
+| '&' pat
+| '(' pat_tup ')'
+| '[' pat_vec ']'
+| ident '@' pat
+| lit_or_path
+| lit_or_path DOTDOT lit_or_path
+| path_expr '{' pat_struct '}'
+| path_expr '(' DOTDOT ')'
+| path_expr '(' pat_tup ')'
+| REF ident
+| MUT ident
+| BOX pat
+;
+
+lit_or_path
+: path_expr
+| lit
+;
+
+pat_field_name
+: MUT IDENT
+| REF IDENT
+| IDENT
+;
+
+pat_field
+: pat_field_name
+| pat_field_name ':' pat
+;
+
+pat_fields
+: pat_field
+| pat_fields ',' pat_field
+;
+
+pat_struct
+: pat_fields
+| pat_fields ',' DOTDOT
+| DOTDOT
+;
+
+pat_tup
+: pat
+| pat_tup ',' pat
+;
+
+pat_vec
+: pat_vec_elt
+| pat_vec ',' pat_vec_elt
+;
+
+pat_vec_elt
+: pat
+| DOTDOT ident
 ;
 
 maybe_tys
 : tys
-| /* empty */
+| %empty
 ;
 
 tys
@@ -228,16 +284,23 @@ tys
 ;
 
 ty
-: path_generic_args_without_colons
+: ty_prim
+| ty_closure
+| '(' maybe_tys ')'
+;
+
+ty_prim
+: path_generic_args_and_bounds
+| MOD_SEP path_generic_args_and_bounds
 | BOX ty
 | '*' maybe_mut ty
-| '(' maybe_tys ')'
 | '&' maybe_lifetime maybe_mut ty
+| '[' ty ']'
+| '[' ty ',' DOTDOT expr ']'
 | TYPEOF '(' expr ')'
-| ty_bare_fn
-| proc_type
-| ty_closure
 | '_'
+| ty_bare_fn
+| ty_proc
 ;
 
 ty_bare_fn
@@ -260,38 +323,44 @@ ty_closure
 
 maybe_once
 : ONCE
-| /* empty */
+| %empty
 ;
 
-proc_type
+ty_proc
 : PROC maybe_generic_params fn_params maybe_bounds ret_ty
 ;
 
 maybe_mut
 : MUT
-| /* empty */
+| %empty
 ;
 
 item_or_view_item
-: item_use
-| item_fn
+: item_fn
 | item_extern_block
 | item_struct
 | item_enum
+| item_type
+| item_trait
+| item_impl
+| view_item
 ;
 
 view_item
-: USE view_paths ';'
+: USE view_paths ';'                          { $$ = mk_node("use", 1, $2); }
 ;
 
 view_paths
-: view_path
-| view_paths ',' view_path
+: view_path                                   { $$ = mk_node("view-paths", 0); }
+| view_paths ',' view_path                    { $$ = ext_node($1, 1, $3); }
 ;
 
 view_path
-: path_no_types_allowed
-| path_no_types_allowed '{' idents '}'
+: path_no_types_allowed                       { $$ = mk_node("use-one", 1, $1); }
+| path_no_types_allowed '{' idents '}'        { $$ = mk_node("use-multi", 2, $1, $3); }
+| path_no_types_allowed MOD_SEP '*' ';'       { $$ = mk_node("use-star", 1, $1); }
+| ident '=' path_no_types_allowed ';'         { $$ = mk_node("use-ident", 1, $1, $3); }
+
 ;
 
 item_extern_block
@@ -302,7 +371,7 @@ item_extern_block
 
 maybe_abi
 : str
-| /* empty */
+| %empty
 ;
 
 item_extern_crate
@@ -316,7 +385,7 @@ item_foreign_mod
 
 maybe_foreign_items
 : foreign_items
-| /* empty */
+| %empty
 ;
 
 foreign_items
@@ -354,24 +423,85 @@ fn_params_allow_variadic_tail
 
 visibility
 : PUB
-| /* empty */
-;
-
-item_use
-: USE path_no_types_allowed ';'                              { $$ = mk_node("use", 0); }
-| USE path_no_types_allowed MOD_SEP '{' maybe_idents '}' ';' { $$ = mk_node("use", 0); }
-| USE path_no_types_allowed MOD_SEP '*' ';'                  { $$ = mk_node("use", 0); }
-| USE ident '=' path_no_types_allowed ';'                    { $$ = mk_node("use", 0); }
-;
-
-maybe_idents
-: idents
-| /* empty */
+| %empty
 ;
 
 idents
 : ident
 | idents ',' ident
+;
+
+item_type
+: TYPE ident maybe_generic_params '=' ty ';'
+;
+
+item_trait
+: TRAIT ident maybe_generic_params maybe_supertraits '{' maybe_trait_methods '}'
+;
+
+maybe_supertraits
+: ':' supertraits
+| %empty
+;
+
+supertraits
+: trait_ref
+| supertraits '+' trait_ref
+;
+
+maybe_trait_methods
+: trait_methods
+| %empty
+;
+
+trait_methods
+: trait_method
+| trait_methods trait_method
+;
+
+maybe_unsafe
+: UNSAFE
+| %empty
+;
+
+trait_method
+: attrs_and_vis maybe_unsafe FN ident maybe_generic_params fn_decl ';'
+| attrs_and_vis maybe_unsafe FN ident maybe_generic_params fn_decl inner_attrs_and_block
+;
+
+// There are two forms of impl:
+//
+// impl (<...>)? TY { ... }
+// impl (<...>)? TRAIT for TY { ... }
+//
+// Unfortunately since TY can begin with '<' itself -- as part of a
+// closure type -- there's an s/r conflict when we see '<' after IMPL:
+// should we reduce one of the early rules of TY (such as maybe_once)
+// or shall we continue shifting into the generic_params list for the
+// impl?
+//
+// The production parser disambiguates a different case here by
+// permitting / requiring the user to provide parens around types when
+// they are ambiguous with traits. We do the same here, regrettably,
+// by splitting ty into ty and ty_prim.
+item_impl
+: IMPL maybe_generic_params ty_prim '{' maybe_impl_methods '}'
+| IMPL maybe_generic_params '(' ty ')' '{' maybe_impl_methods '}'
+| IMPL maybe_generic_params trait_ref FOR ty '{' maybe_impl_methods '}'
+;
+
+maybe_impl_methods
+: impl_methods
+| %empty
+;
+
+impl_methods
+: impl_method
+| impl_methods impl_method
+;
+
+impl_method
+: attrs_and_vis maybe_unsafe FN ident maybe_generic_params inner_attrs_and_block
 ;
 
 item_fn
@@ -388,7 +518,7 @@ fn_params
 
 maybe_params
 : params
-| /* empty */
+| %empty
 ;
 
 params
@@ -412,12 +542,12 @@ inferrable_param
 ret_ty
 : RARROW '!'
 | RARROW ty
-| /* empty */
+| %empty
 ;
 
 maybe_generic_params
 : generic_params
-| /* empty */
+| %empty
 ;
 
 generic_params
@@ -426,17 +556,15 @@ generic_params
 | '<' ty_params '>'
 ;
 
-maybe_ty_params
-: ty_params
-| /* empty */
-;
-
 ty_params
 : ty_param
 | ty_params ',' ty_param
 ;
 
 // A path with no type parameters; e.g. `foo::bar::Baz`
+//
+// These show up in 'use' view-items, because these are processed
+// without respect to types.
 path_no_types_allowed
 : ident
 | path_no_types_allowed MOD_SEP ident
@@ -444,31 +572,48 @@ path_no_types_allowed
 
 // A path with a lifetime and type parameters, with no double colons
 // before the type parameters; e.g. `foo::bar<'a>::Baz<T>`
+//
+// These show up in "trait references", the components of
+// type-parameter bounds lists, as well as in the prefix of the
+// path_generic_args_and_bounds rule, which is the full form of a
+// named typed expression.
+//
+// They do not have (nor need) an extra '::' before '<' because
+// unlike in expr context, there are no "less-than" type exprs to
+// be ambiguous with.
 path_generic_args_without_colons
-: ident maybe_generic_args
-| path_generic_args_without_colons MOD_SEP ident maybe_generic_args
+: %prec IDENT
+  ident
+| %prec IDENT
+  ident generic_args
+| %prec IDENT
+  path_generic_args_without_colons MOD_SEP ident
+| %prec IDENT
+  path_generic_args_without_colons MOD_SEP ident generic_args
 ;
 
 // A path with a lifetime and type parameters with double colons before
 // the type parameters; e.g. `foo::bar::<'a>::Baz::<T>`
+//
+// These show up in expr context, in order to disambiguate from "less-than"
+// expressions.
 path_generic_args_with_colons
 : ident
-| maybe_generic_args
 | path_generic_args_with_colons MOD_SEP ident
-| path_generic_args_with_colons MOD_SEP maybe_generic_args
+| path_generic_args_with_colons MOD_SEP generic_args
 ;
 
 // A path with a lifetime and type parameters with bounds before the last
 // set of type parameters only; e.g. `foo::bar<'a>::Baz:X+Y<T>` This
 // form does not use extra double colons.
+//
 path_generic_args_and_bounds
-: ident maybe_bounds maybe_generic_args
-| path_generic_args_and_bounds MOD_SEP ident maybe_bounds maybe_generic_args
+: path_generic_args_without_colons maybe_bounds maybe_generic_args
 ;
 
 maybe_generic_args
 : generic_args
-| /* empty */
+| %empty
 ;
 
 generic_args
@@ -481,7 +626,7 @@ ty_param
 
 maybe_unsized
 : unsized
-| /* empty */
+| %empty
 ;
 
 unsized
@@ -490,7 +635,7 @@ unsized
 
 maybe_bounds
 : ':' bounds
-| /* empty */
+| %empty
 ;
 
 bounds
@@ -505,7 +650,7 @@ bound
 
 maybe_ty_default
 : '=' ty
-| /* empty */
+| %empty
 ;
 
 lifetimes_or_tys
@@ -520,12 +665,7 @@ lifetime_or_ty
 
 maybe_lifetime
 : LIFETIME
-| /* empty */
-;
-
-maybe_lifetimes
-: lifetimes
-| /* empty */
+| %empty
 ;
 
 lifetimes
@@ -554,11 +694,11 @@ struct_args
 struct_decl_fields
 : struct_decl_field
 | struct_decl_fields ',' struct_decl_field
-| /* empty */
+| %empty
 ;
 
 struct_decl_field
-: maybe_outer_attrs visibility ident ':' ty
+: attrs_and_vis ident ':' ty
 ;
 
 struct_tuple_fields
@@ -579,11 +719,11 @@ item_enum
 enum_defs
 : enum_def
 | enum_defs ',' enum_def
-| /* empty */
+| %empty
 ;
 
 enum_def
-: maybe_outer_attrs visibility ident enum_args
+: attrs_and_vis ident enum_args
 ;
 
 enum_args
@@ -591,7 +731,7 @@ enum_args
 | '{' struct_decl_fields ',' '}'
 | '(' maybe_tys ')'
 | '=' expr
-| /* empty */
+| %empty
 ;
 
 ///////////////////////////////////////////////////////////////////////
@@ -642,7 +782,7 @@ stmts
 | stmts ';'
 | stmts ';' nonblock_expr_stmt                     { $$ = ext_node($1, 1, $3); }
 | nonblock_expr_stmt                               { $$ = mk_node("stmts", 1, $1); }
-| /* empty */                                      { $$ = mk_node("stmts", 0); }
+| %empty                                      { $$ = mk_node("stmts", 0); }
 ;
 
 nonblock_expr_stmt
@@ -652,7 +792,7 @@ nonblock_expr_stmt
 
 maybe_exprs
 : exprs
-| /* empty */
+| %empty
 ;
 
 exprs
@@ -660,9 +800,16 @@ exprs
 | exprs ',' expr                                              { $$ = ext_node($1, 1, $2); }
 ;
 
+path_expr
+: path_generic_args_with_colons
+| MOD_SEP path_generic_args_with_colons
+;
+
 nonblock_nonprefix_expr
 : lit
-| path_generic_args_without_colons '{' field_inits default_field_init '}'
+| %prec IDENT
+  path_expr
+| path_expr '{' field_inits default_field_init '}'
 | nonblock_nonprefix_expr '.' ident
 | nonblock_nonprefix_expr '[' expr ']'
 | nonblock_nonprefix_expr '(' maybe_exprs ')'
@@ -697,7 +844,9 @@ nonblock_nonprefix_expr
 
 expr
 : lit
-| path_generic_args_without_colons '{' field_inits default_field_init '}'
+| %prec IDENT
+  path_expr
+| path_expr '{' field_inits default_field_init '}'
 | expr '.' ident
 | expr '[' expr ']'
 | expr '(' maybe_exprs ')'        { $$ = mk_node("call", 2, $1, $3); }
@@ -744,10 +893,6 @@ lambda_expr
 | '|' inferrable_params '|' expr   { $$ = mk_node("lambda", 2, $2, $4); }
 ;
 
-struct_expr
-: '{' field_inits default_field_init '}'
-;
-
 field_inits
 : field_init
 | field_inits ',' field_init
@@ -760,7 +905,7 @@ field_init
 default_field_init
 : ','
 | ',' DOTDOT expr
-| /* empty */
+| %empty
 ;
 
 block_expr
@@ -789,7 +934,7 @@ match_clause
 
 maybe_guard
 : IF expr
-| /* empty */
+| %empty
 ;
 
 expr_if
