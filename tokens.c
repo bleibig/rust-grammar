@@ -58,7 +58,7 @@ void print_token(int token) {
   case LIT_INT_UNSUFFIXED: printf("LIT_INT_UNSUFFIXED(%si64)", desugar_num(yytext, "")); break;
   case LIT_FLOAT: printf("LIT_FLOAT(%s)", yytext); break;
   case LIT_FLOAT_UNSUFFIXED: printf("LIT_FLOAT_UNSUFFIXED(%s%s)", yytext, (yytext[strlen(yytext) - 1] == '.') ? "0" : ""); break;
-  case LIT_STR: printf("LIT_STR(contents)", yytext); break;
+  case LIT_STR: printf("LIT_STR(%s)", yytext); break;
   case LIT_STR_RAW: printf("LIT_STR_RAW(%s)", yytext); break;
   case IDENT: printf("IDENT(%s)", yytext); break;
   case UNDERSCORE: printf("UNDERSCORE"); break;
