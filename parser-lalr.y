@@ -216,7 +216,61 @@ pats_or
 ;
 
 pat
-: ident
+: '_'
+| '&' pat
+| '(' pat_tup ')'
+| '[' pat_vec ']'
+| ident '@' pat
+| lit_or_path
+| lit_or_path DOTDOT lit_or_path
+| path_generic_args_with_colons '{' pat_struct '}'
+| path_generic_args_with_colons '(' DOTDOT ')'
+| path_generic_args_with_colons '(' pat_tup ')'
+| REF ident
+| MUT ident
+| BOX pat
+;
+
+lit_or_path
+: path_generic_args_with_colons
+| lit
+;
+
+pat_field_name
+: MUT IDENT
+| REF IDENT
+| IDENT
+;
+
+pat_field
+: pat_field_name
+| pat_field_name ':' pat
+;
+
+pat_fields
+: pat_field
+| pat_fields ',' pat_field
+;
+
+pat_struct
+: pat_fields
+| pat_fields ',' DOTDOT
+| DOTDOT
+;
+
+pat_tup
+: pat
+| pat_tup ',' pat
+;
+
+pat_vec
+: pat_vec_elt
+| pat_vec ',' pat_vec_elt
+;
+
+pat_vec_elt
+: pat
+| DOTDOT ident
 ;
 
 maybe_tys
@@ -525,10 +579,14 @@ path_no_types_allowed
 // unlike in expr context, there are no "less-than" type exprs to
 // be ambiguous with.
 path_generic_args_without_colons
-: IDENT
-| IDENT '<' generic_args '>'
-| path_generic_args_without_colons MOD_SEP IDENT
-| path_generic_args_without_colons MOD_SEP IDENT '<' generic_args '>'
+: %prec IDENT
+  ident
+| %prec IDENT
+  ident generic_args
+| %prec IDENT
+  path_generic_args_without_colons MOD_SEP ident
+| %prec IDENT
+  path_generic_args_without_colons MOD_SEP ident generic_args
 ;
 
 // A path with a lifetime and type parameters with double colons before
@@ -539,7 +597,7 @@ path_generic_args_without_colons
 path_generic_args_with_colons
 : ident
 | path_generic_args_with_colons MOD_SEP ident
-| path_generic_args_with_colons MOD_SEP maybe_generic_args
+| path_generic_args_with_colons MOD_SEP generic_args
 ;
 
 // A path with a lifetime and type parameters with bounds before the last
@@ -741,6 +799,9 @@ exprs
 
 nonblock_nonprefix_expr
 : lit
+| %prec IDENT
+  path_generic_args_with_colons
+| path_generic_args_with_colons '{' field_inits default_field_init '}'
 | nonblock_nonprefix_expr '.' ident
 | nonblock_nonprefix_expr '[' expr ']'
 | nonblock_nonprefix_expr '(' maybe_exprs ')'
@@ -771,11 +832,13 @@ nonblock_nonprefix_expr
 | nonblock_nonprefix_expr '*' expr                    { $$ = mk_node("*", 2, $1, $3); }
 | nonblock_nonprefix_expr '/' expr                    { $$ = mk_node("/", 2, $1, $3); }
 | nonblock_nonprefix_expr '%' expr                    { $$ = mk_node("%", 2, $1, $3); }
-| struct_expr
 ;
 
 expr
 : lit
+| %prec IDENT
+  path_generic_args_with_colons
+| path_generic_args_with_colons '{' field_inits default_field_init '}'
 | expr '.' ident
 | expr '[' expr ']'
 | expr '(' maybe_exprs ')'        { $$ = mk_node("call", 2, $1, $3); }
@@ -806,7 +869,6 @@ expr
 | expr '*' expr                    { $$ = mk_node("*", 2, $1, $3); }
 | expr '/' expr                    { $$ = mk_node("/", 2, $1, $3); }
 | expr '%' expr                    { $$ = mk_node("%", 2, $1, $3); }
-| struct_expr
 | block_expr
 | lambda_expr
 ;
@@ -821,10 +883,6 @@ nonblock_prefix_expr
 lambda_expr
 : OROR expr                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
 | '|' inferrable_params '|' expr   { $$ = mk_node("lambda", 2, $2, $4); }
-;
-
-struct_expr
-: path_generic_args_with_colons '{' field_inits default_field_init '}'
 ;
 
 field_inits
