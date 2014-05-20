@@ -223,16 +223,16 @@ pat
 | ident '@' pat
 | lit_or_path
 | lit_or_path DOTDOT lit_or_path
-| path_generic_args_with_colons '{' pat_struct '}'
-| path_generic_args_with_colons '(' DOTDOT ')'
-| path_generic_args_with_colons '(' pat_tup ')'
+| path_expr '{' pat_struct '}'
+| path_expr '(' DOTDOT ')'
+| path_expr '(' pat_tup ')'
 | REF ident
 | MUT ident
 | BOX pat
 ;
 
 lit_or_path
-: path_generic_args_with_colons
+: path_expr
 | lit
 ;
 
@@ -287,15 +287,18 @@ ty
 : ty_prim
 | ty_closure
 | '(' maybe_tys ')'
-| '_'
 ;
 
 ty_prim
 : path_generic_args_and_bounds
+| MOD_SEP path_generic_args_and_bounds
 | BOX ty
 | '*' maybe_mut ty
 | '&' maybe_lifetime maybe_mut ty
+| '[' ty ']'
+| '[' ty ',' DOTDOT expr ']'
 | TYPEOF '(' expr ')'
+| '_'
 | ty_bare_fn
 | ty_proc
 ;
@@ -797,11 +800,16 @@ exprs
 | exprs ',' expr                                              { $$ = ext_node($1, 1, $2); }
 ;
 
+path_expr
+: path_generic_args_with_colons
+| MOD_SEP path_generic_args_with_colons
+;
+
 nonblock_nonprefix_expr
 : lit
 | %prec IDENT
-  path_generic_args_with_colons
-| path_generic_args_with_colons '{' field_inits default_field_init '}'
+  path_expr
+| path_expr '{' field_inits default_field_init '}'
 | nonblock_nonprefix_expr '.' ident
 | nonblock_nonprefix_expr '[' expr ']'
 | nonblock_nonprefix_expr '(' maybe_exprs ')'
@@ -837,8 +845,8 @@ nonblock_nonprefix_expr
 expr
 : lit
 | %prec IDENT
-  path_generic_args_with_colons
-| path_generic_args_with_colons '{' field_inits default_field_init '}'
+  path_expr
+| path_expr '{' field_inits default_field_init '}'
 | expr '.' ident
 | expr '[' expr ']'
 | expr '(' maybe_exprs ')'        { $$ = mk_node("call", 2, $1, $3); }
