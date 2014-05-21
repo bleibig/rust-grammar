@@ -94,6 +94,7 @@ extern char *yytext;
 // all potential ambiguities are scrutinized and eliminated manually.
 %expect 0
 
+
 // IDENT needs to be lower than '{' so that 'foo {' is shifted when
 // trying to decide if we've got a struct-construction expr (esp. in
 // contexts like 'if foo { .')
@@ -126,40 +127,36 @@ extern char *yytext;
 
 %precedence '{' '[' '(' '.'
 
-%start rust
+%start crate
 
 %%
 
-rust
-: crate                                      { $$ = mk_node("crate", 1, $1); }
-;
-
 crate
-: maybe_inner_attrs maybe_mod_items          { $$ = $2; }
+: maybe_inner_attrs maybe_mod_items  { mk_node("crate", 2, $1, $2); }
 ;
 
 maybe_inner_attrs
 : inner_attrs
-| %empty
+| %empty                   { $$ = mk_atom("<empty>"); }
 ;
 
 inner_attrs
-: inner_attr
-| inner_attrs inner_attr
+: inner_attr               { $$ = mk_node("InnerAttrs", 1, $1); }
+| inner_attrs inner_attr   { $$ = ext_node($1, 1, $2); }
 ;
 
 inner_attr
-: SHEBANG '[' meta_item ']'
+: SHEBANG '[' meta_item ']'   { $$ = mk_node("InnerAttr", 0); }
 ;
 
 maybe_outer_attrs
 : outer_attrs
-| %empty
+| %empty                   { $$ = mk_atom("<empty>"); }
 ;
 
 outer_attrs
-: outer_attr
-| outer_attrs outer_attr
+: outer_attr               { $$ = mk_node("OuterAttrs", 1, $1); }
+| outer_attrs outer_attr   { $$ = ext_node($1, 1, $2); }
 ;
 
 outer_attr
@@ -179,11 +176,11 @@ meta_seq
 
 maybe_mod_items
 : mod_items
-| %empty
+| %empty { $$ = mk_atom("<empty>"); }
 ;
 
 mod_items
-: mod_item                               { $$ = mk_node("mod-items", 1, $1); }
+: mod_item                               { $$ = mk_node("items", 1, $1); }
 | mod_items mod_item                     { $$ = ext_node($1, 1, $2); }
 ;
 
@@ -192,64 +189,89 @@ attrs_and_vis
 ;
 
 mod_item
-: attrs_and_vis item_or_view_item    { $$ = $2; }
+: attrs_and_vis item    { $$ = $2; }
+;
+
+item
+: item_static
+| item_type
+| block_item
+| view_item
+;
+
+view_item
+: USE view_path ';'                           { $$ = mk_node("ViewItemUse", 1, $2); }
+| EXTERN CRATE ident ';'                      { $$ = mk_node("ViewItemExternCrate", 1, $3); }
+| EXTERN CRATE ident '=' str ';'              { $$ = mk_node("ViewItemExternCrate", 2, $3, $5); }
+;
+
+
+view_path
+: path_no_types_allowed                       { $$ = mk_node("ViewPathSimple", 1, $1); }
+| path_no_types_allowed '{' idents '}'        { $$ = mk_node("ViewPathList", 2, $1, $3); }
+| path_no_types_allowed MOD_SEP '*' ';'       { $$ = mk_node("ViewPathGlob", 1, $1); }
+| ident '=' path_no_types_allowed ';'         { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
 ;
 
 block_item
 : item_fn
-| item_extern_block
+| item_foreign_mod
+| item_struct
+| item_enum
+| item_trait
+| item_impl
 ;
 
 maybe_ty_ascription
-: ':' ty
-| %empty
+: ':' ty { $$ = $2; }
+| %empty { $$ = mk_atom("<empty>"); }
 ;
 
 maybe_init_expr
-: '=' expr
-| %empty
+: '=' expr { $$ = $2; }
+| %empty   { $$ = mk_atom("<empty>"); }
 ;
 
 pats_or
-: pat
-| pats_or '|' pat
+: pat              { $$ = mk_node("pats", 1, $1); }
+| pats_or '|' pat  { $$ = ext_node($1, 1, $3); }
 ;
 
 pat
 : '_'
-| '&' pat
-| '(' pat_tup ')'
-| '[' pat_vec ']'
-| ident '@' pat
+| '&' pat                                { $$ = mk_node("PatRegion", 1, $2); }
+| '(' pat_tup ')'                        { $$ = mk_node("PatTup", 1, $2); }
+| '[' pat_vec ']'                        { $$ = mk_node("PatVec", 1, $2); }
 | lit_or_path
-| lit_or_path DOTDOT lit_or_path
-| path_expr '{' pat_struct '}'
-| path_expr '(' DOTDOT ')'
-| path_expr '(' pat_tup ')'
-| REF ident
-| MUT ident
-| BOX pat
+| lit_or_path DOTDOT lit_or_path         { $$ = mk_node("PatRange", 2, $1, $3); }
+| path_expr '{' pat_struct '}'           { $$ = mk_node("PatStruct", 2, $1, $3); }
+| path_expr '(' DOTDOT ')'               { $$ = mk_node("PatEnum", 1, $1); }
+| path_expr '(' pat_tup ')'              { $$ = mk_node("PatEnum", 2, $1, $3); }
+| binding_mode ident                     { $$ = mk_node("PatIdent", 2, $1, $2); }
+|              ident '@' pat             { $$ = mk_node("PatIdent", 3, mk_node("BindByValue", 1, mk_atom("MutImmutable")), $1, $3); }
+| binding_mode ident '@' pat             { $$ = mk_node("PatIdent", 3, $1, $2, $4); }
+| BOX pat                                { $$ = mk_node("PatUniq", 1, $2); }
+;
+
+binding_mode
+: REF         { $$ = mk_node("BindByRef", 1, mk_atom("MutImmutable")); }
+| REF MUT     { $$ = mk_node("BindByRef", 1, mk_atom("MutMutable")); }
+| MUT         { $$ = mk_node("BindByValue", 1, mk_atom("MutMutable")); }
 ;
 
 lit_or_path
-: path_expr
-| lit
-;
-
-pat_field_name
-: MUT IDENT
-| REF IDENT
-| IDENT
+: path_expr    { $$ = mk_node("PatLit", 1, $1); }
+| lit          { $$ = mk_node("PatLit", 1, $1); }
 ;
 
 pat_field
-: pat_field_name
-| pat_field_name ':' pat
+: ident            { $$ = mk_node("PatField", 1, $1); }
+| ident ':' pat    { $$ = mk_node("PatField", 2, $1, $3); }
 ;
 
 pat_fields
-: pat_field
-| pat_fields ',' pat_field
+: pat_field                  { $$ = mk_node("PatFields", 1, $1); }
+| pat_fields ',' pat_field   { $$ = ext_node($1, 1, $3); }
 ;
 
 pat_struct
@@ -259,8 +281,8 @@ pat_struct
 ;
 
 pat_tup
-: pat
-| pat_tup ',' pat
+: pat               { $$ = mk_node("pat_tup", 1, $1); }
+| pat_tup ',' pat   { $$ = ext_node($1, 1, $3); }
 ;
 
 pat_vec
@@ -275,12 +297,12 @@ pat_vec_elt
 
 maybe_tys
 : tys
-| %empty
+| %empty  { $$ = mk_atom("<empty>"); }
 ;
 
 tys
-: ty
-| tys ',' ty
+: ty                 { $$ = mk_node("tys", 1, $1); }
+| tys ',' ty         { $$ = ext_node($1, 1, $3); }
 ;
 
 ty
@@ -322,8 +344,8 @@ ty_closure
 ;
 
 maybe_once
-: ONCE
-| %empty
+: ONCE   { $$ = mk_atom("Once"); }
+| %empty { $$ = mk_atom("Many"); }
 ;
 
 ty_proc
@@ -331,56 +353,17 @@ ty_proc
 ;
 
 maybe_mut
-: MUT
-| %empty
+: MUT    { $$ = mk_atom("MutMutable"); }
+| %empty { $$ = mk_atom("MutImmutable"); }
 ;
 
-item_or_view_item
-: item_fn
-| item_extern_block
-| item_struct
-| item_enum
-| item_type
-| item_trait
-| item_impl
-| view_item
-;
-
-view_item
-: USE view_paths ';'                          { $$ = mk_node("use", 1, $2); }
-;
-
-view_paths
-: view_path                                   { $$ = mk_node("view-paths", 0); }
-| view_paths ',' view_path                    { $$ = ext_node($1, 1, $3); }
-;
-
-view_path
-: path_no_types_allowed                       { $$ = mk_node("use-one", 1, $1); }
-| path_no_types_allowed '{' idents '}'        { $$ = mk_node("use-multi", 2, $1, $3); }
-| path_no_types_allowed MOD_SEP '*' ';'       { $$ = mk_node("use-star", 1, $1); }
-| ident '=' path_no_types_allowed ';'         { $$ = mk_node("use-ident", 1, $1, $3); }
-
-;
-
-item_extern_block
-: EXTERN CRATE item_extern_crate
-| EXTERN maybe_abi item_fn
-| EXTERN maybe_abi '{' item_foreign_mod '}'
+item_foreign_mod
+: EXTERN maybe_abi '{' maybe_inner_attrs maybe_foreign_items '}'
 ;
 
 maybe_abi
 : str
 | %empty
-;
-
-item_extern_crate
-: ident ';'
-| ident '=' str ';'
-;
-
-item_foreign_mod
-: maybe_inner_attrs maybe_foreign_items
 ;
 
 maybe_foreign_items
@@ -394,9 +377,9 @@ foreign_items
 ;
 
 foreign_item
-: visibility STATIC item_foreign_static
-| visibility FN item_foreign_fn
-| visibility UNSAFE item_foreign_fn
+: attrs_and_vis STATIC item_foreign_static
+| attrs_and_vis FN item_foreign_fn
+| attrs_and_vis UNSAFE item_foreign_fn
 ;
 
 item_foreign_static
@@ -505,7 +488,10 @@ impl_method
 ;
 
 item_fn
-: FN ident maybe_generic_params fn_decl inner_attrs_and_block  { $$ = mk_node("fn", 1, $5); }
+: maybe_unsafe FN ident maybe_generic_params fn_decl inner_attrs_and_block
+{
+  $$ = mk_node("fn", 5, $1, $3, $4, $5, $6);
+}
 ;
 
 fn_decl
@@ -773,8 +759,8 @@ block
 stmts
 : stmts let                                        { $$ = ext_node($1, 1, $2); }
 | stmts let nonblock_expr_stmt                     { $$ = ext_node($1, 2, $2, $3); }
-| stmts static                                     { $$ = ext_node($1, 1, $2); }
-| stmts static nonblock_expr_stmt                  { $$ = ext_node($1, 2, $2, $3); }
+| stmts item_static                                { $$ = ext_node($1, 1, $2); }
+| stmts item_static nonblock_expr_stmt             { $$ = ext_node($1, 2, $2, $3); }
 | stmts block_item                                 { $$ = ext_node($1, 1, $2); }
 | stmts block_item nonblock_expr_stmt              { $$ = ext_node($1, 2, $2, $3); }
 | stmts block_expr                                 { $$ = ext_node($1, 1, $2); }
@@ -782,7 +768,7 @@ stmts
 | stmts ';'
 | stmts ';' nonblock_expr_stmt                     { $$ = ext_node($1, 1, $3); }
 | nonblock_expr_stmt                               { $$ = mk_node("stmts", 1, $1); }
-| %empty                                      { $$ = mk_node("stmts", 0); }
+| %empty                                           { $$ = mk_node("stmts", 0); }
 ;
 
 nonblock_expr_stmt
@@ -963,7 +949,7 @@ let
 : LET pat maybe_ty_ascription maybe_init_expr ';'
 ;
 
-static
+item_static
 : STATIC pat ':' ty '=' expr ';'
 
 lit
