@@ -91,7 +91,7 @@ fn print_sexp(indent: int, j: &json::Json) {
                 for (k, v) in ob.iter() {
                     print_indent(indent);
                     out.write_str("(");
-                    out.write_str(k.to_str());
+                    out.write_str(k.as_slice());
                     out.write_str("\n");
                     print_sexp(indent + indent_step, v);
                     print_indent(indent);
@@ -110,7 +110,7 @@ fn print_sexp(indent: int, j: &json::Json) {
         }
         json::String(ref s) => {
             print_indent(indent);
-            out.write_str(s.to_str());
+            out.write_str(s.as_slice());
             out.write_str("\n");
         }
         json::Null => {
@@ -127,7 +127,7 @@ fn print_sexp(indent: int, j: &json::Json) {
         }
         json::Number(n) => {
             print_indent(indent);
-            out.write_str(n.to_str());
+            out.write_str(n.to_str().as_slice());
             out.write_str("\n");
         }
     }
@@ -153,8 +153,9 @@ fn main() {
 
             // JSON-ify, meaning "encode then re-parse as just json", ugh.
             let ast_str = json::Encoder::str_encode(&cr.module);
-            let s = ast_str.to_str();
-            let mut b = json::Builder::new(s.chars());
+            let mut s = ast_str.to_str();
+            let chars = Vec::from_fn(s.len(), |_| s.pop_char().unwrap());
+            let mut b = json::Builder::new(chars.move_iter());
             let mut j = b.build().ok().unwrap();
 
             filter_json(&mut j);

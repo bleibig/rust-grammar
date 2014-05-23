@@ -15,7 +15,7 @@ use std::io;
  * between the two are easily comparable.
  */
 
-fn token_to_str(tok: token::Token) -> ~str {
+fn token_to_str(tok: token::Token) -> StrBuf {
     match tok {
         token::LIT_CHAR(_c) => {
             format!("LIT_CHAR(char)")
@@ -30,14 +30,14 @@ fn token_to_str(tok: token::Token) -> ~str {
             format!("LIT_INT_UNSUFFIXED({}i64)", v as i64)
         },
         token::LIT_FLOAT(s, t) => {
-            let mut body = StrBuf::from_str(token::get_ident(s).get().to_str());
+            let mut body = StrBuf::from_str(token::get_ident(s).get());
             if body.as_slice().ends_with(".") {
                 body.push_char('0');  // `10.f` is not a float literal
             }
             format!("LIT_FLOAT({}{})", body, ast_util::float_ty_to_str(t))
         },
         token::LIT_FLOAT_UNSUFFIXED(s) => {
-            let mut body = StrBuf::from_str(token::get_ident(s).get().to_str());
+            let mut body = StrBuf::from_str(token::get_ident(s).get());
             if body.as_slice().ends_with(".") {
                 body.push_char('0');  // `10.f` is not a float literal
             }
