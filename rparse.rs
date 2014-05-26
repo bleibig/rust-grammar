@@ -11,7 +11,7 @@ use std::io;
 use std::os;
 use std::io::Reader;
 use std::vec::FromVec;
-use std::strbuf::StrBuf;
+use std::string::String;
 use serialize::json;
 use serialize::json::{Json, List, String, Object};
 
@@ -23,16 +23,16 @@ fn filter_json(j: &mut json::Json) {
     match *j {
         json::Object(ref mut ob) => {
             // remove
-            ob.pop(&StrBuf::from_str("lifetimes"));
-            ob.pop(&StrBuf::from_str("global"));
-            ob.pop(&StrBuf::from_str("types"));
-            ob.pop(&StrBuf::from_str("span"));
-            ob.pop(&StrBuf::from_str("id"));
-            let mut kv : Option<(StrBuf,~[Json])> = None;
-            match ob.find(&StrBuf::from_str("node")) {
+            ob.pop(&String::from_str("lifetimes"));
+            ob.pop(&String::from_str("global"));
+            ob.pop(&String::from_str("types"));
+            ob.pop(&String::from_str("span"));
+            ob.pop(&String::from_str("id"));
+            let mut kv : Option<(String,~[Json])> = None;
+            match ob.find(&String::from_str("node")) {
                 Some(&json::Object(ref ob2)) => {
-                    match (ob2.find(&StrBuf::from_str("variant")),
-                           ob2.find(&StrBuf::from_str("fields"))) {
+                    match (ob2.find(&String::from_str("variant")),
+                           ob2.find(&String::from_str("fields"))) {
                         (Some(&String(ref s)), Some(&List(ref ls))) => {
                             kv = Some((s.clone(), FromVec::from_vec(ls.clone())));
                         }
@@ -44,7 +44,7 @@ fn filter_json(j: &mut json::Json) {
             match kv {
                 None => (),
                 Some((k, v)) => {
-                    ob.pop(&StrBuf::from_str("node"));
+                    ob.pop(&String::from_str("node"));
                     ob.insert(k, List(Vec::from_slice(v)));
                 }
             }
@@ -135,7 +135,7 @@ fn print_sexp(indent: int, j: &json::Json) {
 
 fn main() {
 
-    let args = os::args().move_iter().map(|s| StrBuf::from_owned_str(s)).collect::<Vec<StrBuf>>();
+    let args = os::args().move_iter().map(|s| String::from_owned_str(s)).collect::<Vec<String>>();
     let opts = [ optflag("j", "", "dump output in JSON, not sexp") ];
     let matches = match getopts(args.tail(), opts) {
         Ok(m) => { m }
@@ -148,7 +148,7 @@ fn main() {
             let opt = config::basic_options();
             let sess = session::build_session(opt, None);
             let cfg = config::build_configuration(&sess);
-            let input = driver::StrInput(StrBuf::from_owned_str(text));
+            let input = driver::StrInput(String::from_owned_str(text));
             let cr = driver::phase_1_parse_input(&sess, cfg, &input);
 
             // JSON-ify, meaning "encode then re-parse as just json", ugh.
