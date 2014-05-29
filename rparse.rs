@@ -135,7 +135,7 @@ fn print_sexp(indent: int, j: &json::Json) {
 
 fn main() {
 
-    let args = os::args().move_iter().map(|s| String::from_owned_str(s)).collect::<Vec<String>>();
+    let args = os::args().move_iter().collect::<Vec<String>>();
     let opts = [ optflag("j", "", "dump output in JSON, not sexp") ];
     let matches = match getopts(args.tail(), opts) {
         Ok(m) => { m }
@@ -148,7 +148,7 @@ fn main() {
             let opt = config::basic_options();
             let sess = session::build_session(opt, None);
             let cfg = config::build_configuration(&sess);
-            let input = driver::StrInput(String::from_owned_str(text));
+            let input = driver::StrInput(text);
             let cr = driver::phase_1_parse_input(&sess, cfg, &input);
 
             // JSON-ify, meaning "encode then re-parse as just json", ugh.

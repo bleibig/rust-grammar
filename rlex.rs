@@ -1,5 +1,6 @@
 extern crate syntax;
 extern crate rustc;
+extern crate debug;
 
 use syntax::parse;
 use syntax::parse::lexer;
@@ -86,7 +87,7 @@ fn main() {
     let options = config::basic_options();
     let session = session::build_session(options, None);
     let filemap = parse::string_to_filemap(&session.parse_sess,
-                                           String::from_owned_str(line),
+                                           line,
                                            String::from_str("<n/a>"));
     let mut lexer = lexer::new_string_reader(session.diagnostic(), filemap);
 
