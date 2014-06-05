@@ -38,7 +38,7 @@ usuf (u8|u16|u32|u64|u)
 
 [ \n\t\r]             { }
 
-\/\/(\/|!)            { BEGIN(doc_line); yymore(); }
+\/\/(\/|\!)           { BEGIN(doc_line); yymore(); }
 <doc_line>\n          { BEGIN(INITIAL); yyleng--; yytext[yyleng] = 0; return DOC_COMMENT; }
 <doc_line>[^\n]*      { yymore(); }
 
@@ -133,12 +133,12 @@ while    { return WHILE; }
 \]     { return ']'; }
 @      { return '@'; }
 #      { BEGIN(pound); }
-<pound>! { BEGIN(shebang_or_attr); }
+<pound>\! { BEGIN(shebang_or_attr); }
 <shebang_or_attr>\[ { BEGIN(INITIAL); yyless(0); return SHEBANG; }
-<shebang_or_attr>[^[\n]*\n  { BEGIN(INITIAL); }
+<shebang_or_attr>[^\[\n]*\n  { BEGIN(INITIAL); }
 <pound>. { BEGIN(INITIAL); yyless(0); return '#'; }
 
-~      { return '~'; }
+\~     { return '~'; }
 ::     { return MOD_SEP; }
 :      { return ':'; }
 \$     { return '$'; }
@@ -146,8 +146,8 @@ while    { return WHILE; }
 ==    { return EQEQ; }
 =>    { return FAT_ARROW; }
 =     { return '='; }
-!=    { return NE; }
-!     { return '!'; }
+\!=   { return NE; }
+\!    { return '!'; }
 \<=   { return LE; }
 \<\<  { return SHL; }
 \<\<= { return BINOPEQ; }
@@ -248,7 +248,7 @@ r/#             {
 
 -\>  { return RARROW; }
 -    { return '-'; }
--=   { return BINOPEQ; };
+-=   { return BINOPEQ; }
 &&   { return ANDAND; }
 &    { return '&'; }
 &=   { return BINOPEQ; }
