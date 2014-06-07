@@ -23,9 +23,6 @@ fn filter_json(j: &mut json::Json) {
     match *j {
         json::Object(ref mut ob) => {
             // remove
-            ob.pop(&String::from_str("lifetimes"));
-            ob.pop(&String::from_str("global"));
-            ob.pop(&String::from_str("types"));
             ob.pop(&String::from_str("span"));
             ob.pop(&String::from_str("id"));
             let mut kv : Option<(String,~[Json])> = None;
@@ -153,8 +150,7 @@ fn main() {
 
             // JSON-ify, meaning "encode then re-parse as just json", ugh.
             let ast_str = json::Encoder::str_encode(&cr.module);
-            let mut s = ast_str.to_str();
-            let chars = Vec::from_fn(s.len(), |_| s.pop_char().unwrap());
+            let chars = ast_str.as_slice().chars().collect::<Vec<char>>();
             let mut b = json::Builder::new(chars.move_iter());
             let mut j = b.build().ok().unwrap();
 
