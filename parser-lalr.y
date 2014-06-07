@@ -113,7 +113,8 @@ extern char *yytext;
 %precedence SHIFTPLUS SHIFTLT
 
 // Binops & unops, and their precedences
-%left '='
+%precedence BOX
+%left '=' BINOPEQ
 %left OROR
 %left ANDAND
 %left EQEQ NE
@@ -803,40 +804,42 @@ path_expr
 ;
 
 nonblock_nonprefix_expr
-: lit
+: lit                                                 { $$ = mk_node("ExprLit", 1, $1); }
 | %prec IDENT
-  path_expr
-| path_expr '{' field_inits default_field_init '}'
-| nonblock_nonprefix_expr '.' ident
-| nonblock_nonprefix_expr '[' expr ']'
-| nonblock_nonprefix_expr '(' maybe_exprs ')'
-| '(' maybe_exprs ')'
-| CONTINUE                                            { $$ = mk_node("continue", 0); }
-| CONTINUE ident                                      { $$ = mk_node("continue-label", 0); }
-| RETURN                                              { $$ = mk_node("return", 0); }
-| RETURN expr                                         { $$ = mk_node("return-expr", 1, $2); }
-| BREAK                                               { $$ = mk_node("break", 0); }
-| BREAK ident                                         { $$ = mk_node("break-ident", 0); }
-| nonblock_nonprefix_expr '=' expr                    { $$ = mk_node("=", 2, $1, $3); }
-| nonblock_nonprefix_expr OROR expr                   { $$ = mk_node("||", 2, $1, $3); }
-| nonblock_nonprefix_expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $3); }
-| nonblock_nonprefix_expr EQEQ expr                   { $$ = mk_node("==", 2, $1, $3); }
-| nonblock_nonprefix_expr NE expr                     { $$ = mk_node("!=", 2, $1, $3); }
-| nonblock_nonprefix_expr '<' expr                    { $$ = mk_node("<", 2, $1, $3); }
-| nonblock_nonprefix_expr '>' expr                    { $$ = mk_node(">", 2, $1, $3); }
-| nonblock_nonprefix_expr LE expr                     { $$ = mk_node("<=", 2, $1, $3); }
-| nonblock_nonprefix_expr GE expr                     { $$ = mk_node(">=", 2, $1, $3); }
-| nonblock_nonprefix_expr '|' expr                    { $$ = mk_node("|", 2, $1, $3); }
-| nonblock_nonprefix_expr '^' expr                    { $$ = mk_node("^", 2, $1, $3); }
-| nonblock_nonprefix_expr '&' expr                    { $$ = mk_node("&", 2, $1, $3); }
-| nonblock_nonprefix_expr SHL expr                    { $$ = mk_node("<<", 2, $1, $3); }
-| nonblock_nonprefix_expr SHR expr                    { $$ = mk_node(">>", 2, $1, $3); }
-| nonblock_nonprefix_expr '+' expr                    { $$ = mk_node("+", 2, $1, $3); }
-| nonblock_nonprefix_expr '-' expr                    { $$ = mk_node("-", 2, $1, $3); }
-| nonblock_nonprefix_expr AS ty                       { $$ = mk_node("as", 2, $1, $3); }
-| nonblock_nonprefix_expr '*' expr                    { $$ = mk_node("*", 2, $1, $3); }
-| nonblock_nonprefix_expr '/' expr                    { $$ = mk_node("/", 2, $1, $3); }
-| nonblock_nonprefix_expr '%' expr                    { $$ = mk_node("%", 2, $1, $3); }
+  path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
+| path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
+| nonblock_nonprefix_expr '.' ident                   { $$ = mk_node("ExprField", 2, $1, $3); }
+| nonblock_nonprefix_expr '[' expr ']'                { $$ = mk_node("ExprIndex", 2, $1, $3); }
+| nonblock_nonprefix_expr '(' maybe_exprs ')'         { $$ = mk_node("ExprCall", 2, $1, $3); }
+| '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
+| CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
+| CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
+| RETURN                                              { $$ = mk_node("ExprRet", 0); }
+| RETURN expr                                         { $$ = mk_node("ExprRet", 1, $2); }
+| BREAK                                               { $$ = mk_node("ExprBreak", 0); }
+| BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
+| nonblock_nonprefix_expr '=' expr                    { $$ = mk_node("ExprAssign", 2, $1, $3); }
+| nonblock_nonprefix_expr BINOPEQ expr                { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| nonblock_nonprefix_expr OROR expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
+| nonblock_nonprefix_expr ANDAND expr                 { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
+| nonblock_nonprefix_expr EQEQ expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
+| nonblock_nonprefix_expr NE expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
+| nonblock_nonprefix_expr '<' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
+| nonblock_nonprefix_expr '>' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
+| nonblock_nonprefix_expr LE expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
+| nonblock_nonprefix_expr GE expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
+| nonblock_nonprefix_expr '|' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
+| nonblock_nonprefix_expr '^' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
+| nonblock_nonprefix_expr '&' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
+| nonblock_nonprefix_expr SHL expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
+| nonblock_nonprefix_expr SHR expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
+| nonblock_nonprefix_expr '+' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
+| nonblock_nonprefix_expr '-' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
+| nonblock_nonprefix_expr '*' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
+| nonblock_nonprefix_expr '/' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
+| nonblock_nonprefix_expr '%' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
+| nonblock_nonprefix_expr AS ty                       { $$ = mk_node("ExprCast", 2, $1, $3); }
+| BOX nonblock_nonprefix_expr                         { $$ = mk_node("ExprBox", 1, $2); }
 ;
 
 expr
@@ -844,37 +847,39 @@ expr
 | %prec IDENT
   path_expr                       { $$ = mk_node("ExprPath", 1, $1); }
 | path_expr '{' field_inits default_field_init '}'
-                                  { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
+				  { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | expr '.' ident                  { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr '[' expr ']'               { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | expr '(' maybe_exprs ')'        { $$ = mk_node("ExprCall", 2, $1, $3); }
 | '(' maybe_exprs ')'             { $$ = mk_node("ExprParen", 1, $2); }
-| CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
-| CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
-| RETURN                                              { $$ = mk_node("ExprRet", 0); }
-| RETURN expr                                         { $$ = mk_node("ExprRet", 1, $2); }
-| BREAK                                               { $$ = mk_node("ExprBreak", 0); }
-| BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
-| expr '=' expr                    { $$ = mk_node("=", 2, $1, $3); }
-| expr OROR expr                   { $$ = mk_node("||", 2, $1, $3); }
-| expr ANDAND expr                 { $$ = mk_node("&&", 2, $1, $3); }
-| expr EQEQ expr                   { $$ = mk_node("==", 2, $1, $3); }
-| expr NE expr                     { $$ = mk_node("!=", 2, $1, $3); }
-| expr '<' expr                    { $$ = mk_node("<", 2, $1, $3); }
-| expr '>' expr                    { $$ = mk_node(">", 2, $1, $3); }
-| expr LE expr                     { $$ = mk_node("<=", 2, $1, $3); }
-| expr GE expr                     { $$ = mk_node(">=", 2, $1, $3); }
-| expr '|' expr                    { $$ = mk_node("|", 2, $1, $3); }
-| expr '^' expr                    { $$ = mk_node("^", 2, $1, $3); }
-| expr '&' expr                    { $$ = mk_node("&", 2, $1, $3); }
-| expr SHL expr                    { $$ = mk_node("<<", 2, $1, $3); }
-| expr SHR expr                    { $$ = mk_node(">>", 2, $1, $3); }
-| expr '+' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
-| expr '-' expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
-| expr AS ty                       { $$ = mk_node("ExprCast", 2, $1, $3); }
-| expr '*' expr                    { $$ = mk_node("*", 2, $1, $3); }
-| expr '/' expr                    { $$ = mk_node("/", 2, $1, $3); }
-| expr '%' expr                    { $$ = mk_node("%", 2, $1, $3); }
+| CONTINUE                        { $$ = mk_node("ExprAgain", 0); }
+| CONTINUE ident                  { $$ = mk_node("ExprAgain", 1, $2); }
+| RETURN                          { $$ = mk_node("ExprRet", 0); }
+| RETURN expr                     { $$ = mk_node("ExprRet", 1, $2); }
+| BREAK                           { $$ = mk_node("ExprBreak", 0); }
+| BREAK ident                     { $$ = mk_node("ExprBreak", 1, $2); }
+| expr '=' expr                   { $$ = mk_node("ExprAssign", 2, $1, $3); }
+| expr BINOPEQ expr               { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| expr OROR expr                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
+| expr ANDAND expr                { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
+| expr EQEQ expr                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
+| expr NE expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
+| expr '<' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
+| expr '>' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
+| expr LE expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
+| expr GE expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
+| expr '|' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
+| expr '^' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
+| expr '&' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
+| expr SHL expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
+| expr SHR expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
+| expr '+' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
+| expr '-' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
+| expr '*' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
+| expr '/' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
+| expr '%' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
+| expr AS ty                      { $$ = mk_node("ExprCast", 2, $1, $3); }
+| BOX expr                        { $$ = mk_node("ExprBox", 1, $2); }
 | block_expr
 | lambda_expr
 ;
@@ -901,9 +906,9 @@ field_init
 ;
 
 default_field_init
-: ','
-| ',' DOTDOT expr
-| %empty { $$ = mk_none(); }
+: ','               { $$ = mk_none(); }
+| ',' DOTDOT expr   { $$ = $3; }
+| %empty            { $$ = mk_none(); }
 ;
 
 block_expr
@@ -912,32 +917,32 @@ block_expr
 | expr_while
 | expr_loop
 | expr_for
-| UNSAFE block                     { $$ = mk_node("UnsafeBlock", 1, $1); }
+| UNSAFE block                               { $$ = mk_node("UnsafeBlock", 1, $1); }
 | block
 ;
 
 expr_match
-: MATCH expr '{' match_clauses '}'        { $$ = mk_node("ExprMatch", 2, $2, $4); }
-| MATCH expr '{' match_clauses ',' '}'    { $$ = mk_node("ExprMatch", 2, $2, $4); }
+: MATCH expr '{' match_clauses '}'           { $$ = mk_node("ExprMatch", 2, $2, $4); }
+| MATCH expr '{' match_clauses ',' '}'       { $$ = mk_node("ExprMatch", 2, $2, $4); }
 ;
 
 match_clauses
-: match_clause                            { $$ = mk_node("Arms", 1, $1); }
-| match_clauses ',' match_clause          { $$ = ext_node($1, 1, $3) ; }
+: match_clause                               { $$ = mk_node("Arms", 1, $1); }
+| match_clauses ',' match_clause             { $$ = ext_node($1, 1, $3) ; }
 ;
 
 match_clause
-: pats_or maybe_guard FAT_ARROW expr      { $$ = mk_node("Arm", 3, $1, $2, $4); }
+: pats_or maybe_guard FAT_ARROW expr         { $$ = mk_node("Arm", 3, $1, $2, $4); }
 ;
 
 maybe_guard
-: IF expr            { $$ = $2; }
-| %empty             { $$ = mk_none(); }
+: IF expr           { $$ = $2; }
+| %empty            { $$ = mk_none(); }
 ;
 
 expr_if
-: IF expr block
-| IF expr block ELSE block_or_if
+: IF expr block                              { $$ = mk_node("ExprIf", 2, $2, $3); }
+| IF expr block ELSE block_or_if             { $$ = mk_node("ExprIf", 3, $2, $3, $5); }
 ;
 
 block_or_if
@@ -946,15 +951,15 @@ block_or_if
 ;
 
 expr_while
-: WHILE expr block
+: WHILE expr block                           { $$ = mk_node("ExprWhile", 2, $2, $3); }
 ;
 
 expr_loop
-: LOOP block
+: LOOP block                                 { $$ = mk_node("ExprLoop", 1, $2); }
 ;
 
 expr_for
-: FOR expr IN expr block
+: FOR expr IN expr block                     { $$ = mk_node("ExprForLoop", 3, $2, $4, $5); }
 ;
 
 let
@@ -965,16 +970,16 @@ item_static
 : STATIC pat ':' ty '=' expr ';'  { $$ = mk_node("ItemStatic", 3, $2, $4, $6); }
 
 lit
-: LIT_CHAR                   { $$ = mk_node("lit-char", 1, mk_atom(yytext)); }
-| LIT_INT                    { $$ = mk_node("lit-int", 1, mk_atom(yytext)); }
-| LIT_UINT                   { $$ = mk_node("lit-uint", 1, mk_atom(yytext)); }
-| LIT_INT_UNSUFFIXED         { $$ = mk_node("lit-int", 1, mk_atom(yytext)); }
-| LIT_FLOAT                  { $$ = mk_node("lit-float", 1, mk_atom(yytext)); }
-| LIT_FLOAT_UNSUFFIXED       { $$ = mk_node("lit-float", 1, mk_atom(yytext)); }
-| LIT_STR                    { $$ = mk_node("lit-str", 1, mk_atom(yytext)); }
-| LIT_STR_RAW                { $$ = mk_node("lit-str-raw", 1, mk_atom(yytext)); }
-| TRUE                       { $$ = mk_node("lit-true", 1, mk_atom(yytext)); }
-| FALSE                      { $$ = mk_node("lit-false", 1, mk_atom(yytext)); }
+: LIT_CHAR                   { $$ = mk_node("LitChar", 1, mk_atom(yytext)); }
+| LIT_INT                    { $$ = mk_node("LitInt", 1, mk_atom(yytext)); }
+| LIT_UINT                   { $$ = mk_node("LitUint", 1, mk_atom(yytext)); }
+| LIT_INT_UNSUFFIXED         { $$ = mk_node("LitIntUnsuffixed", 1, mk_atom(yytext)); }
+| LIT_FLOAT                  { $$ = mk_node("LitFloat", 1, mk_atom(yytext)); }
+| LIT_FLOAT_UNSUFFIXED       { $$ = mk_node("LitFloatUnsuffixed", 1, mk_atom(yytext)); }
+| LIT_STR                    { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("CookedStr")); }
+| LIT_STR_RAW                { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("RawStr")); }
+| TRUE                       { $$ = mk_node("LitBool", 1, mk_atom(yytext)); }
+| FALSE                      { $$ = mk_node("LitBool", 1, mk_atom(yytext)); }
 ;
 
 str
