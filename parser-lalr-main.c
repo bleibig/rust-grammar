@@ -58,6 +58,10 @@ struct node *mk_atom(char *name) {
   return nd;
 }
 
+struct node *mk_none() {
+  return mk_atom("<none>");
+}
+
 struct node *ext_node(struct node *nd, int n, ...) {
   va_list ap;
   int i = 0, c = nd->n_elems + n;
