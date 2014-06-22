@@ -10,7 +10,6 @@ use getopts::{optflag,getopts};
 use std::io;
 use std::os;
 use std::io::Reader;
-use std::vec::FromVec;
 use std::string::String;
 use serialize::json;
 use serialize::json::{Json, List, String, Object};
@@ -25,13 +24,13 @@ fn filter_json(j: &mut json::Json) {
             // remove
             ob.pop(&String::from_str("span"));
             ob.pop(&String::from_str("id"));
-            let mut kv : Option<(String,~[Json])> = None;
+            let mut kv : Option<(String,Vec<Json>)> = None;
             match ob.find(&String::from_str("node")) {
                 Some(&json::Object(ref ob2)) => {
                     match (ob2.find(&String::from_str("variant")),
                            ob2.find(&String::from_str("fields"))) {
                         (Some(&String(ref s)), Some(&List(ref ls))) => {
-                            kv = Some((s.clone(), FromVec::from_vec(ls.clone())));
+                            kv = Some((s.clone(), ls.clone()));
                         }
                         _ => ()
                     }
@@ -42,7 +41,7 @@ fn filter_json(j: &mut json::Json) {
                 None => (),
                 Some((k, v)) => {
                     ob.pop(&String::from_str("node"));
-                    ob.insert(k, List(Vec::from_slice(v)));
+                    ob.insert(k, List(v));
                 }
             }
             for (_, v) in ob.mut_iter() {
@@ -136,7 +135,7 @@ fn main() {
     let opts = [ optflag("j", "", "dump output in JSON, not sexp") ];
     let matches = match getopts(args.tail(), opts) {
         Ok(m) => { m }
-        Err(f) => { fail!(f.to_err_msg()) }
+        Err(f) => { fail!(f) }
     };
     let dump_json = matches.opt_present("j");
 

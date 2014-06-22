@@ -89,7 +89,7 @@ fn main() {
     let filemap = parse::string_to_filemap(&session.parse_sess,
                                            line,
                                            String::from_str("<n/a>"));
-    let mut lexer = lexer::new_string_reader(session.diagnostic(), filemap);
+    let mut lexer = lexer::StringReader::new(session.diagnostic(), filemap);
 
     {
         use syntax::parse::lexer::Reader;
