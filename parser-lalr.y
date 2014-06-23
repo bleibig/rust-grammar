@@ -184,8 +184,8 @@ meta_seq
 ;
 
 maybe_mod_items
-: mod_items
-| %empty { $$ = mk_none(); }
+: mod_items          { $$ = $1; }
+| %empty             { $$ = mk_none(); }
 ;
 
 mod_items
@@ -202,10 +202,10 @@ mod_item
 ;
 
 item
-: item_static
-| item_type
-| block_item
-| view_item
+: item_static           { $$ = $1; }
+| item_type             { $$ = $1; }
+| block_item            { $$ = $1; }
+| view_item             { $$ = $1; }
 ;
 
 view_item
@@ -216,19 +216,20 @@ view_item
 
 
 view_path
-: path_no_types_allowed                       { $$ = mk_node("ViewPathSimple", 1, $1); }
-| path_no_types_allowed '{' idents '}'        { $$ = mk_node("ViewPathList", 2, $1, $3); }
-| path_no_types_allowed MOD_SEP '*' ';'       { $$ = mk_node("ViewPathGlob", 1, $1); }
-| ident '=' path_no_types_allowed ';'         { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
+: path_no_types_allowed                        { $$ = mk_node("ViewPathSimple", 1, $1); }
+| path_no_types_allowed MOD_SEP '{' idents '}' { $$ = mk_node("ViewPathList", 2, $1, $4); }
+| path_no_types_allowed MOD_SEP '*'            { $$ = mk_node("ViewPathGlob", 1, $1); }
+| ident '=' path_no_types_allowed              { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
 ;
 
 block_item
-: item_fn
-| item_foreign_mod
-| item_struct
-| item_enum
-| item_trait
-| item_impl
+: item_fn                   { $$ = mk_node("ItemFn", 1, $1); }
+| item_mod                  { $$ = mk_node("ItemMod", 1, $1); }
+| item_foreign_mod          { $$ = mk_node("ItemForeignMod", 1, $1); }
+| item_struct               { $$ = mk_node("ItemStruct", 1, $1); }
+| item_enum                 { $$ = mk_node("ItemEnum", 1, $1); }
+| item_trait                { $$ = mk_node("ItemTrait", 1, $1); }
+| item_impl                 { $$ = mk_node("ItemImpl", 1, $1); }
 ;
 
 maybe_ty_ascription
@@ -319,7 +320,7 @@ tys
 ;
 
 ty
-: ty_prim
+: ty_prim { $$ = mk_node("ty", 1, $1); }
 | ty_closure
 | '(' maybe_tys ')'  { $$ = $2; }
 ;
@@ -368,6 +369,11 @@ ty_proc
 maybe_mut
 : MUT    { $$ = mk_atom("MutMutable"); }
 | %empty { $$ = mk_atom("MutImmutable"); }
+;
+
+item_mod
+: MOD IDENT ';'                                       { $$ = mk_none(); }
+| MOD IDENT '{' maybe_inner_attrs maybe_mod_items '}' { $$ = mk_node("Mod", 2, $4, $5); }
 ;
 
 item_foreign_mod
@@ -423,8 +429,8 @@ visibility
 ;
 
 idents
-: ident
-| idents ',' ident
+: ident            { $$ = mk_node("ident", 1, $1); }
+| idents ',' ident { $$ = ext_node($1, 1, $3); }
 ;
 
 item_type
@@ -539,8 +545,8 @@ inferrable_param
 ;
 
 ret_ty
-: RARROW '!'
-| RARROW ty
+: RARROW '!' { $$ = mk_none(); }
+| RARROW ty { $$ = mk_node("ret-ty", 1, $2); }
 | %empty { $$ = mk_none(); }
 ;
 

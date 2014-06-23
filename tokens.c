@@ -149,10 +149,14 @@ static int hex_to_num(char c) {
 
 static char *desugar_num(char *tok, char *default_suffix) {
     int len = strlen(tok);
-    int start = 2;
+    int start = 0;
     int end;
     long long int val = 0;
     char *res = malloc(64);
+
+    if (tok[0] == '0') {
+        start = 2;
+    }
 
     for (int i = 0, k = 0; i < len; i++) {
         if (tok[i] == '_') {

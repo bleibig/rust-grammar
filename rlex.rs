@@ -44,23 +44,8 @@ fn token_to_str(tok: token::Token) -> String {
             }
             format!("LIT_FLOAT_UNSUFFIXED({})", body)
         },
-        token::LIT_STR(_s) => {
-            /*
-            format!("LIT_STR(\"{}\")", token::get_ident(s).get().chars().fold(String::new(),
-                |mut result, c| {
-                    match c {
-                        '\n' => result.push_str("\\n"),
-                        '\t' => result.push_str("\\t"),
-                        '\r' => result.push_str("\\r"),
-                        '\\' => result.push_str("\\\\"),
-                        '"'  => result.push_str("\\\""),
-                        ' '..'~' => result.push_char(c),
-                        _    => c.escape_unicode(|c| result.push_char(if c != 'u' { c.to_uppercase() } else { 'u' }))
-                    }
-                    result
-                }))
-            */
-            format!("LIT_STR(contents)")
+        token::LIT_STR(s) => {
+          format!("LIT_STR(\"{}\")", token::get_ident(s).get().escape_default())
         },
         token::LIT_STR_RAW(s, n) => {
             format!("LIT_STR_RAW(r{delim}\"{string}\"{delim})",
@@ -70,7 +55,7 @@ fn token_to_str(tok: token::Token) -> String {
             format!("IDENT({})", token::get_ident(s).get().to_str())
         },
         token::LIFETIME(s) => {
-            format!("LIFETIME('{})", token::get_ident(s).get().to_str())
+            format!("LIFETIME({})", token::get_ident(s).get().to_str())
         },
         token::DOC_COMMENT(s) => {
             format!("DOC_COMMENT({})", token::get_ident(s).get().to_str())
