@@ -1027,6 +1027,7 @@ unpaired_token
 | LIFETIME                   { $$ = mk_atom(yytext); }
 | ';'                        { $$ = mk_atom(yytext); }
 | ','                        { $$ = mk_atom(yytext); }
+| '.'                        { $$ = mk_atom(yytext); }
 | '@'                        { $$ = mk_atom(yytext); }
 | '#'                        { $$ = mk_atom(yytext); }
 | '~'                        { $$ = mk_atom(yytext); }
