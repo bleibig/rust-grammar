@@ -1047,8 +1047,9 @@ unpaired_token
 ;
 
 token_trees
-: token_tree                 { $$ = mk_node("TokenTrees", 1, $1); }
+: %empty                     { $$ = mk_node("TokenTrees", 0); }
 | token_trees token_tree     { $$ = ext_node($1, 1, $2); }
+;
 
 token_tree
 : delimited_token_trees
