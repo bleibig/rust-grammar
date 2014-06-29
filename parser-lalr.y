@@ -898,7 +898,7 @@ expr
 nonblock_prefix_expr
 : '-' expr                         { $$ = mk_node("-", 1, $2); }
 | '*' expr                         { $$ = mk_node("*", 1, $2); }
-| '~' expr                         { $$ = mk_node("~", 1, $2); }
+| '&' expr                         { $$ = mk_node("&", 1, $2); }
 | lambda_expr
 ;
 
