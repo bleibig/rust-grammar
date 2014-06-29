@@ -320,21 +320,22 @@ tys
 ;
 
 ty
-: ty_prim { $$ = mk_node("ty", 1, $1); }
+: ty_prim
 | ty_closure
-| '(' maybe_tys ')'  { $$ = $2; }
+| '(' tys ')'                          { $$ = mk_node("TyTup", 1, $2); }
+| '(' ')'                              { $$ = mk_atom("TyNil"); }
 ;
 
 ty_prim
 : path_generic_args_and_bounds         { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
 | MOD_SEP path_generic_args_and_bounds { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
-| BOX ty
-| '*' maybe_mut ty
-| '&' maybe_lifetime maybe_mut ty
-| '[' ty ']'
-| '[' ty ',' DOTDOT expr ']'
-| TYPEOF '(' expr ')'
-| '_'
+| BOX ty                               { $$ = mk_node("TyBox", 1, $2); }
+| '*' maybe_mut ty                     { $$ = mk_node("TyPtr", 2, $2, $3); }
+| '&' maybe_lifetime maybe_mut ty      { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
+| '[' ty ']'                           { $$ = mk_node("TyVec", 1, $2); }
+| '[' ty ',' DOTDOT expr ']'           { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
+| TYPEOF '(' expr ')'                  { $$ = mk_node("TyTypeof", 1, $3); }
+| '_'                                  { $$ = mk_atom("TyInfer"); }
 | ty_bare_fn
 | ty_proc
 ;
