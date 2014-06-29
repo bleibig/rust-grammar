@@ -184,7 +184,7 @@ meta_seq
 ;
 
 maybe_mod_items
-: mod_items          { $$ = $1; }
+: mod_items
 | %empty             { $$ = mk_none(); }
 ;
 
@@ -202,10 +202,10 @@ mod_item
 ;
 
 item
-: item_static           { $$ = $1; }
-| item_type             { $$ = $1; }
-| block_item            { $$ = $1; }
-| view_item             { $$ = $1; }
+: item_static
+| item_type
+| block_item
+| view_item
 ;
 
 view_item
