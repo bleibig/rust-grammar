@@ -223,13 +223,13 @@ view_path
 ;
 
 block_item
-: item_fn                   { $$ = mk_node("ItemFn", 1, $1); }
-| item_mod                  { $$ = mk_node("ItemMod", 1, $1); }
+: item_fn
+| item_mod
 | item_foreign_mod          { $$ = mk_node("ItemForeignMod", 1, $1); }
-| item_struct               { $$ = mk_node("ItemStruct", 1, $1); }
-| item_enum                 { $$ = mk_node("ItemEnum", 1, $1); }
-| item_trait                { $$ = mk_node("ItemTrait", 1, $1); }
-| item_impl                 { $$ = mk_node("ItemImpl", 1, $1); }
+| item_struct
+| item_enum
+| item_trait
+| item_impl
 ;
 
 maybe_ty_ascription
@@ -440,6 +440,9 @@ item_type
 
 item_trait
 : TRAIT ident generic_params maybe_supertraits '{' maybe_trait_methods '}'
+{
+  $$ = mk_node("ItemTrait", 4, $2, $3, $4, $6);
+}
 ;
 
 maybe_supertraits
@@ -488,9 +491,9 @@ trait_method
 // they are ambiguous with traits. We do the same here, regrettably,
 // by splitting ty into ty and ty_prim.
 item_impl
-: IMPL generic_params ty_prim '{' maybe_impl_methods '}'
-| IMPL generic_params '(' ty ')' '{' maybe_impl_methods '}'
-| IMPL generic_params trait_ref FOR ty '{' maybe_impl_methods '}'
+: IMPL generic_params ty_prim '{' maybe_impl_methods '}'           { $$ = mk_node("ItemImpl", 3, $2, $3, $5); }
+| IMPL generic_params '(' ty ')' '{' maybe_impl_methods '}'        { $$ = mk_node("ItemImpl", 3, $2, $4, $7); }
+| IMPL generic_params trait_ref FOR ty '{' maybe_impl_methods '}'  { $$ = mk_node("ItemImpl", 4, $2, $3, $5, $7); }
 ;
 
 maybe_impl_methods
@@ -510,7 +513,7 @@ impl_method
 item_fn
 : maybe_unsafe FN ident generic_params fn_decl inner_attrs_and_block
 {
-  $$ = mk_node("fn", 5, $1, $3, $4, $5, $6);
+  $$ = mk_node("ItemFn", 5, $1, $3, $4, $5, $6);
 }
 ;
 
@@ -684,7 +687,7 @@ trait_ref
 
 // structs
 item_struct
-: STRUCT ident generic_params struct_args     { $$ = mk_node("struct", 0); }
+: STRUCT ident generic_params struct_args     { $$ = mk_node("ItemStruct", 0); }
 ;
 
 struct_args
@@ -717,8 +720,8 @@ struct_tuple_field
 
 // enums
 item_enum
-: ENUM ident generic_params '{' enum_defs '}'     { $$ = mk_node("enum", 0); }
-| ENUM ident generic_params '{' enum_defs ',' '}' { $$ = mk_node("enum", 0); }
+: ENUM ident generic_params '{' enum_defs '}'     { $$ = mk_node("ItemEnum", 0); }
+| ENUM ident generic_params '{' enum_defs ',' '}' { $$ = mk_node("ItemEnum", 0); }
 ;
 
 enum_defs
