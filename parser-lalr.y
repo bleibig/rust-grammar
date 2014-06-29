@@ -184,7 +184,7 @@ meta_seq
 ;
 
 maybe_mod_items
-: mod_items          { $$ = $1; }
+: mod_items
 | %empty             { $$ = mk_none(); }
 ;
 
@@ -202,10 +202,10 @@ mod_item
 ;
 
 item
-: item_static           { $$ = $1; }
-| item_type             { $$ = $1; }
-| block_item            { $$ = $1; }
-| view_item             { $$ = $1; }
+: item_static
+| item_type
+| block_item
+| view_item
 ;
 
 view_item
@@ -223,13 +223,13 @@ view_path
 ;
 
 block_item
-: item_fn                   { $$ = mk_node("ItemFn", 1, $1); }
-| item_mod                  { $$ = mk_node("ItemMod", 1, $1); }
+: item_fn
+| item_mod
 | item_foreign_mod          { $$ = mk_node("ItemForeignMod", 1, $1); }
-| item_struct               { $$ = mk_node("ItemStruct", 1, $1); }
-| item_enum                 { $$ = mk_node("ItemEnum", 1, $1); }
-| item_trait                { $$ = mk_node("ItemTrait", 1, $1); }
-| item_impl                 { $$ = mk_node("ItemImpl", 1, $1); }
+| item_struct
+| item_enum
+| item_trait
+| item_impl
 ;
 
 maybe_ty_ascription
@@ -320,21 +320,22 @@ tys
 ;
 
 ty
-: ty_prim { $$ = mk_node("ty", 1, $1); }
+: ty_prim
 | ty_closure
-| '(' maybe_tys ')'  { $$ = $2; }
+| '(' tys ')'                          { $$ = mk_node("TyTup", 1, $2); }
+| '(' ')'                              { $$ = mk_atom("TyNil"); }
 ;
 
 ty_prim
 : path_generic_args_and_bounds         { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
 | MOD_SEP path_generic_args_and_bounds { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
-| BOX ty
-| '*' maybe_mut ty
-| '&' maybe_lifetime maybe_mut ty
-| '[' ty ']'
-| '[' ty ',' DOTDOT expr ']'
-| TYPEOF '(' expr ')'
-| '_'
+| BOX ty                               { $$ = mk_node("TyBox", 1, $2); }
+| '*' maybe_mut ty                     { $$ = mk_node("TyPtr", 2, $2, $3); }
+| '&' maybe_lifetime maybe_mut ty      { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
+| '[' ty ']'                           { $$ = mk_node("TyVec", 1, $2); }
+| '[' ty ',' DOTDOT expr ']'           { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
+| TYPEOF '(' expr ')'                  { $$ = mk_node("TyTypeof", 1, $3); }
+| '_'                                  { $$ = mk_atom("TyInfer"); }
 | ty_bare_fn
 | ty_proc
 ;
@@ -372,8 +373,8 @@ maybe_mut
 ;
 
 item_mod
-: MOD IDENT ';'                                       { $$ = mk_none(); }
-| MOD IDENT '{' maybe_inner_attrs maybe_mod_items '}' { $$ = mk_node("Mod", 2, $4, $5); }
+: MOD ident ';'                                       { $$ = mk_node("ItemMod", 1, $2); }
+| MOD ident '{' maybe_inner_attrs maybe_mod_items '}' { $$ = mk_node("ItemMod", 3, $2, $4, $5); }
 ;
 
 item_foreign_mod
@@ -439,16 +440,19 @@ item_type
 
 item_trait
 : TRAIT ident generic_params maybe_supertraits '{' maybe_trait_methods '}'
+{
+  $$ = mk_node("ItemTrait", 4, $2, $3, $4, $6);
+}
 ;
 
 maybe_supertraits
-: ':' supertraits
-| %empty { $$ = mk_none(); }
+: ':' supertraits   { $$ = $2; }
+| %empty            { $$ = mk_none(); }
 ;
 
 supertraits
-: trait_ref
-| supertraits '+' trait_ref
+: trait_ref                   { $$ = mk_node("SuperTraits", 1, $1); }
+| supertraits '+' trait_ref   { $$ = ext_node($1, 1, $3); }
 ;
 
 maybe_trait_methods
@@ -457,8 +461,8 @@ maybe_trait_methods
 ;
 
 trait_methods
-: trait_method
-| trait_methods trait_method
+: trait_method                 { $$ = mk_node("TraitMethods", 1, $1); }
+| trait_methods trait_method   { $$ = ext_node($1, 1, $2); }
 ;
 
 maybe_unsafe
@@ -467,8 +471,22 @@ maybe_unsafe
 ;
 
 trait_method
+: type_method { $$ = mk_node("Required", 1, $1); }
+| method      { $$ = mk_node("Provided", 1, $1); }
+;
+
+type_method
 : attrs_and_vis maybe_unsafe FN ident generic_params fn_decl ';'
-| attrs_and_vis maybe_unsafe FN ident generic_params fn_decl inner_attrs_and_block
+{
+  $$ = mk_node("TypeMethod", 5, $1, $2, $4, $5, $6);
+}
+;
+
+method
+: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl inner_attrs_and_block
+{
+  $$ = mk_node("Method", 6, $1, $2, $4, $5, $6, $7);
+}
 ;
 
 // There are two forms of impl:
@@ -487,9 +505,9 @@ trait_method
 // they are ambiguous with traits. We do the same here, regrettably,
 // by splitting ty into ty and ty_prim.
 item_impl
-: IMPL generic_params ty_prim '{' maybe_impl_methods '}'
-| IMPL generic_params '(' ty ')' '{' maybe_impl_methods '}'
-| IMPL generic_params trait_ref FOR ty '{' maybe_impl_methods '}'
+: IMPL generic_params ty_prim '{' maybe_impl_methods '}'           { $$ = mk_node("ItemImpl", 3, $2, $3, $5); }
+| IMPL generic_params '(' ty ')' '{' maybe_impl_methods '}'        { $$ = mk_node("ItemImpl", 3, $2, $4, $7); }
+| IMPL generic_params trait_ref FOR ty '{' maybe_impl_methods '}'  { $$ = mk_node("ItemImpl", 4, $2, $3, $5, $7); }
 ;
 
 maybe_impl_methods
@@ -498,18 +516,14 @@ maybe_impl_methods
 ;
 
 impl_methods
-: impl_method
-| impl_methods impl_method
-;
-
-impl_method
-: attrs_and_vis maybe_unsafe FN ident generic_params inner_attrs_and_block
+: method                 { $$ = mk_node("ImplMethods", 1, $1); }
+| impl_methods method    { $$ = ext_node($1, 1, $2); }
 ;
 
 item_fn
 : maybe_unsafe FN ident generic_params fn_decl inner_attrs_and_block
 {
-  $$ = mk_node("fn", 5, $1, $3, $4, $5, $6);
+  $$ = mk_node("ItemFn", 5, $1, $3, $4, $5, $6);
 }
 ;
 
@@ -584,7 +598,7 @@ path_no_types_allowed
 // be ambiguous with.
 path_generic_args_without_colons
 : %prec IDENT
-  ident                { $$ = mk_node("components", 1, $1); }
+  ident                  { $$ = mk_node("components", 1, $1); }
 | %prec IDENT
   ident generic_args     { $$ = mk_node("components", 2, $1, $2); }
 | %prec IDENT
@@ -683,7 +697,7 @@ trait_ref
 
 // structs
 item_struct
-: STRUCT ident generic_params struct_args     { $$ = mk_node("struct", 0); }
+: STRUCT ident generic_params struct_args     { $$ = mk_node("ItemStruct", 0); }
 ;
 
 struct_args
@@ -716,8 +730,8 @@ struct_tuple_field
 
 // enums
 item_enum
-: ENUM ident generic_params '{' enum_defs '}'     { $$ = mk_node("enum", 0); }
-| ENUM ident generic_params '{' enum_defs ',' '}' { $$ = mk_node("enum", 0); }
+: ENUM ident generic_params '{' enum_defs '}'     { $$ = mk_node("ItemEnum", 0); }
+| ENUM ident generic_params '{' enum_defs ',' '}' { $$ = mk_node("ItemEnum", 0); }
 ;
 
 enum_defs
@@ -813,6 +827,8 @@ nonblock_nonprefix_expr
 : lit                                                 { $$ = mk_node("ExprLit", 1, $1); }
 | %prec IDENT
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
+| SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
+| path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | nonblock_nonprefix_expr '.' ident                   { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonblock_nonprefix_expr '[' expr ']'                { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -849,51 +865,52 @@ nonblock_nonprefix_expr
 ;
 
 expr
-: lit                             { $$ = mk_node("ExprLit", 1, $1); }
+: lit                                                 { $$ = mk_node("ExprLit", 1, $1); }
 | %prec IDENT
-  path_expr                       { $$ = mk_node("ExprPath", 1, $1); }
-| path_expr '{' field_inits default_field_init '}'
-				  { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
-| expr '.' ident                  { $$ = mk_node("ExprField", 2, $1, $3); }
-| expr '[' expr ']'               { $$ = mk_node("ExprIndex", 2, $1, $3); }
-| expr '(' maybe_exprs ')'        { $$ = mk_node("ExprCall", 2, $1, $3); }
-| '(' maybe_exprs ')'             { $$ = mk_node("ExprParen", 1, $2); }
-| CONTINUE                        { $$ = mk_node("ExprAgain", 0); }
-| CONTINUE ident                  { $$ = mk_node("ExprAgain", 1, $2); }
-| RETURN                          { $$ = mk_node("ExprRet", 0); }
-| RETURN expr                     { $$ = mk_node("ExprRet", 1, $2); }
-| BREAK                           { $$ = mk_node("ExprBreak", 0); }
-| BREAK ident                     { $$ = mk_node("ExprBreak", 1, $2); }
-| expr '=' expr                   { $$ = mk_node("ExprAssign", 2, $1, $3); }
-| expr BINOPEQ expr               { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
-| expr OROR expr                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
-| expr ANDAND expr                { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
-| expr EQEQ expr                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
-| expr NE expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
-| expr '<' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
-| expr '>' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
-| expr LE expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
-| expr GE expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
-| expr '|' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
-| expr '^' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
-| expr '&' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
-| expr SHL expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
-| expr SHR expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
-| expr '+' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
-| expr '-' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
-| expr '*' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
-| expr '/' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
-| expr '%' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
-| expr AS ty                      { $$ = mk_node("ExprCast", 2, $1, $3); }
-| BOX expr                        { $$ = mk_node("ExprBox", 1, $2); }
+  path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
+| SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
+| path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
+| path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
+| expr '.' ident                                      { $$ = mk_node("ExprField", 2, $1, $3); }
+| expr '[' expr ']'                                   { $$ = mk_node("ExprIndex", 2, $1, $3); }
+| expr '(' maybe_exprs ')'                            { $$ = mk_node("ExprCall", 2, $1, $3); }
+| '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
+| CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
+| CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
+| RETURN                                              { $$ = mk_node("ExprRet", 0); }
+| RETURN expr                                         { $$ = mk_node("ExprRet", 1, $2); }
+| BREAK                                               { $$ = mk_node("ExprBreak", 0); }
+| BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
+| expr '=' expr                                       { $$ = mk_node("ExprAssign", 2, $1, $3); }
+| expr BINOPEQ expr                                   { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| expr OROR expr                                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
+| expr ANDAND expr                                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
+| expr EQEQ expr                                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
+| expr NE expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
+| expr '<' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
+| expr '>' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
+| expr LE expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
+| expr GE expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
+| expr '|' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
+| expr '^' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
+| expr '&' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
+| expr SHL expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
+| expr SHR expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
+| expr '+' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
+| expr '-' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
+| expr '*' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
+| expr '/' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
+| expr '%' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
+| expr AS ty                                          { $$ = mk_node("ExprCast", 2, $1, $3); }
+| BOX expr                                            { $$ = mk_node("ExprBox", 1, $2); }
 | block_expr
-| lambda_expr
+| nonblock_prefix_expr
 ;
 
 nonblock_prefix_expr
 : '-' expr                         { $$ = mk_node("-", 1, $2); }
 | '*' expr                         { $$ = mk_node("*", 1, $2); }
-| '~' expr                         { $$ = mk_node("~", 1, $2); }
+| '&' expr                         { $$ = mk_node("&", 1, $2); }
 | lambda_expr
 ;
 
@@ -982,17 +999,100 @@ lit
 | LIT_INT_UNSUFFIXED         { $$ = mk_node("LitIntUnsuffixed", 1, mk_atom(yytext)); }
 | LIT_FLOAT                  { $$ = mk_node("LitFloat", 1, mk_atom(yytext)); }
 | LIT_FLOAT_UNSUFFIXED       { $$ = mk_node("LitFloatUnsuffixed", 1, mk_atom(yytext)); }
-| LIT_STR                    { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("CookedStr")); }
-| LIT_STR_RAW                { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("RawStr")); }
 | TRUE                       { $$ = mk_node("LitBool", 1, mk_atom(yytext)); }
 | FALSE                      { $$ = mk_node("LitBool", 1, mk_atom(yytext)); }
+| str
 ;
 
 str
-: LIT_STR                    { $$ = mk_node("lit-str", 1, mk_atom(yytext)); }
-| LIT_STR_RAW                { $$ = mk_node("lit-str-raw", 1, mk_atom(yytext)); }
+: LIT_STR                    { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("CookedStr")); }
+| LIT_STR_RAW                { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("RawStr")); }
 ;
 
 ident
 : IDENT                      { $$ = mk_node("ident", 1, mk_atom(yytext)); }
+;
+
+unpaired_token
+: SHL                        { $$ = mk_atom(yytext); }
+| SHR                        { $$ = mk_atom(yytext); }
+| LE                         { $$ = mk_atom(yytext); }
+| EQEQ                       { $$ = mk_atom(yytext); }
+| NE                         { $$ = mk_atom(yytext); }
+| GE                         { $$ = mk_atom(yytext); }
+| ANDAND                     { $$ = mk_atom(yytext); }
+| OROR                       { $$ = mk_atom(yytext); }
+| BINOPEQ                    { $$ = mk_atom(yytext); }
+| DOTDOT                     { $$ = mk_atom(yytext); }
+| DOTDOTDOT                  { $$ = mk_atom(yytext); }
+| MOD_SEP                    { $$ = mk_atom(yytext); }
+| RARROW                     { $$ = mk_atom(yytext); }
+| FAT_ARROW                  { $$ = mk_atom(yytext); }
+| LIT_CHAR                   { $$ = mk_atom(yytext); }
+| LIT_INT                    { $$ = mk_atom(yytext); }
+| LIT_UINT                   { $$ = mk_atom(yytext); }
+| LIT_INT_UNSUFFIXED         { $$ = mk_atom(yytext); }
+| LIT_FLOAT                  { $$ = mk_atom(yytext); }
+| LIT_FLOAT_UNSUFFIXED       { $$ = mk_atom(yytext); }
+| LIT_STR                    { $$ = mk_atom(yytext); }
+| LIT_STR_RAW                { $$ = mk_atom(yytext); }
+| IDENT                      { $$ = mk_atom(yytext); }
+| UNDERSCORE                 { $$ = mk_atom(yytext); }
+| LIFETIME                   { $$ = mk_atom(yytext); }
+| ';'                        { $$ = mk_atom(yytext); }
+| ','                        { $$ = mk_atom(yytext); }
+| '.'                        { $$ = mk_atom(yytext); }
+| '@'                        { $$ = mk_atom(yytext); }
+| '#'                        { $$ = mk_atom(yytext); }
+| '~'                        { $$ = mk_atom(yytext); }
+| ':'                        { $$ = mk_atom(yytext); }
+| '$'                        { $$ = mk_atom(yytext); }
+| '='                        { $$ = mk_atom(yytext); }
+| '!'                        { $$ = mk_atom(yytext); }
+| '<'                        { $$ = mk_atom(yytext); }
+| '>'                        { $$ = mk_atom(yytext); }
+| '-'                        { $$ = mk_atom(yytext); }
+| '&'                        { $$ = mk_atom(yytext); }
+| '|'                        { $$ = mk_atom(yytext); }
+| '+'                        { $$ = mk_atom(yytext); }
+| '*'                        { $$ = mk_atom(yytext); }
+| '/'                        { $$ = mk_atom(yytext); }
+| '^'                        { $$ = mk_atom(yytext); }
+| '%'                        { $$ = mk_atom(yytext); }
+;
+
+token_trees
+: %empty                     { $$ = mk_node("TokenTrees", 0); }
+| token_trees token_tree     { $$ = ext_node($1, 1, $2); }
+;
+
+token_tree
+: delimited_token_trees
+| unpaired_token         { $$ = mk_node("TTTok", 1, $1); }
+;
+
+delimited_token_trees
+: '(' token_trees ')'
+{
+  $$ = mk_node("TTDelim", 3,
+               mk_node("TTTok", 1, mk_atom("(")),
+               $2,
+               mk_node("TTTok", 1, mk_atom(")")));
+}
+
+| '{' token_trees '}'
+{
+  $$ = mk_node("TTDelim", 3,
+               mk_node("TTTok", 1, mk_atom("{")),
+               $2,
+               mk_node("TTTok", 1, mk_atom("}")));
+}
+
+| '[' token_trees ']'
+{
+  $$ = mk_node("TTDelim", 3,
+               mk_node("TTTok", 1, mk_atom("[")),
+               $2,
+               mk_node("TTTok", 1, mk_atom("]")));
+}
 ;
