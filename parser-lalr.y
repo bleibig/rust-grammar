@@ -588,7 +588,7 @@ path_no_types_allowed
 // be ambiguous with.
 path_generic_args_without_colons
 : %prec IDENT
-  ident                { $$ = mk_node("components", 1, $1); }
+  ident                  { $$ = mk_node("components", 1, $1); }
 | %prec IDENT
   ident generic_args     { $$ = mk_node("components", 2, $1, $2); }
 | %prec IDENT
