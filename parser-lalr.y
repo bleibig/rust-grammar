@@ -813,6 +813,7 @@ nonblock_nonprefix_expr
 : lit                                                 { $$ = mk_node("ExprLit", 1, $1); }
 | %prec IDENT
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
+| path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | nonblock_nonprefix_expr '.' ident                   { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonblock_nonprefix_expr '[' expr ']'                { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -849,43 +850,43 @@ nonblock_nonprefix_expr
 ;
 
 expr
-: lit                             { $$ = mk_node("ExprLit", 1, $1); }
+: lit                                                 { $$ = mk_node("ExprLit", 1, $1); }
 | %prec IDENT
-  path_expr                       { $$ = mk_node("ExprPath", 1, $1); }
-| path_expr '{' field_inits default_field_init '}'
-				  { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
-| expr '.' ident                  { $$ = mk_node("ExprField", 2, $1, $3); }
-| expr '[' expr ']'               { $$ = mk_node("ExprIndex", 2, $1, $3); }
-| expr '(' maybe_exprs ')'        { $$ = mk_node("ExprCall", 2, $1, $3); }
-| '(' maybe_exprs ')'             { $$ = mk_node("ExprParen", 1, $2); }
-| CONTINUE                        { $$ = mk_node("ExprAgain", 0); }
-| CONTINUE ident                  { $$ = mk_node("ExprAgain", 1, $2); }
-| RETURN                          { $$ = mk_node("ExprRet", 0); }
-| RETURN expr                     { $$ = mk_node("ExprRet", 1, $2); }
-| BREAK                           { $$ = mk_node("ExprBreak", 0); }
-| BREAK ident                     { $$ = mk_node("ExprBreak", 1, $2); }
-| expr '=' expr                   { $$ = mk_node("ExprAssign", 2, $1, $3); }
-| expr BINOPEQ expr               { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
-| expr OROR expr                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
-| expr ANDAND expr                { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
-| expr EQEQ expr                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
-| expr NE expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
-| expr '<' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
-| expr '>' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
-| expr LE expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
-| expr GE expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
-| expr '|' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
-| expr '^' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
-| expr '&' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
-| expr SHL expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
-| expr SHR expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
-| expr '+' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
-| expr '-' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
-| expr '*' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
-| expr '/' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
-| expr '%' expr                   { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
-| expr AS ty                      { $$ = mk_node("ExprCast", 2, $1, $3); }
-| BOX expr                        { $$ = mk_node("ExprBox", 1, $2); }
+  path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
+| path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
+| path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
+| expr '.' ident                                      { $$ = mk_node("ExprField", 2, $1, $3); }
+| expr '[' expr ']'                                   { $$ = mk_node("ExprIndex", 2, $1, $3); }
+| expr '(' maybe_exprs ')'                            { $$ = mk_node("ExprCall", 2, $1, $3); }
+| '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
+| CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
+| CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
+| RETURN                                              { $$ = mk_node("ExprRet", 0); }
+| RETURN expr                                         { $$ = mk_node("ExprRet", 1, $2); }
+| BREAK                                               { $$ = mk_node("ExprBreak", 0); }
+| BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
+| expr '=' expr                                       { $$ = mk_node("ExprAssign", 2, $1, $3); }
+| expr BINOPEQ expr                                   { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| expr OROR expr                                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
+| expr ANDAND expr                                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
+| expr EQEQ expr                                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
+| expr NE expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
+| expr '<' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
+| expr '>' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
+| expr LE expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
+| expr GE expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
+| expr '|' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
+| expr '^' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
+| expr '&' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
+| expr SHL expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
+| expr SHR expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
+| expr '+' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
+| expr '-' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
+| expr '*' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
+| expr '/' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
+| expr '%' expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
+| expr AS ty                                          { $$ = mk_node("ExprCast", 2, $1, $3); }
+| BOX expr                                            { $$ = mk_node("ExprBox", 1, $2); }
 | block_expr
 | lambda_expr
 ;
@@ -995,4 +996,86 @@ str
 
 ident
 : IDENT                      { $$ = mk_node("ident", 1, mk_atom(yytext)); }
+;
+
+unpaired_token
+: SHL                        { $$ = mk_atom(yytext); }
+| SHR                        { $$ = mk_atom(yytext); }
+| LE                         { $$ = mk_atom(yytext); }
+| EQEQ                       { $$ = mk_atom(yytext); }
+| NE                         { $$ = mk_atom(yytext); }
+| GE                         { $$ = mk_atom(yytext); }
+| ANDAND                     { $$ = mk_atom(yytext); }
+| OROR                       { $$ = mk_atom(yytext); }
+| BINOPEQ                    { $$ = mk_atom(yytext); }
+| DOTDOT                     { $$ = mk_atom(yytext); }
+| DOTDOTDOT                  { $$ = mk_atom(yytext); }
+| MOD_SEP                    { $$ = mk_atom(yytext); }
+| RARROW                     { $$ = mk_atom(yytext); }
+| FAT_ARROW                  { $$ = mk_atom(yytext); }
+| LIT_CHAR                   { $$ = mk_atom(yytext); }
+| LIT_INT                    { $$ = mk_atom(yytext); }
+| LIT_UINT                   { $$ = mk_atom(yytext); }
+| LIT_INT_UNSUFFIXED         { $$ = mk_atom(yytext); }
+| LIT_FLOAT                  { $$ = mk_atom(yytext); }
+| LIT_FLOAT_UNSUFFIXED       { $$ = mk_atom(yytext); }
+| LIT_STR                    { $$ = mk_atom(yytext); }
+| LIT_STR_RAW                { $$ = mk_atom(yytext); }
+| IDENT                      { $$ = mk_atom(yytext); }
+| UNDERSCORE                 { $$ = mk_atom(yytext); }
+| LIFETIME                   { $$ = mk_atom(yytext); }
+| ';'                        { $$ = mk_atom(yytext); }
+| ','                        { $$ = mk_atom(yytext); }
+| '@'                        { $$ = mk_atom(yytext); }
+| '#'                        { $$ = mk_atom(yytext); }
+| '~'                        { $$ = mk_atom(yytext); }
+| ':'                        { $$ = mk_atom(yytext); }
+| '$'                        { $$ = mk_atom(yytext); }
+| '='                        { $$ = mk_atom(yytext); }
+| '!'                        { $$ = mk_atom(yytext); }
+| '<'                        { $$ = mk_atom(yytext); }
+| '>'                        { $$ = mk_atom(yytext); }
+| '-'                        { $$ = mk_atom(yytext); }
+| '&'                        { $$ = mk_atom(yytext); }
+| '|'                        { $$ = mk_atom(yytext); }
+| '+'                        { $$ = mk_atom(yytext); }
+| '*'                        { $$ = mk_atom(yytext); }
+| '/'                        { $$ = mk_atom(yytext); }
+| '^'                        { $$ = mk_atom(yytext); }
+| '%'                        { $$ = mk_atom(yytext); }
+;
+
+token_trees
+: token_tree                 { $$ = mk_node("TokenTrees", 1, $1); }
+| token_trees token_tree     { $$ = ext_node($1, 1, $2); }
+
+token_tree
+: delimited_token_trees
+| unpaired_token         { $$ = mk_node("TTTok", 1, $1); }
+;
+
+delimited_token_trees
+: '(' token_trees ')'
+{
+  $$ = mk_node("TTDelim", 3,
+               mk_node("TTTok", 1, mk_atom("(")),
+               $2,
+               mk_node("TTTok", 1, mk_atom(")")));
+}
+
+| '{' token_trees '}'
+{
+  $$ = mk_node("TTDelim", 3,
+               mk_node("TTTok", 1, mk_atom("{")),
+               $2,
+               mk_node("TTTok", 1, mk_atom("}")));
+}
+
+| '[' token_trees ']'
+{
+  $$ = mk_node("TTDelim", 3,
+               mk_node("TTTok", 1, mk_atom("[")),
+               $2,
+               mk_node("TTTok", 1, mk_atom("]")));
+}
 ;
