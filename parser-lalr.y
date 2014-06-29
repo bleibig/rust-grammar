@@ -446,13 +446,13 @@ item_trait
 ;
 
 maybe_supertraits
-: ':' supertraits
-| %empty { $$ = mk_none(); }
+: ':' supertraits   { $$ = $2; }
+| %empty            { $$ = mk_none(); }
 ;
 
 supertraits
-: trait_ref
-| supertraits '+' trait_ref
+: trait_ref                   { $$ = mk_node("SuperTraits", 1, $1); }
+| supertraits '+' trait_ref   { $$ = ext_node($1, 1, $3); }
 ;
 
 maybe_trait_methods
@@ -461,8 +461,8 @@ maybe_trait_methods
 ;
 
 trait_methods
-: trait_method
-| trait_methods trait_method
+: trait_method                 { $$ = mk_node("TraitMethods", 1, $1); }
+| trait_methods trait_method   { $$ = ext_node($1, 1, $2); }
 ;
 
 maybe_unsafe
@@ -471,8 +471,22 @@ maybe_unsafe
 ;
 
 trait_method
+: type_method { $$ = mk_node("Required", 1, $1); }
+| method      { $$ = mk_node("Provided", 1, $1); }
+;
+
+type_method
 : attrs_and_vis maybe_unsafe FN ident generic_params fn_decl ';'
-| attrs_and_vis maybe_unsafe FN ident generic_params fn_decl inner_attrs_and_block
+{
+  $$ = mk_node("TypeMethod", 5, $1, $2, $4, $5, $6);
+}
+;
+
+method
+: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl inner_attrs_and_block
+{
+  $$ = mk_node("Method", 6, $1, $2, $4, $5, $6, $7);
+}
 ;
 
 // There are two forms of impl:
@@ -502,12 +516,8 @@ maybe_impl_methods
 ;
 
 impl_methods
-: impl_method
-| impl_methods impl_method
-;
-
-impl_method
-: attrs_and_vis maybe_unsafe FN ident generic_params inner_attrs_and_block
+: method                 { $$ = mk_node("ImplMethods", 1, $1); }
+| impl_methods method    { $$ = ext_node($1, 1, $2); }
 ;
 
 item_fn
