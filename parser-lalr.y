@@ -892,7 +892,7 @@ expr
 | expr AS ty                                          { $$ = mk_node("ExprCast", 2, $1, $3); }
 | BOX expr                                            { $$ = mk_node("ExprBox", 1, $2); }
 | block_expr
-| lambda_expr
+| nonblock_prefix_expr
 ;
 
 nonblock_prefix_expr
