@@ -373,8 +373,8 @@ maybe_mut
 ;
 
 item_mod
-: MOD IDENT ';'                                       { $$ = mk_none(); }
-| MOD IDENT '{' maybe_inner_attrs maybe_mod_items '}' { $$ = mk_node("Mod", 2, $4, $5); }
+: MOD ident ';'                                       { $$ = mk_node("ItemMod", 1, $2); }
+| MOD ident '{' maybe_inner_attrs maybe_mod_items '}' { $$ = mk_node("ItemMod", 3, $2, $4, $5); }
 ;
 
 item_foreign_mod
