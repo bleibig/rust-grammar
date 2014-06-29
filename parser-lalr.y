@@ -817,6 +817,7 @@ nonblock_nonprefix_expr
 : lit                                                 { $$ = mk_node("ExprLit", 1, $1); }
 | %prec IDENT
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
+| SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | nonblock_nonprefix_expr '.' ident                   { $$ = mk_node("ExprField", 2, $1, $3); }
@@ -857,8 +858,9 @@ expr
 : lit                                                 { $$ = mk_node("ExprLit", 1, $1); }
 | %prec IDENT
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
-| path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
+| SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
+| path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | expr '.' ident                                      { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr '[' expr ']'                                   { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | expr '(' maybe_exprs ')'                            { $$ = mk_node("ExprCall", 2, $1, $3); }
