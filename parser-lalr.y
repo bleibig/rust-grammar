@@ -984,15 +984,14 @@ lit
 | LIT_INT_UNSUFFIXED         { $$ = mk_node("LitIntUnsuffixed", 1, mk_atom(yytext)); }
 | LIT_FLOAT                  { $$ = mk_node("LitFloat", 1, mk_atom(yytext)); }
 | LIT_FLOAT_UNSUFFIXED       { $$ = mk_node("LitFloatUnsuffixed", 1, mk_atom(yytext)); }
-| LIT_STR                    { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("CookedStr")); }
-| LIT_STR_RAW                { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("RawStr")); }
 | TRUE                       { $$ = mk_node("LitBool", 1, mk_atom(yytext)); }
 | FALSE                      { $$ = mk_node("LitBool", 1, mk_atom(yytext)); }
+| str
 ;
 
 str
-: LIT_STR                    { $$ = mk_node("lit-str", 1, mk_atom(yytext)); }
-| LIT_STR_RAW                { $$ = mk_node("lit-str-raw", 1, mk_atom(yytext)); }
+: LIT_STR                    { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("CookedStr")); }
+| LIT_STR_RAW                { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("RawStr")); }
 ;
 
 ident
