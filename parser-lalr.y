@@ -482,14 +482,14 @@ trait_method
 ;
 
 type_method
-: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl ';'
+: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self ';'
 {
   $$ = mk_node("TypeMethod", 5, $1, $2, $4, $5, $6);
 }
 ;
 
 method
-: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl inner_attrs_and_block
+: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self inner_attrs_and_block
 {
   $$ = mk_node("Method", 6, $1, $2, $4, $5, $6, $7);
 }
@@ -537,8 +537,18 @@ fn_decl
 : fn_params ret_ty   { $$ = mk_node("FnDecl", 2, $1, $2); }
 ;
 
+fn_decl_with_self
+: fn_params_with_self ret_ty   { $$ = mk_node("FnDecl", 2, $1, $2); }
+;
+
 fn_params
 : '(' maybe_params ')'  { $$ = $2; }
+;
+
+fn_params_with_self
+: '(' SELF maybe_params ')'                     { $$ = mk_node("SelfValue", 1, $3); }
+| '(' '&' maybe_lifetime SELF maybe_params ')'  { $$ = mk_node("SelfRegion", 2, $3, $5); }
+| '(' maybe_params ')'                          { $$ = mk_node("SelfStatic", 1, $2); }
 ;
 
 maybe_params
