@@ -90,6 +90,7 @@ pub      { return PUB; }
 ref      { return REF; }
 return   { return RETURN; }
 self     { return SELF; }
+static   { return STATIC; }
 struct   { return STRUCT; }
 trait    { return TRAIT; }
 true     { return TRUE; }
