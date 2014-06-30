@@ -94,6 +94,11 @@ extern char *yytext;
 // all potential ambiguities are scrutinized and eliminated manually.
 %expect 0
 
+// fake-precedence symbol to cause '|' bars in lambda context to parse
+// at low precedence, permit things like |x| foo = bar, where '=' is
+// otherwise lower-precedence than '|'.
+%precedence LAMBDA
+
 // IDENT needs to be lower than '{' so that 'foo {' is shifted when
 // trying to decide if we've got a struct-construction expr (esp. in
 // contexts like 'if foo { .')
@@ -915,8 +920,10 @@ nonblock_prefix_expr
 ;
 
 lambda_expr
-: OROR expr                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
-| '|' inferrable_params '|' expr   { $$ = mk_node("lambda", 2, $2, $4); }
+: %prec LAMBDA
+  OROR expr                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
+| %prec LAMBDA
+  '|' inferrable_params '|' expr   { $$ = mk_node("lambda", 2, $2, $4); }
 ;
 
 field_inits
