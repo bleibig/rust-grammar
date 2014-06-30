@@ -1067,7 +1067,7 @@ expr_loop
 ;
 
 expr_for
-: FOR expr IN expr_nostruct block                     { $$ = mk_node("ExprForLoop", 3, $2, $4, $5); }
+: FOR pat IN expr_nostruct block                      { $$ = mk_node("ExprForLoop", 3, $2, $4, $5); }
 ;
 
 let
