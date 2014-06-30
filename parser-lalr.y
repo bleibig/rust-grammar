@@ -1009,6 +1009,7 @@ block_expr
 
 expr_match
 : MATCH expr_nostruct '{' match_clauses '}'           { $$ = mk_node("ExprMatch", 2, $2, $4); }
+| MATCH expr_nostruct '{' '}'                         { $$ = mk_node("ExprMatch", 1, $2); }
 | MATCH expr_nostruct '{' match_clauses ',' '}'       { $$ = mk_node("ExprMatch", 2, $2, $4); }
 ;
 
