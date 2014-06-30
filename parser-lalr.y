@@ -912,6 +912,55 @@ expr
 | nonblock_prefix_expr
 ;
 
+expr_nostruct
+: lit                                                 { $$ = mk_node("ExprLit", 1, $1); }
+| %prec IDENT
+  path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
+| SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
+| path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
+| expr_nostruct '.' ident                             { $$ = mk_node("ExprField", 2, $1, $3); }
+| expr_nostruct '[' expr ']'                          { $$ = mk_node("ExprIndex", 2, $1, $3); }
+| expr_nostruct '(' maybe_exprs ')'                   { $$ = mk_node("ExprCall", 2, $1, $3); }
+| '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
+| CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
+| CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
+| RETURN                                              { $$ = mk_node("ExprRet", 0); }
+| RETURN expr                                         { $$ = mk_node("ExprRet", 1, $2); }
+| BREAK                                               { $$ = mk_node("ExprBreak", 0); }
+| BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
+| expr_nostruct '=' expr_nostruct                     { $$ = mk_node("ExprAssign", 2, $1, $3); }
+| expr_nostruct BINOPEQ expr_nostruct                 { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| expr_nostruct OROR expr_nostruct                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
+| expr_nostruct ANDAND expr_nostruct                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
+| expr_nostruct EQEQ expr_nostruct                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
+| expr_nostruct NE expr_nostruct                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
+| expr_nostruct '<' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
+| expr_nostruct '>' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
+| expr_nostruct LE expr_nostruct                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
+| expr_nostruct GE expr_nostruct                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
+| expr_nostruct '|' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
+| expr_nostruct '^' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
+| expr_nostruct '&' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
+| expr_nostruct SHL expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
+| expr_nostruct SHR expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
+| expr_nostruct '+' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
+| expr_nostruct '-' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
+| expr_nostruct '*' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
+| expr_nostruct '/' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
+| expr_nostruct '%' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
+| expr_nostruct AS ty                                 { $$ = mk_node("ExprCast", 2, $1, $3); }
+| BOX expr_nostruct                                   { $$ = mk_node("ExprBox", 1, $2); }
+| block_expr
+| nonblock_prefix_expr_nostruct
+;
+
+nonblock_prefix_expr_nostruct
+: '-' expr_nostruct                         { $$ = mk_node("-", 1, $2); }
+| '*' expr_nostruct                         { $$ = mk_node("*", 1, $2); }
+| '&' expr_nostruct                         { $$ = mk_node("&", 1, $2); }
+| lambda_expr_nostruct
+;
+
 nonblock_prefix_expr
 : '-' expr                         { $$ = mk_node("-", 1, $2); }
 | '*' expr                         { $$ = mk_node("*", 1, $2); }
@@ -924,6 +973,13 @@ lambda_expr
   OROR expr                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
 | %prec LAMBDA
   '|' inferrable_params '|' expr   { $$ = mk_node("lambda", 2, $2, $4); }
+;
+
+lambda_expr_nostruct
+: %prec LAMBDA
+  OROR expr_nostruct                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
+| %prec LAMBDA
+  '|' inferrable_params '|' expr_nostruct   { $$ = mk_node("lambda", 2, $2, $4); }
 ;
 
 field_inits
@@ -952,8 +1008,8 @@ block_expr
 ;
 
 expr_match
-: MATCH expr '{' match_clauses '}'           { $$ = mk_node("ExprMatch", 2, $2, $4); }
-| MATCH expr '{' match_clauses ',' '}'       { $$ = mk_node("ExprMatch", 2, $2, $4); }
+: MATCH expr_nostruct '{' match_clauses '}'           { $$ = mk_node("ExprMatch", 2, $2, $4); }
+| MATCH expr_nostruct '{' match_clauses ',' '}'       { $$ = mk_node("ExprMatch", 2, $2, $4); }
 ;
 
 match_clauses
@@ -966,13 +1022,13 @@ match_clause
 ;
 
 maybe_guard
-: IF expr           { $$ = $2; }
-| %empty            { $$ = mk_none(); }
+: IF expr_nostruct           { $$ = $2; }
+| %empty                     { $$ = mk_none(); }
 ;
 
 expr_if
-: IF expr block                              { $$ = mk_node("ExprIf", 2, $2, $3); }
-| IF expr block ELSE block_or_if             { $$ = mk_node("ExprIf", 3, $2, $3, $5); }
+: IF expr_nostruct block                              { $$ = mk_node("ExprIf", 2, $2, $3); }
+| IF expr_nostruct block ELSE block_or_if             { $$ = mk_node("ExprIf", 3, $2, $3, $5); }
 ;
 
 block_or_if
@@ -981,15 +1037,15 @@ block_or_if
 ;
 
 expr_while
-: WHILE expr block                           { $$ = mk_node("ExprWhile", 2, $2, $3); }
+: WHILE expr_nostruct block                           { $$ = mk_node("ExprWhile", 2, $2, $3); }
 ;
 
 expr_loop
-: LOOP block                                 { $$ = mk_node("ExprLoop", 1, $2); }
+: LOOP block                                          { $$ = mk_node("ExprLoop", 1, $2); }
 ;
 
 expr_for
-: FOR expr IN expr block                     { $$ = mk_node("ExprForLoop", 3, $2, $4, $5); }
+: FOR expr IN expr_nostruct block                     { $$ = mk_node("ExprForLoop", 3, $2, $4, $5); }
 ;
 
 let
