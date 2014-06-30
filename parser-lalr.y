@@ -7,6 +7,7 @@ extern struct node *mk_node(char const *name, int n, ...);
 extern struct node *mk_atom(char *text);
 extern struct node *mk_none();
 extern struct node *ext_node(struct node *nd, int n, ...);
+extern void push_back(char c);
 extern char *yytext;
 %}
 %debug
@@ -571,8 +572,11 @@ ret_ty
 
 generic_params
 : '<' lifetimes '>'                   { $$ = mk_node("Generics", 2, $2, mk_none()); }
+| '<' lifetimes SHR                   { push_back('>'); $$ = mk_node("Generics", 2, $2, mk_none()); }
 | '<' lifetimes ',' ty_params '>'     { $$ = mk_node("Generics", 2, $2, $4); }
+| '<' lifetimes ',' ty_params SHR     { push_back('>'); $$ = mk_node("Generics", 2, $2, $4); }
 | '<' ty_params '>'                   { $$ = mk_node("Generics", 2, mk_none(), $2); }
+| '<' ty_params SHR                   { push_back('>'); $$ = mk_node("Generics", 2, mk_none(), $2); }
 | %empty                              { $$ = mk_none(); }
 ;
 
@@ -636,6 +640,7 @@ path_generic_args_and_bounds
 
 generic_args
 : '<' lifetimes_or_tys '>' { $$ = $2; }
+| '<' lifetimes_or_tys SHR { push_back('>'); $$ = $2; }
 ;
 
 ty_param
