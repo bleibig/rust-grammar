@@ -820,7 +820,7 @@ maybe_exprs
 
 exprs
 : expr                                                        { $$ = mk_node("exprs", 1, $1); }
-| exprs ',' expr                                              { $$ = ext_node($1, 1, $2); }
+| exprs ',' expr                                              { $$ = ext_node($1, 1, $3); }
 ;
 
 path_expr
