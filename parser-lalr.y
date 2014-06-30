@@ -795,20 +795,20 @@ block
 
 stmts
 : stmts let                                        { $$ = ext_node($1, 1, $2); }
-| stmts let nonblock_expr_stmt                     { $$ = ext_node($1, 2, $2, $3); }
+| stmts let nonblock_expr                          { $$ = ext_node($1, 2, $2, $3); }
 | stmts item_static                                { $$ = ext_node($1, 1, $2); }
-| stmts item_static nonblock_expr_stmt             { $$ = ext_node($1, 2, $2, $3); }
+| stmts item_static nonblock_expr                  { $$ = ext_node($1, 2, $2, $3); }
 | stmts block_item                                 { $$ = ext_node($1, 1, $2); }
-| stmts block_item nonblock_expr_stmt              { $$ = ext_node($1, 2, $2, $3); }
+| stmts block_item nonblock_expr                   { $$ = ext_node($1, 2, $2, $3); }
 | stmts block_expr                                 { $$ = ext_node($1, 1, $2); }
-| stmts block_expr nonblock_expr_stmt              { $$ = ext_node($1, 2, $2, $3); }
+| stmts block_expr nonblock_expr                   { $$ = ext_node($1, 2, $2, $3); }
 | stmts ';'
-| stmts ';' nonblock_expr_stmt                     { $$ = ext_node($1, 1, $3); }
-| nonblock_expr_stmt                               { $$ = mk_node("stmts", 1, $1); }
+| stmts ';' nonblock_expr                          { $$ = ext_node($1, 1, $3); }
+| nonblock_expr                                    { $$ = mk_node("stmts", 1, $1); }
 | %empty                                           { $$ = mk_node("stmts", 0); }
 ;
 
-nonblock_expr_stmt
+nonblock_expr
 : nonblock_prefix_expr
 | nonblock_nonprefix_expr
 ;
@@ -909,6 +909,7 @@ expr
 | expr AS ty                                          { $$ = mk_node("ExprCast", 2, $1, $3); }
 | BOX expr                                            { $$ = mk_node("ExprBox", 1, $2); }
 | block_expr
+| block
 | nonblock_prefix_expr
 ;
 
@@ -951,6 +952,7 @@ expr_nostruct
 | expr_nostruct AS ty                                 { $$ = mk_node("ExprCast", 2, $1, $3); }
 | BOX expr_nostruct                                   { $$ = mk_node("ExprBox", 1, $2); }
 | block_expr
+| block
 | nonblock_prefix_expr_nostruct
 ;
 
@@ -1004,7 +1006,6 @@ block_expr
 | expr_loop
 | expr_for
 | UNSAFE block                               { $$ = mk_node("UnsafeBlock", 1, $1); }
-| block
 ;
 
 expr_match
@@ -1014,12 +1015,23 @@ expr_match
 ;
 
 match_clauses
-: match_clause                               { $$ = mk_node("Arms", 1, $1); }
-| match_clauses ',' match_clause             { $$ = ext_node($1, 1, $3) ; }
+: nonblock_match_clause                                 { $$ = mk_node("Arms", 1, $1); }
+| match_clauses_ending_in_block                         { $$ = mk_node("Arms", 1, $1); }
+| match_clauses ',' nonblock_match_clause               { $$ = ext_node($1, 1, $3); }
+| match_clauses ',' match_clauses_ending_in_block       { $$ = ext_node($1, 1, $3); }
+
+match_clauses_ending_in_block
+: block_match_clause                                    { $$ = mk_node("Arms", 1, $1); }
+| match_clauses_ending_in_block block_match_clause      { $$ = ext_node($1, 1, $2) ; }
 ;
 
-match_clause
-: pats_or maybe_guard FAT_ARROW expr         { $$ = mk_node("Arm", 3, $1, $2, $4); }
+nonblock_match_clause
+: pats_or maybe_guard FAT_ARROW nonblock_expr         { $$ = mk_node("Arm", 3, $1, $2, $4); }
+| pats_or maybe_guard FAT_ARROW block_expr            { $$ = mk_node("Arm", 3, $1, $2, $4); }
+;
+
+block_match_clause
+: pats_or maybe_guard FAT_ARROW block                 { $$ = mk_node("Arm", 3, $1, $2, $4); }
 ;
 
 maybe_guard
