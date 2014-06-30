@@ -253,7 +253,7 @@ pats_or
 ;
 
 pat
-: '_'
+: UNDERSCORE                             { $$ = mk_atom("PatWild"); }
 | '&' pat                                { $$ = mk_node("PatRegion", 1, $2); }
 | '(' pat_tup ')'                        { $$ = mk_node("PatTup", 1, $2); }
 | '[' pat_vec ']'                        { $$ = mk_node("PatVec", 1, $2); }
@@ -340,7 +340,7 @@ ty_prim
 | '[' ty ']'                           { $$ = mk_node("TyVec", 1, $2); }
 | '[' ty ',' DOTDOT expr ']'           { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
 | TYPEOF '(' expr ')'                  { $$ = mk_node("TyTypeof", 1, $3); }
-| '_'                                  { $$ = mk_atom("TyInfer"); }
+| UNDERSCORE                           { $$ = mk_atom("TyInfer"); }
 | ty_bare_fn
 | ty_proc
 ;
