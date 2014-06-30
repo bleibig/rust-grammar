@@ -1025,6 +1025,7 @@ expr_match
 match_clauses
 : nonblock_match_clause                                 { $$ = mk_node("Arms", 1, $1); }
 | match_clauses_ending_in_block                         { $$ = mk_node("Arms", 1, $1); }
+| match_clauses_ending_in_block nonblock_match_clause   { $$ = ext_node($1, 1, $2); }
 | match_clauses ',' nonblock_match_clause               { $$ = ext_node($1, 1, $3); }
 | match_clauses ',' match_clauses_ending_in_block       { $$ = ext_node($1, 1, $3); }
 
