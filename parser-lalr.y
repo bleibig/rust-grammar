@@ -707,35 +707,35 @@ trait_ref
 
 // structs
 item_struct
-: STRUCT ident generic_params struct_args     { $$ = mk_node("ItemStruct", 0); }
+: STRUCT ident generic_params struct_args     { $$ = mk_node("ItemStruct", 3, $2, $3, $4); }
 ;
 
 struct_args
-: '{' struct_decl_fields '}'
-| '{' struct_decl_fields ',' '}'
-| '(' ')' ';'
-| '(' struct_tuple_fields ')' ';'
-| '(' struct_tuple_fields ',' ')' ';'
-| ';'
+: '{' struct_decl_fields '}'                  { $$ = $2; }
+| '{' struct_decl_fields ',' '}'              { $$ = $2; }
+| '(' ')' ';'                                 { $$ = mk_none(); }
+| '(' struct_tuple_fields ')' ';'             { $$ = $2; }
+| '(' struct_tuple_fields ',' ')' ';'         { $$ = $2; }
+| ';'                                         { $$ = mk_none(); }
 ;
 
 struct_decl_fields
-: struct_decl_field
-| struct_decl_fields ',' struct_decl_field
-| %empty { $$ = mk_none(); }
+: struct_decl_field                           { $$ = mk_node("StructFields", 1, $1); }
+| struct_decl_fields ',' struct_decl_field    { $$ = ext_node($1, 1, $3); }
+| %empty                                      { $$ = mk_none(); }
 ;
 
 struct_decl_field
-: attrs_and_vis ident ':' ty
+: attrs_and_vis ident ':' ty                  { $$ = mk_node("StructField", 3, $1, $2, $4); }
 ;
 
 struct_tuple_fields
-: struct_tuple_field
-| struct_tuple_fields ',' struct_tuple_field
+: struct_tuple_field                          { $$ = mk_node("StructFields", 1, $1); }
+| struct_tuple_fields ',' struct_tuple_field  { $$ = ext_node($1, 1, $3); }
 ;
 
 struct_tuple_field
-: maybe_outer_attrs ty
+: maybe_outer_attrs ty                        { $$ = mk_node("StructField", 2, $1, $2); }
 ;
 
 // enums
