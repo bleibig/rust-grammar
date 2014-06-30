@@ -838,6 +838,7 @@ nonblock_nonprefix_expr
 | nonblock_nonprefix_expr '.' ident                   { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonblock_nonprefix_expr '[' expr ']'                { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | nonblock_nonprefix_expr '(' maybe_exprs ')'         { $$ = mk_node("ExprCall", 2, $1, $3); }
+| '[' maybe_exprs ']'                                 { $$ = mk_node("ExprVec", 1, $2); }
 | '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
 | CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
 | CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
@@ -879,6 +880,7 @@ expr
 | expr '.' ident                                      { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr '[' expr ']'                                   { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | expr '(' maybe_exprs ')'                            { $$ = mk_node("ExprCall", 2, $1, $3); }
+| '[' maybe_exprs ']'                                 { $$ = mk_node("ExprVec", 1, $2); }
 | '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
 | CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
 | CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
@@ -922,6 +924,7 @@ expr_nostruct
 | expr_nostruct '.' ident                             { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr_nostruct '[' expr ']'                          { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | expr_nostruct '(' maybe_exprs ')'                   { $$ = mk_node("ExprCall", 2, $1, $3); }
+| '[' maybe_exprs ']'                                 { $$ = mk_node("ExprVec", 1, $2); }
 | '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
 | CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
 | CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
