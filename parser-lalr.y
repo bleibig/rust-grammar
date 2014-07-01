@@ -7,6 +7,7 @@ extern struct node *mk_node(char const *name, int n, ...);
 extern struct node *mk_atom(char *text);
 extern struct node *mk_none();
 extern struct node *ext_node(struct node *nd, int n, ...);
+extern void push_back(char c);
 extern char *yytext;
 %}
 %debug
@@ -93,6 +94,11 @@ extern char *yytext;
 // We expect no shift/reduce or reduce/reduce conflicts in this grammar;
 // all potential ambiguities are scrutinized and eliminated manually.
 %expect 0
+
+// fake-precedence symbol to cause '|' bars in lambda context to parse
+// at low precedence, permit things like |x| foo = bar, where '=' is
+// otherwise lower-precedence than '|'.
+%precedence LAMBDA
 
 // IDENT needs to be lower than '{' so that 'foo {' is shifted when
 // trying to decide if we've got a struct-construction expr (esp. in
@@ -248,7 +254,7 @@ pats_or
 ;
 
 pat
-: '_'
+: UNDERSCORE                             { $$ = mk_atom("PatWild"); }
 | '&' pat                                { $$ = mk_node("PatRegion", 1, $2); }
 | '(' pat_tup ')'                        { $$ = mk_node("PatTup", 1, $2); }
 | '[' pat_vec ']'                        { $$ = mk_node("PatVec", 1, $2); }
@@ -335,7 +341,7 @@ ty_prim
 | '[' ty ']'                           { $$ = mk_node("TyVec", 1, $2); }
 | '[' ty ',' DOTDOT expr ']'           { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
 | TYPEOF '(' expr ')'                  { $$ = mk_node("TyTypeof", 1, $3); }
-| '_'                                  { $$ = mk_atom("TyInfer"); }
+| UNDERSCORE                           { $$ = mk_atom("TyInfer"); }
 | ty_bare_fn
 | ty_proc
 ;
@@ -476,14 +482,14 @@ trait_method
 ;
 
 type_method
-: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl ';'
+: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self ';'
 {
   $$ = mk_node("TypeMethod", 5, $1, $2, $4, $5, $6);
 }
 ;
 
 method
-: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl inner_attrs_and_block
+: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self inner_attrs_and_block
 {
   $$ = mk_node("Method", 6, $1, $2, $4, $5, $6, $7);
 }
@@ -531,8 +537,18 @@ fn_decl
 : fn_params ret_ty   { $$ = mk_node("FnDecl", 2, $1, $2); }
 ;
 
+fn_decl_with_self
+: fn_params_with_self ret_ty   { $$ = mk_node("FnDecl", 2, $1, $2); }
+;
+
 fn_params
 : '(' maybe_params ')'  { $$ = $2; }
+;
+
+fn_params_with_self
+: '(' SELF maybe_params ')'                     { $$ = mk_node("SelfValue", 1, $3); }
+| '(' '&' maybe_lifetime SELF maybe_params ')'  { $$ = mk_node("SelfRegion", 2, $3, $5); }
+| '(' maybe_params ')'                          { $$ = mk_node("SelfStatic", 1, $2); }
 ;
 
 maybe_params
@@ -566,8 +582,11 @@ ret_ty
 
 generic_params
 : '<' lifetimes '>'                   { $$ = mk_node("Generics", 2, $2, mk_none()); }
+| '<' lifetimes SHR                   { push_back('>'); $$ = mk_node("Generics", 2, $2, mk_none()); }
 | '<' lifetimes ',' ty_params '>'     { $$ = mk_node("Generics", 2, $2, $4); }
+| '<' lifetimes ',' ty_params SHR     { push_back('>'); $$ = mk_node("Generics", 2, $2, $4); }
 | '<' ty_params '>'                   { $$ = mk_node("Generics", 2, mk_none(), $2); }
+| '<' ty_params SHR                   { push_back('>'); $$ = mk_node("Generics", 2, mk_none(), $2); }
 | %empty                              { $$ = mk_none(); }
 ;
 
@@ -631,6 +650,7 @@ path_generic_args_and_bounds
 
 generic_args
 : '<' lifetimes_or_tys '>' { $$ = $2; }
+| '<' lifetimes_or_tys SHR { push_back('>'); $$ = $2; }
 ;
 
 ty_param
@@ -697,35 +717,35 @@ trait_ref
 
 // structs
 item_struct
-: STRUCT ident generic_params struct_args     { $$ = mk_node("ItemStruct", 0); }
+: STRUCT ident generic_params struct_args     { $$ = mk_node("ItemStruct", 3, $2, $3, $4); }
 ;
 
 struct_args
-: '{' struct_decl_fields '}'
-| '{' struct_decl_fields ',' '}'
-| '(' ')' ';'
-| '(' struct_tuple_fields ')' ';'
-| '(' struct_tuple_fields ',' ')' ';'
-| ';'
+: '{' struct_decl_fields '}'                  { $$ = $2; }
+| '{' struct_decl_fields ',' '}'              { $$ = $2; }
+| '(' ')' ';'                                 { $$ = mk_none(); }
+| '(' struct_tuple_fields ')' ';'             { $$ = $2; }
+| '(' struct_tuple_fields ',' ')' ';'         { $$ = $2; }
+| ';'                                         { $$ = mk_none(); }
 ;
 
 struct_decl_fields
-: struct_decl_field
-| struct_decl_fields ',' struct_decl_field
-| %empty { $$ = mk_none(); }
+: struct_decl_field                           { $$ = mk_node("StructFields", 1, $1); }
+| struct_decl_fields ',' struct_decl_field    { $$ = ext_node($1, 1, $3); }
+| %empty                                      { $$ = mk_none(); }
 ;
 
 struct_decl_field
-: attrs_and_vis ident ':' ty
+: attrs_and_vis ident ':' ty                  { $$ = mk_node("StructField", 3, $1, $2, $4); }
 ;
 
 struct_tuple_fields
-: struct_tuple_field
-| struct_tuple_fields ',' struct_tuple_field
+: struct_tuple_field                          { $$ = mk_node("StructFields", 1, $1); }
+| struct_tuple_fields ',' struct_tuple_field  { $$ = ext_node($1, 1, $3); }
 ;
 
 struct_tuple_field
-: maybe_outer_attrs ty
+: maybe_outer_attrs ty                        { $$ = mk_node("StructField", 2, $1, $2); }
 ;
 
 // enums
@@ -790,20 +810,20 @@ block
 
 stmts
 : stmts let                                        { $$ = ext_node($1, 1, $2); }
-| stmts let nonblock_expr_stmt                     { $$ = ext_node($1, 2, $2, $3); }
+| stmts let nonblock_expr                          { $$ = ext_node($1, 2, $2, $3); }
 | stmts item_static                                { $$ = ext_node($1, 1, $2); }
-| stmts item_static nonblock_expr_stmt             { $$ = ext_node($1, 2, $2, $3); }
+| stmts item_static nonblock_expr                  { $$ = ext_node($1, 2, $2, $3); }
 | stmts block_item                                 { $$ = ext_node($1, 1, $2); }
-| stmts block_item nonblock_expr_stmt              { $$ = ext_node($1, 2, $2, $3); }
+| stmts block_item nonblock_expr                   { $$ = ext_node($1, 2, $2, $3); }
 | stmts block_expr                                 { $$ = ext_node($1, 1, $2); }
-| stmts block_expr nonblock_expr_stmt              { $$ = ext_node($1, 2, $2, $3); }
+| stmts block_expr nonblock_expr                   { $$ = ext_node($1, 2, $2, $3); }
 | stmts ';'
-| stmts ';' nonblock_expr_stmt                     { $$ = ext_node($1, 1, $3); }
-| nonblock_expr_stmt                               { $$ = mk_node("stmts", 1, $1); }
+| stmts ';' nonblock_expr                          { $$ = ext_node($1, 1, $3); }
+| nonblock_expr                                    { $$ = mk_node("stmts", 1, $1); }
 | %empty                                           { $$ = mk_node("stmts", 0); }
 ;
 
-nonblock_expr_stmt
+nonblock_expr
 : nonblock_prefix_expr
 | nonblock_nonprefix_expr
 ;
@@ -815,7 +835,7 @@ maybe_exprs
 
 exprs
 : expr                                                        { $$ = mk_node("exprs", 1, $1); }
-| exprs ',' expr                                              { $$ = ext_node($1, 1, $2); }
+| exprs ',' expr                                              { $$ = ext_node($1, 1, $3); }
 ;
 
 path_expr
@@ -833,6 +853,7 @@ nonblock_nonprefix_expr
 | nonblock_nonprefix_expr '.' ident                   { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonblock_nonprefix_expr '[' expr ']'                { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | nonblock_nonprefix_expr '(' maybe_exprs ')'         { $$ = mk_node("ExprCall", 2, $1, $3); }
+| '[' maybe_exprs ']'                                 { $$ = mk_node("ExprVec", 1, $2); }
 | '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
 | CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
 | CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
@@ -874,6 +895,7 @@ expr
 | expr '.' ident                                      { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr '[' expr ']'                                   { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | expr '(' maybe_exprs ')'                            { $$ = mk_node("ExprCall", 2, $1, $3); }
+| '[' maybe_exprs ']'                                 { $$ = mk_node("ExprVec", 1, $2); }
 | '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
 | CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
 | CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
@@ -904,7 +926,59 @@ expr
 | expr AS ty                                          { $$ = mk_node("ExprCast", 2, $1, $3); }
 | BOX expr                                            { $$ = mk_node("ExprBox", 1, $2); }
 | block_expr
+| block
 | nonblock_prefix_expr
+;
+
+expr_nostruct
+: lit                                                 { $$ = mk_node("ExprLit", 1, $1); }
+| %prec IDENT
+  path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
+| SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
+| path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
+| expr_nostruct '.' ident                             { $$ = mk_node("ExprField", 2, $1, $3); }
+| expr_nostruct '[' expr ']'                          { $$ = mk_node("ExprIndex", 2, $1, $3); }
+| expr_nostruct '(' maybe_exprs ')'                   { $$ = mk_node("ExprCall", 2, $1, $3); }
+| '[' maybe_exprs ']'                                 { $$ = mk_node("ExprVec", 1, $2); }
+| '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
+| CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
+| CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
+| RETURN                                              { $$ = mk_node("ExprRet", 0); }
+| RETURN expr                                         { $$ = mk_node("ExprRet", 1, $2); }
+| BREAK                                               { $$ = mk_node("ExprBreak", 0); }
+| BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
+| expr_nostruct '=' expr_nostruct                     { $$ = mk_node("ExprAssign", 2, $1, $3); }
+| expr_nostruct BINOPEQ expr_nostruct                 { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| expr_nostruct OROR expr_nostruct                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
+| expr_nostruct ANDAND expr_nostruct                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
+| expr_nostruct EQEQ expr_nostruct                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
+| expr_nostruct NE expr_nostruct                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
+| expr_nostruct '<' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
+| expr_nostruct '>' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
+| expr_nostruct LE expr_nostruct                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
+| expr_nostruct GE expr_nostruct                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
+| expr_nostruct '|' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
+| expr_nostruct '^' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
+| expr_nostruct '&' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
+| expr_nostruct SHL expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
+| expr_nostruct SHR expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
+| expr_nostruct '+' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
+| expr_nostruct '-' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
+| expr_nostruct '*' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
+| expr_nostruct '/' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
+| expr_nostruct '%' expr_nostruct                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
+| expr_nostruct AS ty                                 { $$ = mk_node("ExprCast", 2, $1, $3); }
+| BOX expr_nostruct                                   { $$ = mk_node("ExprBox", 1, $2); }
+| block_expr
+| block
+| nonblock_prefix_expr_nostruct
+;
+
+nonblock_prefix_expr_nostruct
+: '-' expr_nostruct                         { $$ = mk_node("-", 1, $2); }
+| '*' expr_nostruct                         { $$ = mk_node("*", 1, $2); }
+| '&' expr_nostruct                         { $$ = mk_node("&", 1, $2); }
+| lambda_expr_nostruct
 ;
 
 nonblock_prefix_expr
@@ -915,8 +989,17 @@ nonblock_prefix_expr
 ;
 
 lambda_expr
-: OROR expr                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
-| '|' inferrable_params '|' expr   { $$ = mk_node("lambda", 2, $2, $4); }
+: %prec LAMBDA
+  OROR expr                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
+| %prec LAMBDA
+  '|' inferrable_params '|' expr   { $$ = mk_node("lambda", 2, $2, $4); }
+;
+
+lambda_expr_nostruct
+: %prec LAMBDA
+  OROR expr_nostruct                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
+| %prec LAMBDA
+  '|' inferrable_params '|' expr_nostruct   { $$ = mk_node("lambda", 2, $2, $4); }
 ;
 
 field_inits
@@ -941,31 +1024,43 @@ block_expr
 | expr_loop
 | expr_for
 | UNSAFE block                               { $$ = mk_node("UnsafeBlock", 1, $1); }
-| block
 ;
 
 expr_match
-: MATCH expr '{' match_clauses '}'           { $$ = mk_node("ExprMatch", 2, $2, $4); }
-| MATCH expr '{' match_clauses ',' '}'       { $$ = mk_node("ExprMatch", 2, $2, $4); }
+: MATCH expr_nostruct '{' match_clauses '}'           { $$ = mk_node("ExprMatch", 2, $2, $4); }
+| MATCH expr_nostruct '{' '}'                         { $$ = mk_node("ExprMatch", 1, $2); }
+| MATCH expr_nostruct '{' match_clauses ',' '}'       { $$ = mk_node("ExprMatch", 2, $2, $4); }
 ;
 
 match_clauses
-: match_clause                               { $$ = mk_node("Arms", 1, $1); }
-| match_clauses ',' match_clause             { $$ = ext_node($1, 1, $3) ; }
+: nonblock_match_clause                                 { $$ = mk_node("Arms", 1, $1); }
+| match_clauses_ending_in_block                         { $$ = mk_node("Arms", 1, $1); }
+| match_clauses_ending_in_block nonblock_match_clause   { $$ = ext_node($1, 1, $2); }
+| match_clauses ',' nonblock_match_clause               { $$ = ext_node($1, 1, $3); }
+| match_clauses ',' match_clauses_ending_in_block       { $$ = ext_node($1, 1, $3); }
+
+match_clauses_ending_in_block
+: block_match_clause                                    { $$ = mk_node("Arms", 1, $1); }
+| match_clauses_ending_in_block block_match_clause      { $$ = ext_node($1, 1, $2) ; }
 ;
 
-match_clause
-: pats_or maybe_guard FAT_ARROW expr         { $$ = mk_node("Arm", 3, $1, $2, $4); }
+nonblock_match_clause
+: pats_or maybe_guard FAT_ARROW nonblock_expr         { $$ = mk_node("Arm", 3, $1, $2, $4); }
+| pats_or maybe_guard FAT_ARROW block_expr            { $$ = mk_node("Arm", 3, $1, $2, $4); }
+;
+
+block_match_clause
+: pats_or maybe_guard FAT_ARROW block                 { $$ = mk_node("Arm", 3, $1, $2, $4); }
 ;
 
 maybe_guard
-: IF expr           { $$ = $2; }
-| %empty            { $$ = mk_none(); }
+: IF expr_nostruct           { $$ = $2; }
+| %empty                     { $$ = mk_none(); }
 ;
 
 expr_if
-: IF expr block                              { $$ = mk_node("ExprIf", 2, $2, $3); }
-| IF expr block ELSE block_or_if             { $$ = mk_node("ExprIf", 3, $2, $3, $5); }
+: IF expr_nostruct block                              { $$ = mk_node("ExprIf", 2, $2, $3); }
+| IF expr_nostruct block ELSE block_or_if             { $$ = mk_node("ExprIf", 3, $2, $3, $5); }
 ;
 
 block_or_if
@@ -974,15 +1069,15 @@ block_or_if
 ;
 
 expr_while
-: WHILE expr block                           { $$ = mk_node("ExprWhile", 2, $2, $3); }
+: WHILE expr_nostruct block                           { $$ = mk_node("ExprWhile", 2, $2, $3); }
 ;
 
 expr_loop
-: LOOP block                                 { $$ = mk_node("ExprLoop", 1, $2); }
+: LOOP block                                          { $$ = mk_node("ExprLoop", 1, $2); }
 ;
 
 expr_for
-: FOR expr IN expr block                     { $$ = mk_node("ExprForLoop", 3, $2, $4, $5); }
+: FOR pat IN expr_nostruct block                      { $$ = mk_node("ExprForLoop", 3, $2, $4, $5); }
 ;
 
 let
@@ -1039,6 +1134,44 @@ unpaired_token
 | IDENT                      { $$ = mk_atom(yytext); }
 | UNDERSCORE                 { $$ = mk_atom(yytext); }
 | LIFETIME                   { $$ = mk_atom(yytext); }
+| SELF                       { $$ = mk_atom(yytext); }
+| STATIC                     { $$ = mk_atom(yytext); }
+| AS                         { $$ = mk_atom(yytext); }
+| BREAK                      { $$ = mk_atom(yytext); }
+| CRATE                      { $$ = mk_atom(yytext); }
+| ELSE                       { $$ = mk_atom(yytext); }
+| ENUM                       { $$ = mk_atom(yytext); }
+| EXTERN                     { $$ = mk_atom(yytext); }
+| FALSE                      { $$ = mk_atom(yytext); }
+| FN                         { $$ = mk_atom(yytext); }
+| FOR                        { $$ = mk_atom(yytext); }
+| IF                         { $$ = mk_atom(yytext); }
+| IMPL                       { $$ = mk_atom(yytext); }
+| IN                         { $$ = mk_atom(yytext); }
+| LET                        { $$ = mk_atom(yytext); }
+| LOOP                       { $$ = mk_atom(yytext); }
+| MATCH                      { $$ = mk_atom(yytext); }
+| MOD                        { $$ = mk_atom(yytext); }
+| MUT                        { $$ = mk_atom(yytext); }
+| ONCE                       { $$ = mk_atom(yytext); }
+| PRIV                       { $$ = mk_atom(yytext); }
+| PUB                        { $$ = mk_atom(yytext); }
+| REF                        { $$ = mk_atom(yytext); }
+| RETURN                     { $$ = mk_atom(yytext); }
+| STRUCT                     { $$ = mk_atom(yytext); }
+| TRUE                       { $$ = mk_atom(yytext); }
+| TRAIT                      { $$ = mk_atom(yytext); }
+| TYPE                       { $$ = mk_atom(yytext); }
+| UNSAFE                     { $$ = mk_atom(yytext); }
+| USE                        { $$ = mk_atom(yytext); }
+| WHILE                      { $$ = mk_atom(yytext); }
+| CONTINUE                   { $$ = mk_atom(yytext); }
+| PROC                       { $$ = mk_atom(yytext); }
+| BOX                        { $$ = mk_atom(yytext); }
+| TYPEOF                     { $$ = mk_atom(yytext); }
+| DOC_COMMENT                { $$ = mk_atom(yytext); }
+| SHEBANG                    { $$ = mk_atom(yytext); }
+| STATIC_LIFETIME            { $$ = mk_atom(yytext); }
 | ';'                        { $$ = mk_atom(yytext); }
 | ','                        { $$ = mk_atom(yytext); }
 | '.'                        { $$ = mk_atom(yytext); }

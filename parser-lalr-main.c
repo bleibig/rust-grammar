@@ -3,11 +3,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define YYSTYPE struct node *
+extern int yylex();
+extern int rsparse();
 
-int yylex();
-int yyparse();
-extern int yydebug;
+static char pushback = '\0';
+int rslex() {
+  if (pushback == '\0') {
+    return yylex();
+  } else {
+    char c = pushback;
+    pushback = '\0';
+    return c;
+  }
+}
+
+void push_back(char c) {
+  pushback = c;
+}
+
+extern int rsdebug;
 
 struct node {
   struct node *next;
@@ -69,7 +83,7 @@ struct node *ext_node(struct node *nd, int n, ...) {
   struct node *nn;
 
   printf("# Extending %d-ary node by %d nodes: %s = %p",
-         nd->n_elems, c, nd->name, nd);
+	 nd->n_elems, c, nd->name, nd);
 
   if (nd->next) {
     nd->next->prev = nd->prev;
@@ -127,8 +141,8 @@ void print_node(struct node *n, int depth) {
 int main() {
   int ret = 0;
   struct node *tmp;
-  /* yydebug = 1; */
-  ret = yyparse();
+  /* rsdebug = 1; */
+  ret = rsparse();
   printf("--- PARSE COMPLETE: ret:%d, n_nodes:%d ---\n", ret, n_nodes);
   if (nodes) {
     print_node(nodes, 0);
@@ -144,7 +158,7 @@ int main() {
   return ret;
 }
 
-void yyerror(char const *s) {
+void rserror(char const *s) {
   fprintf (stderr, "%s\n", s);
 }
 
