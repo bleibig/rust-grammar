@@ -43,7 +43,7 @@ parser.c: parser.g
 	LLnextgen $< --generate-lexer-wrapper=no --verbose
 
 parser-lalr.tab.c parser-lalr.tab.h: parser-lalr.y
-	bison $< -d -p rs -v --warnings=error=all
+	bison $< -d -p rs -v --report=all --warnings=error=all
 
 rlex: rlex.rs
 	rustc $<
