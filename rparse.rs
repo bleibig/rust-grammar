@@ -123,7 +123,7 @@ fn print_sexp(indent: int, j: &json::Json) {
         }
         json::Number(n) => {
             print_indent(indent);
-            out.write_str(n.to_str().as_slice());
+            out.write_str(n.to_string().as_slice());
             out.write_str("\n");
         }
     }
@@ -139,7 +139,7 @@ fn main() {
     };
     let dump_json = matches.opt_present("j");
 
-    match io::stdin().read_to_str() {
+    match io::stdin().read_to_string() {
         Ok(text) => {
             let opt = config::basic_options();
             let sess = session::build_session(opt, None);
@@ -148,7 +148,7 @@ fn main() {
             let cr = driver::phase_1_parse_input(&sess, cfg, &input);
 
             // JSON-ify, meaning "encode then re-parse as just json", ugh.
-            let ast_str = json::Encoder::str_encode(&cr.module);
+            let ast_str = json::encode(&cr.module);
             let chars = ast_str.as_slice().chars().collect::<Vec<char>>();
             let mut b = json::Builder::new(chars.move_iter());
             let mut j = b.build().ok().unwrap();
