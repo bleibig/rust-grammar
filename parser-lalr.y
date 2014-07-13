@@ -391,7 +391,7 @@ item_mod
 ;
 
 item_foreign_mod
-: EXTERN maybe_abi '{' maybe_inner_attrs maybe_foreign_items '}'
+: EXTERN maybe_abi '{' maybe_inner_attrs maybe_foreign_items '}' { $$ = mk_node("ItemForeignMod", 2, $4, $5); }
 ;
 
 maybe_abi
@@ -411,7 +411,7 @@ foreign_items
 
 foreign_item
 : attrs_and_vis STATIC item_foreign_static
-| attrs_and_vis FN item_foreign_fn
+| attrs_and_vis item_foreign_fn
 | attrs_and_vis UNSAFE item_foreign_fn
 ;
 
