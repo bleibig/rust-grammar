@@ -848,7 +848,7 @@ exprs
 
 path_expr
 : path_generic_args_with_colons
-| MOD_SEP path_generic_args_with_colons
+| MOD_SEP path_generic_args_with_colons  { $$ = $2; }
 ;
 
 nonblock_nonprefix_expr
@@ -1033,14 +1033,14 @@ expr_nostruct
 nonblock_prefix_expr_nostruct
 : '-' expr_nostruct                         { $$ = mk_node("-", 1, $2); }
 | '*' expr_nostruct                         { $$ = mk_node("*", 1, $2); }
-| '&' maybe_mut expr_nostruct               { $$ = mk_node("&", 1, $2); }
+| '&' maybe_mut expr_nostruct               { $$ = mk_node("&", 2, $2, $3); }
 | lambda_expr_nostruct
 ;
 
 nonblock_prefix_expr
 : '-' expr                         { $$ = mk_node("-", 1, $2); }
 | '*' expr                         { $$ = mk_node("*", 1, $2); }
-| '&' maybe_mut expr               { $$ = mk_node("&", 1, $2); }
+| '&' maybe_mut expr               { $$ = mk_node("&", 2, $2, $3); }
 | lambda_expr
 ;
 
@@ -1090,7 +1090,7 @@ block_expr
 | expr_while
 | expr_loop
 | expr_for
-| UNSAFE block                               { $$ = mk_node("UnsafeBlock", 1, $1); }
+| UNSAFE block                               { $$ = mk_node("UnsafeBlock", 1, $2); }
 ;
 
 expr_match
