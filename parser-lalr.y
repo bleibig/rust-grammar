@@ -709,10 +709,12 @@ lifetimes
 
 lifetime
 : LIFETIME                      { $$ = mk_node("lifetime", 1, mk_atom(yytext)); }
+| STATIC_LIFETIME               { $$ = mk_atom("static_lifetime"); }
 ;
 
 trait_ref
 : path_generic_args_without_colons
+| MOD_SEP path_generic_args_without_colons
 ;
 
 // structs
@@ -1031,14 +1033,14 @@ expr_nostruct
 nonblock_prefix_expr_nostruct
 : '-' expr_nostruct                         { $$ = mk_node("-", 1, $2); }
 | '*' expr_nostruct                         { $$ = mk_node("*", 1, $2); }
-| '&' expr_nostruct                         { $$ = mk_node("&", 1, $2); }
+| '&' maybe_mut expr_nostruct               { $$ = mk_node("&", 1, $2); }
 | lambda_expr_nostruct
 ;
 
 nonblock_prefix_expr
 : '-' expr                         { $$ = mk_node("-", 1, $2); }
 | '*' expr                         { $$ = mk_node("*", 1, $2); }
-| '&' expr                         { $$ = mk_node("&", 1, $2); }
+| '&' maybe_mut expr               { $$ = mk_node("&", 1, $2); }
 | lambda_expr
 ;
 
