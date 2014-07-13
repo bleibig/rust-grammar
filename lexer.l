@@ -105,6 +105,7 @@ while    { return WHILE; }
 0o[0-8_]+{suf}?                                    { return LIT_INTEGER; }
 0b[01_]+{suf}?                                     { return LIT_INTEGER; }
 [0-9][0-9_]*{suf}?                                 { return LIT_INTEGER; }
+[0-9][0-9_]*\.(\.|[a-zA-Z])    { yyless(yyleng - 2); return LIT_INTEGER; }
 
 [0-9][0-9_]*\.[0-9]*([eE][-\+]?[0-9]+)?(f32|f64)?   { return LIT_FLOAT; }
 [0-9][0-9_]*(\.[0-9]*)?[eE][-\+]?[0-9]+(f32|f64)?   { return LIT_FLOAT; }
