@@ -53,11 +53,8 @@ void print_token(int token) {
   case RARROW: printf("RARROW"); break;
   case FAT_ARROW: printf("FAT_ARROW"); break;
   case LIT_CHAR: printf("LIT_CHAR(char)"); break;
-  case LIT_INT: printf("LIT_INT(%s)", desugar_num(yytext, "i")); break;
-  case LIT_UINT: printf("LIT_UINT(%s)", desugar_num(yytext, "u")); break;
-  case LIT_INT_UNSUFFIXED: printf("LIT_INT_UNSUFFIXED(%si64)", desugar_num(yytext, "")); break;
+  case LIT_INTEGER: printf("LIT_INTEGER(%s)", desugar_num(yytext, "")); break;
   case LIT_FLOAT: printf("LIT_FLOAT(%s)", yytext); break;
-  case LIT_FLOAT_UNSUFFIXED: printf("LIT_FLOAT_UNSUFFIXED(%s%s)", yytext, (yytext[strlen(yytext) - 1] == '.') ? "0" : ""); break;
   case LIT_STR: printf("LIT_STR(%s)", yytext); break;
   case LIT_STR_RAW: printf("LIT_STR_RAW(%s)", yytext); break;
   case IDENT: printf("IDENT(%s)", yytext); break;

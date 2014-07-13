@@ -13,6 +13,7 @@ use std::io::Reader;
 use std::string::String;
 use serialize::json;
 use serialize::json::{Json, List, String, Object};
+use syntax::diagnostics::registry;
 
 use rustc::driver::{driver, session, config};
 
@@ -142,7 +143,8 @@ fn main() {
     match io::stdin().read_to_string() {
         Ok(text) => {
             let opt = config::basic_options();
-            let sess = session::build_session(opt, None);
+            let sess = session::build_session(opt, None,
+                                              registry::Registry::new(rustc::DIAGNOSTICS));
             let cfg = config::build_configuration(&sess);
             let input = driver::StrInput(text);
             let cr = driver::phase_1_parse_input(&sess, cfg, &input);

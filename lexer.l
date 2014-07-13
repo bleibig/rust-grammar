@@ -31,8 +31,7 @@ static int saw_non_hash;
 %x blockcomment
 %x doc_block
 
-isuf (i8|i16|i32|i64|i)
-usuf (u8|u16|u32|u64|u)
+suf (i8|i16|i32|i64|i|u8|u16|u32|u64|u)
 
 %%
 
@@ -102,24 +101,14 @@ while    { return WHILE; }
 
 [a-zA-Z_][a-zA-Z0-9_]*      { return IDENT; }
 
-0x[0-9a-fA-F_]+{isuf}                              { return LIT_INT; }
-0x[0-9a-fA-F_]+{usuf}                              { return LIT_UINT; }
-0o[0-8_]+{isuf}                                    { return LIT_INT; }
-0o[0-8_]+{usuf}                                    { return LIT_UINT; }
-0b[01_]+{isuf}                                     { return LIT_INT; }
-0b[01_]+{usuf}                                     { return LIT_UINT; }
-[0-9][0-9_]*{isuf}                                 { return LIT_INT; }
-[0-9][0-9_]*{usuf}                                 { return LIT_UINT; }
+0x[0-9a-fA-F_]+{suf}?                              { return LIT_INTEGER; }
+0o[0-8_]+{suf}?                                    { return LIT_INTEGER; }
+0b[01_]+{suf}?                                     { return LIT_INTEGER; }
+[0-9][0-9_]*{suf}?                                 { return LIT_INTEGER; }
 
-[0-9][0-9_]*\.[0-9]*([eE][-\+]?[0-9]+)?            { return LIT_FLOAT_UNSUFFIXED; }
-[0-9][0-9_]*\.[0-9]*([eE][-\+]?[0-9]+)?(f32|f64)   { return LIT_FLOAT; }
-[0-9][0-9_]*(\.[0-9]*)?[eE][-\+]?[0-9]+            { return LIT_FLOAT_UNSUFFIXED; }
-[0-9][0-9_]*(\.[0-9]*)?[eE][-\+]?[0-9]+(f32|f64)   { return LIT_FLOAT; }
-[0-9][0-9_]*(f32|f64)                              { return LIT_FLOAT; }
-0x[0-9a-fA-F_]+ { return LIT_INT_UNSUFFIXED; }
-0o[0-8_]+       { return LIT_INT_UNSUFFIXED; }
-0b[01_]+        { return LIT_INT_UNSUFFIXED; }
-[0-9][0-9_]*    { return LIT_INT_UNSUFFIXED; }
+[0-9][0-9_]*\.[0-9]*([eE][-\+]?[0-9]+)?(f32|f64)?   { return LIT_FLOAT; }
+[0-9][0-9_]*(\.[0-9]*)?[eE][-\+]?[0-9]+(f32|f64)?   { return LIT_FLOAT; }
+[0-9][0-9_]*(f32|f64)                               { return LIT_FLOAT; }
 
 ;      { return ';'; }
 ,      { return ','; }

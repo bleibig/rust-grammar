@@ -17,11 +17,8 @@
 %token RARROW;
 %token FAT_ARROW;
 %token LIT_CHAR;
-%token LIT_INT;
-%token LIT_UINT;
-%token LIT_INT_UNSUFFIXED;
+%token LIT_INTEGER;
 %token LIT_FLOAT;
-%token LIT_FLOAT_UNSUFFIXED;
 %token LIT_STR;
 %token LIT_STR_RAW;
 %token IDENT;
@@ -387,26 +384,22 @@ bracedelim : '{' token_tree '}' ;
 token_tree : [ non_delimiter | delimited ]* ;
 non_delimiter : '=' | '<' | '>' | '.' | '~' | ',' | ';' | ':' | '#' | '$'
     | LE | EQEQ | NE | GE | ANDAND | OROR | BINOPEQ | DOTDOT
-    | DOTDOTDOT | MOD_SEP | RARROW | FAT_ARROW | LIT_CHAR | LIT_INT
-    | LIT_INT_UNSUFFIXED | LIT_FLOAT | LIT_FLOAT_UNSUFFIXED | LIT_STR
-    | LIT_STR_RAW | IDENT | UNDERSCORE | LIFETIME | SELF | STATIC | AS
-    | BREAK | CRATE | ELSE | ENUM | EXTERN | FALSE | FN | FOR
-    | IF | IMPL | IN | LET | LOOP | MATCH | MOD | MUT | ONCE | PRIV
-    | PUB | REF | RETURN | SHL | SHR | STRUCT | TRUE | TRAIT | TYPE
+    | DOTDOTDOT | MOD_SEP | RARROW | FAT_ARROW | LIT_CHAR | LIT_INTEGER
+    | LIT_FLOAT | LIT_STR | LIT_STR_RAW | IDENT | UNDERSCORE | LIFETIME
+    | SELF | STATIC | AS | BREAK | CRATE | ELSE | ENUM | EXTERN | FALSE
+    | FN | FOR | IF | IMPL | IN | LET | LOOP | MATCH | MOD | MUT | ONCE
+    | PRIV | PUB | REF | RETURN | SHL | SHR | STRUCT | TRUE | TRAIT | TYPE
     | UNSAFE | USE | WHILE | CONTINUE | PROC | BOX | TYPEOF
     ;
 
 /// Utility rules
 STR : LIT_STR | LIT_STR_RAW ;
 lit : TRUE | FALSE | token_lit ;
-number : LIT_INT | LIT_UINT | LIT_INT_UNSUFFIXED | LIT_FLOAT | LIT_FLOAT_UNSUFFIXED ;
+number : LIT_INTEGER | LIT_FLOAT ;
 token_lit
     : LIT_CHAR
-    | LIT_INT
-    | LIT_UINT
-    | LIT_INT_UNSUFFIXED
+    | LIT_INTEGER
     | LIT_FLOAT
-    | LIT_FLOAT_UNSUFFIXED
     | LIT_STR
     | LIT_STR_RAW
     | '(' ')'
@@ -415,11 +408,8 @@ lit_no_unit
     : TRUE
     | FALSE
     | LIT_CHAR
-    | LIT_INT
-    | LIT_UINT
-    | LIT_INT_UNSUFFIXED
+    | LIT_INTEGER
     | LIT_FLOAT
-    | LIT_FLOAT_UNSUFFIXED
     | LIT_STR
     | LIT_STR_RAW
     ;

@@ -27,11 +27,8 @@ extern char *yytext;
 %token RARROW
 %token FAT_ARROW
 %token LIT_CHAR
-%token LIT_INT
-%token LIT_UINT
-%token LIT_INT_UNSUFFIXED
+%token LIT_INTEGER
 %token LIT_FLOAT
-%token LIT_FLOAT_UNSUFFIXED
 %token LIT_STR
 %token LIT_STR_RAW
 %token IDENT
@@ -1157,11 +1154,8 @@ item_static
 
 lit
 : LIT_CHAR                   { $$ = mk_node("LitChar", 1, mk_atom(yytext)); }
-| LIT_INT                    { $$ = mk_node("LitInt", 1, mk_atom(yytext)); }
-| LIT_UINT                   { $$ = mk_node("LitUint", 1, mk_atom(yytext)); }
-| LIT_INT_UNSUFFIXED         { $$ = mk_node("LitIntUnsuffixed", 1, mk_atom(yytext)); }
+| LIT_INTEGER                { $$ = mk_node("LitInteger", 1, mk_atom(yytext)); }
 | LIT_FLOAT                  { $$ = mk_node("LitFloat", 1, mk_atom(yytext)); }
-| LIT_FLOAT_UNSUFFIXED       { $$ = mk_node("LitFloatUnsuffixed", 1, mk_atom(yytext)); }
 | TRUE                       { $$ = mk_node("LitBool", 1, mk_atom(yytext)); }
 | FALSE                      { $$ = mk_node("LitBool", 1, mk_atom(yytext)); }
 | str
@@ -1192,11 +1186,8 @@ unpaired_token
 | RARROW                     { $$ = mk_atom(yytext); }
 | FAT_ARROW                  { $$ = mk_atom(yytext); }
 | LIT_CHAR                   { $$ = mk_atom(yytext); }
-| LIT_INT                    { $$ = mk_atom(yytext); }
-| LIT_UINT                   { $$ = mk_atom(yytext); }
-| LIT_INT_UNSUFFIXED         { $$ = mk_atom(yytext); }
+| LIT_INTEGER                { $$ = mk_atom(yytext); }
 | LIT_FLOAT                  { $$ = mk_atom(yytext); }
-| LIT_FLOAT_UNSUFFIXED       { $$ = mk_atom(yytext); }
 | LIT_STR                    { $$ = mk_atom(yytext); }
 | LIT_STR_RAW                { $$ = mk_atom(yytext); }
 | IDENT                      { $$ = mk_atom(yytext); }
