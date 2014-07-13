@@ -10,6 +10,10 @@ import subprocess
 # 2 - path to the parser-lalr executable
 # 3 - path to the source directory to look for *.rs files
 
+if len(sys.argv) != 4:
+    print 'usage: testparser.py <parser> <parser-lalr> <rust-src-dir>'
+    sys.exit(1)
+
 parser = sys.argv[1]
 parser_lalr = sys.argv[2]
 
@@ -55,7 +59,7 @@ for base, dirs, files in os.walk(sys.argv[3]):
             bad_parser_lalr.append(p)
             pass
 
-        sys.stdout.write("\r total: %d, parser: %d, parser-lalr: %d, scanned %-60s" %
+        sys.stdout.write("\033[2K\r total: %d, parser: %d, parser-lalr: %d, scanned %-60s" %
                         (total, parser_ok, parser_lalr_ok, p))
 
 print "\n"
