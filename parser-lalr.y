@@ -553,10 +553,14 @@ fn_params
 ;
 
 fn_params_with_self
-: '(' SELF maybe_params ')'                     { $$ = mk_node("SelfValue", 1, $3); }
-| '(' '&' maybe_lifetime SELF maybe_params ')'  { $$ = mk_node("SelfRegion", 2, $3, $5); }
-| '(' maybe_params ')'                          { $$ = mk_node("SelfStatic", 1, $2); }
+: '(' SELF maybe_comma_params ')'                     { $$ = mk_node("SelfValue", 1, $3); }
+| '(' '&' maybe_lifetime SELF maybe_comma_params ')'  { $$ = mk_node("SelfRegion", 2, $3, $5); }
+| '(' maybe_params ')'                                { $$ = mk_node("SelfStatic", 1, $2); }
 ;
+
+maybe_comma_params
+: ',' params  { $$ = $2; }
+| %empty      { $$ = mk_none(); }
 
 maybe_params
 : params
