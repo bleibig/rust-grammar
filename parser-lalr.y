@@ -70,6 +70,7 @@ extern char *yytext;
 %token CONTINUE
 %token PROC
 %token BOX
+%token CONST
 %token TYPEOF
 %token DOC_COMMENT
 
@@ -336,7 +337,7 @@ ty_prim
 : path_generic_args_and_bounds         { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
 | MOD_SEP path_generic_args_and_bounds { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
 | BOX ty                               { $$ = mk_node("TyBox", 1, $2); }
-| '*' maybe_mut ty                     { $$ = mk_node("TyPtr", 2, $2, $3); }
+| '*' maybe_mut_or_const ty            { $$ = mk_node("TyPtr", 2, $2, $3); }
 | '&' maybe_lifetime maybe_mut ty      { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
 | '[' ty ']'                           { $$ = mk_node("TyVec", 1, $2); }
 | '[' ty ',' DOTDOT expr ']'           { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
@@ -375,6 +376,12 @@ ty_proc
 
 maybe_mut
 : MUT    { $$ = mk_atom("MutMutable"); }
+| %empty { $$ = mk_atom("MutImmutable"); }
+;
+
+maybe_mut_or_const
+: MUT    { $$ = mk_atom("MutMutable"); }
+| CONST  { $$ = mk_atom("MutImmutable"); }
 | %empty { $$ = mk_atom("MutImmutable"); }
 ;
 
@@ -1032,14 +1039,14 @@ expr_nostruct
 
 nonblock_prefix_expr_nostruct
 : '-' expr_nostruct                         { $$ = mk_node("-", 1, $2); }
-| '*' expr_nostruct                         { $$ = mk_node("*", 1, $2); }
+| '*' maybe_mut_or_const expr_nostruct      { $$ = mk_node("*", 2, $2, $3); }
 | '&' maybe_mut expr_nostruct               { $$ = mk_node("&", 2, $2, $3); }
 | lambda_expr_nostruct
 ;
 
 nonblock_prefix_expr
 : '-' expr                         { $$ = mk_node("-", 1, $2); }
-| '*' expr                         { $$ = mk_node("*", 1, $2); }
+| '*' maybe_mut_or_const expr      { $$ = mk_node("*", 2, $2, $3); }
 | '&' maybe_mut expr               { $$ = mk_node("&", 2, $2, $3); }
 | lambda_expr
 ;
@@ -1229,6 +1236,7 @@ unpaired_token
 | CONTINUE                   { $$ = mk_atom(yytext); }
 | PROC                       { $$ = mk_atom(yytext); }
 | BOX                        { $$ = mk_atom(yytext); }
+| CONST                      { $$ = mk_atom(yytext); }
 | TYPEOF                     { $$ = mk_atom(yytext); }
 | DOC_COMMENT                { $$ = mk_atom(yytext); }
 | SHEBANG                    { $$ = mk_atom(yytext); }

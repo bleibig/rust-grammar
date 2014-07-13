@@ -57,6 +57,7 @@ enum Token {
   CONTINUE,
   PROC,
   BOX,
+  CONST,
   TYPEOF,
   DOC_COMMENT,
 

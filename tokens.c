@@ -94,6 +94,7 @@ void print_token(int token) {
   case CONTINUE: printf("IDENT(continue)"); break;
   case PROC: printf("IDENT(proc)"); break;
   case BOX: printf("IDENT(box)"); break;
+  case CONST: printf("IDENT(const)"); break;
   case TYPEOF: printf("IDENT(typeof)"); break;
   case DOC_COMMENT: printf("DOC_COMMENT(%s)", yytext); break;
   case SHEBANG: printf("POUND\nNOT"); break;

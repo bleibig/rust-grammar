@@ -66,6 +66,7 @@ _        { return UNDERSCORE; }
 as       { return AS; }
 box      { return BOX; }
 break    { return BREAK; }
+const    { return CONST; }
 continue { return CONTINUE; }
 crate    { return CRATE; }
 else     { return ELSE; }
