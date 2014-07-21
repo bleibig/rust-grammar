@@ -334,7 +334,7 @@ ty
 ;
 
 ty_prim
-: path_generic_args_and_bounds         { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
+: path_generic_args_without_colons     { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
 | MOD_SEP path_generic_args_and_bounds { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
 | BOX ty                               { $$ = mk_node("TyBox", 1, $2); }
 | '*' maybe_mut_or_const ty            { $$ = mk_node("TyPtr", 2, $2, $3); }
@@ -435,6 +435,7 @@ fn_params_allow_variadic
 fn_params_allow_variadic_tail
 : ',' DOTDOTDOT
 | ',' param fn_params_allow_variadic_tail
+| %empty
 ;
 
 visibility
@@ -553,14 +554,10 @@ fn_params
 ;
 
 fn_params_with_self
-: '(' SELF maybe_comma_params ')'                     { $$ = mk_node("SelfValue", 1, $3); }
-| '(' '&' maybe_lifetime SELF maybe_comma_params ')'  { $$ = mk_node("SelfRegion", 2, $3, $5); }
-| '(' maybe_params ')'                                { $$ = mk_node("SelfStatic", 1, $2); }
+: '(' SELF maybe_comma_anon_params ')'                     { $$ = mk_node("SelfValue", 1, $3); }
+| '(' '&' maybe_lifetime SELF maybe_comma_anon_params ')'  { $$ = mk_node("SelfRegion", 2, $3, $5); }
+| '(' maybe_params ')'                                     { $$ = mk_node("SelfStatic", 1, $2); }
 ;
-
-maybe_comma_params
-: ',' params  { $$ = $2; }
-| %empty      { $$ = mk_none(); }
 
 maybe_params
 : params
@@ -583,6 +580,27 @@ inferrable_params
 
 inferrable_param
 : pat maybe_ty_ascription
+;
+
+maybe_comma_anon_params
+: ',' maybe_anon_params { $$ = $2; }
+| %empty                { $$ = mk_none(); }
+;
+
+maybe_anon_params
+: maybe_anon_param                       { $$ = mk_node("Args", 1, $1); }
+| maybe_anon_params ',' maybe_anon_param { $$ = ext_node($1, 1, $3); }
+;
+
+maybe_anon_param
+: plain_ident_or_underscore ':' ty   { $$ = mk_node("Arg", 2, $1, $3); }
+| ty
+;
+
+plain_ident_or_underscore
+: ident
+| binding_mode ident { $$ = $2; }
+| UNDERSCORE { $$ = mk_atom("PatWild"); }
 ;
 
 ret_ty
@@ -826,6 +844,8 @@ stmts
 | stmts let nonblock_expr                          { $$ = ext_node($1, 2, $2, $3); }
 | stmts item_static                                { $$ = ext_node($1, 1, $2); }
 | stmts item_static nonblock_expr                  { $$ = ext_node($1, 2, $2, $3); }
+| stmts item_type                                  { $$ = ext_node($1, 1, $2); }
+| stmts item_type nonblock_expr                    { $$ = ext_node($1, 2, $2, $3); }
 | stmts block_item                                 { $$ = ext_node($1, 1, $2); }
 | stmts block_item nonblock_expr                   { $$ = ext_node($1, 2, $2, $3); }
 | stmts block_expr                                 { $$ = ext_node($1, 1, $2); }
