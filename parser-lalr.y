@@ -556,6 +556,7 @@ fn_params
 
 fn_anon_params
 : '(' maybe_anon_params ')' { $$ = $2; }
+;
 
 fn_params_with_self
 : '(' SELF maybe_comma_anon_params ')'                     { $$ = mk_node("SelfValue", 1, $3); }
@@ -587,16 +588,21 @@ inferrable_param
 ;
 
 maybe_comma_anon_params
-: ',' maybe_anon_params { $$ = $2; }
-| %empty                { $$ = mk_none(); }
+: ',' anon_params { $$ = $2; }
+| %empty          { $$ = mk_none(); }
 ;
 
 maybe_anon_params
-: maybe_anon_param                       { $$ = mk_node("Args", 1, $1); }
-| maybe_anon_params ',' maybe_anon_param { $$ = ext_node($1, 1, $3); }
+: anon_params
+| %empty      { $$ = mk_none(); }
 ;
 
-maybe_anon_param
+anon_params
+: anon_param                 { $$ = mk_node("Args", 1, $1); }
+| anon_params ',' anon_param { $$ = ext_node($1, 1, $3); }
+;
+
+anon_param
 : plain_ident_or_underscore ':' ty   { $$ = mk_node("Arg", 2, $1, $3); }
 | ty
 ;
