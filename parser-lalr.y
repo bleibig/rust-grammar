@@ -1,4 +1,5 @@
 %{
+#define YYERROR_VERBOSE
 #define YYSTYPE struct node *
 struct node;
 extern int yylex();
@@ -348,14 +349,14 @@ ty_prim
 ;
 
 ty_bare_fn
-:                         FN ty_fn_decl
-|                  UNSAFE FN ty_fn_decl
-| EXTERN maybe_abi        FN ty_fn_decl
-| EXTERN maybe_abi UNSAFE FN ty_fn_decl
+:                         FN ty_fn_decl { $$ = $2; }
+|                  UNSAFE FN ty_fn_decl { $$ = $3; }
+| EXTERN maybe_abi        FN ty_fn_decl { $$ = $4; }
+| EXTERN maybe_abi UNSAFE FN ty_fn_decl { $$ = $5; }
 ;
 
 ty_fn_decl
-: generic_params fn_params ret_ty
+: generic_params fn_anon_params ret_ty
 ;
 
 ty_closure
@@ -552,6 +553,9 @@ fn_decl_with_self
 fn_params
 : '(' maybe_params ')'  { $$ = $2; }
 ;
+
+fn_anon_params
+: '(' maybe_anon_params ')' { $$ = $2; }
 
 fn_params_with_self
 : '(' SELF maybe_comma_anon_params ')'                     { $$ = mk_node("SelfValue", 1, $3); }
