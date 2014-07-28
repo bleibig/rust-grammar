@@ -96,7 +96,8 @@ extern char *yytext;
 
 // fake-precedence symbol to cause '|' bars in lambda context to parse
 // at low precedence, permit things like |x| foo = bar, where '=' is
-// otherwise lower-precedence than '|'.
+// otherwise lower-precedence than '|'. Also used for proc() to cause
+// things like proc() a + b to parse as proc() { a + b }.
 %precedence LAMBDA
 
 // IDENT needs to be lower than '{' so that 'foo {' is shifted when
@@ -1076,6 +1077,7 @@ nonblock_prefix_expr_nostruct
 | '*' maybe_mut_or_const expr_nostruct      { $$ = mk_node("*", 2, $2, $3); }
 | '&' maybe_mut expr_nostruct               { $$ = mk_node("&", 2, $2, $3); }
 | lambda_expr_nostruct
+| proc_expr_nostruct
 ;
 
 nonblock_prefix_expr
@@ -1083,20 +1085,39 @@ nonblock_prefix_expr
 | '*' maybe_mut_or_const expr      { $$ = mk_node("*", 2, $2, $3); }
 | '&' maybe_mut expr               { $$ = mk_node("&", 2, $2, $3); }
 | lambda_expr
+| proc_expr
 ;
 
 lambda_expr
 : %prec LAMBDA
-  OROR expr                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
+  OROR expr                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
 | %prec LAMBDA
-  '|' inferrable_params '|' expr   { $$ = mk_node("lambda", 2, $2, $4); }
+  '|' '|'  expr                    { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
+| %prec LAMBDA
+  '|' inferrable_params '|' expr   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
 ;
 
 lambda_expr_nostruct
 : %prec LAMBDA
-  OROR expr_nostruct                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
+  OROR expr_nostruct                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
 | %prec LAMBDA
-  '|' inferrable_params '|' expr_nostruct   { $$ = mk_node("lambda", 2, $2, $4); }
+  '|' '|'  expr_nostruct                    { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
+| %prec LAMBDA
+  '|' inferrable_params '|' expr_nostruct   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
+;
+
+proc_expr
+: %prec LAMBDA
+  PROC '(' ')' expr                         { $$ = mk_node("ExprProc", 2, mk_none(), $4); }
+| %prec LAMBDA
+  PROC '(' inferrable_params ')' expr       { $$ = mk_node("ExprProc", 2, $3, $5); }
+;
+
+proc_expr_nostruct
+: %prec LAMBDA
+  PROC '(' ')' expr_nostruct                     { $$ = mk_node("ExprProc", 2, mk_none(), $4); }
+| %prec LAMBDA
+  PROC '(' inferrable_params ')' expr_nostruct   { $$ = mk_node("ExprProc", 2, $3, $5); }
 ;
 
 maybe_vec_expr
