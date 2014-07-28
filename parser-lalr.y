@@ -824,7 +824,7 @@ inner_attrs_and_block
 ;
 
 block
-: '{' stmts '}'               { $$ = mk_node("block", 1, $2); }
+: '{' stmts '}'               { $$ = mk_node("ExprBlock", 1, $2); }
 ;
 
 // There are two sub-grammars within a "stmts: exprs" derivation
