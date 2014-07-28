@@ -73,7 +73,8 @@ extern char *yytext;
 %token BOX
 %token CONST
 %token TYPEOF
-%token DOC_COMMENT
+%token INNER_DOC_COMMENT
+%token OUTER_DOC_COMMENT
 
 %token SHEBANG
 %token STATIC_LIFETIME
@@ -163,7 +164,8 @@ inner_attrs
 ;
 
 inner_attr
-: SHEBANG '[' meta_item ']'   { $$ = mk_node("InnerAttr", 0); }
+: SHEBANG '[' meta_item ']'   { $$ = mk_node("InnerAttr", 1, $3); }
+| INNER_DOC_COMMENT           { $$ = mk_node("InnerAttr", 1, mk_node("doc-comment", 1, mk_atom(yytext))); }
 ;
 
 maybe_outer_attrs
@@ -178,6 +180,7 @@ outer_attrs
 
 outer_attr
 : '#' '[' meta_item ']'    { $$ = $3; }
+| OUTER_DOC_COMMENT        { $$ = mk_node("doc-comment", 1, mk_atom(yytext)); }
 ;
 
 meta_item
@@ -1296,7 +1299,8 @@ unpaired_token
 | BOX                        { $$ = mk_atom(yytext); }
 | CONST                      { $$ = mk_atom(yytext); }
 | TYPEOF                     { $$ = mk_atom(yytext); }
-| DOC_COMMENT                { $$ = mk_atom(yytext); }
+| INNER_DOC_COMMENT          { $$ = mk_atom(yytext); }
+| OUTER_DOC_COMMENT          { $$ = mk_atom(yytext); }
 | SHEBANG                    { $$ = mk_atom(yytext); }
 | STATIC_LIFETIME            { $$ = mk_atom(yytext); }
 | ';'                        { $$ = mk_atom(yytext); }

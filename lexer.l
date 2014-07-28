@@ -38,7 +38,11 @@ suf (i8|i16|i32|i64|i|u8|u16|u32|u64|u)
 [ \n\t\r]             { }
 
 \/\/(\/|\!)           { BEGIN(doc_line); yymore(); }
-<doc_line>\n          { BEGIN(INITIAL); yyleng--; yytext[yyleng] = 0; return DOC_COMMENT; }
+<doc_line>\n          { BEGIN(INITIAL);
+                        yyleng--;
+                        yytext[yyleng] = 0;
+                        return ((yytext[2] == '!') ? INNER_DOC_COMMENT : OUTER_DOC_COMMENT);
+                      }
 <doc_line>[^\n]*      { yymore(); }
 
 \/\/|\/\/\/\/         { BEGIN(linecomment); }
@@ -52,7 +56,7 @@ suf (i8|i16|i32|i64|i|u8|u16|u32|u64|u)
     if (yy_top_state() == doc_block) {
         yymore();
     } else {
-        return DOC_COMMENT;
+        return ((yytext[2] == '!') ? INNER_DOC_COMMENT : OUTER_DOC_COMMENT);
     }
 }
 <doc_block>(.|\n)     { yymore(); }
