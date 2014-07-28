@@ -133,6 +133,7 @@ extern char *yytext;
 %left '+' '-'
 %precedence AS
 %left '*' '/' '%'
+%precedence '!'
 
 // RETURN needs to be lower-precedence than all the block-expr
 // starting keywords, so that juxtapositioning them in a stmts
@@ -1073,17 +1074,19 @@ expr_nostruct
 ;
 
 nonblock_prefix_expr_nostruct
-: '-' expr_nostruct                         { $$ = mk_node("-", 1, $2); }
-| '*' maybe_mut_or_const expr_nostruct      { $$ = mk_node("*", 2, $2, $3); }
-| '&' maybe_mut expr_nostruct               { $$ = mk_node("&", 2, $2, $3); }
+: '-' expr_nostruct                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnNeg"), $2); }
+| '!' expr_nostruct                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnNot"), $2); }
+| '*' expr_nostruct                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnDeref"), $2); }
+| '&' maybe_mut expr_nostruct               { $$ = mk_node("ExprAddrOf", 2, $2, $3); }
 | lambda_expr_nostruct
 | proc_expr_nostruct
 ;
 
 nonblock_prefix_expr
-: '-' expr                         { $$ = mk_node("-", 1, $2); }
-| '*' maybe_mut_or_const expr      { $$ = mk_node("*", 2, $2, $3); }
-| '&' maybe_mut expr               { $$ = mk_node("&", 2, $2, $3); }
+: '-' expr                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnNeg"), $2); }
+| '!' expr                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnNot"), $2); }
+| '*' expr                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnDeref"), $2); }
+| '&' maybe_mut expr               { $$ = mk_node("ExprAddrOf", 2, $2, $3); }
 | lambda_expr
 | proc_expr
 ;
