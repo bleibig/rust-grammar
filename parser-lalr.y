@@ -73,7 +73,8 @@ extern char *yytext;
 %token BOX
 %token CONST
 %token TYPEOF
-%token DOC_COMMENT
+%token INNER_DOC_COMMENT
+%token OUTER_DOC_COMMENT
 
 %token SHEBANG
 %token STATIC_LIFETIME
@@ -96,7 +97,8 @@ extern char *yytext;
 
 // fake-precedence symbol to cause '|' bars in lambda context to parse
 // at low precedence, permit things like |x| foo = bar, where '=' is
-// otherwise lower-precedence than '|'.
+// otherwise lower-precedence than '|'. Also used for proc() to cause
+// things like proc() a + b to parse as proc() { a + b }.
 %precedence LAMBDA
 
 // IDENT needs to be lower than '{' so that 'foo {' is shifted when
@@ -132,6 +134,7 @@ extern char *yytext;
 %left '+' '-'
 %precedence AS
 %left '*' '/' '%'
+%precedence '!'
 
 // RETURN needs to be lower-precedence than all the block-expr
 // starting keywords, so that juxtapositioning them in a stmts
@@ -161,7 +164,8 @@ inner_attrs
 ;
 
 inner_attr
-: SHEBANG '[' meta_item ']'   { $$ = mk_node("InnerAttr", 0); }
+: SHEBANG '[' meta_item ']'   { $$ = mk_node("InnerAttr", 1, $3); }
+| INNER_DOC_COMMENT           { $$ = mk_node("InnerAttr", 1, mk_node("doc-comment", 1, mk_atom(yytext))); }
 ;
 
 maybe_outer_attrs
@@ -176,6 +180,7 @@ outer_attrs
 
 outer_attr
 : '#' '[' meta_item ']'    { $$ = $3; }
+| OUTER_DOC_COMMENT        { $$ = mk_node("doc-comment", 1, mk_atom(yytext)); }
 ;
 
 meta_item
@@ -822,7 +827,7 @@ inner_attrs_and_block
 ;
 
 block
-: '{' stmts '}'               { $$ = mk_node("block", 1, $2); }
+: '{' stmts '}'               { $$ = mk_node("ExprBlock", 1, $2); }
 ;
 
 // There are two sub-grammars within a "stmts: exprs" derivation
@@ -1072,31 +1077,53 @@ expr_nostruct
 ;
 
 nonblock_prefix_expr_nostruct
-: '-' expr_nostruct                         { $$ = mk_node("-", 1, $2); }
-| '*' maybe_mut_or_const expr_nostruct      { $$ = mk_node("*", 2, $2, $3); }
-| '&' maybe_mut expr_nostruct               { $$ = mk_node("&", 2, $2, $3); }
+: '-' expr_nostruct                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnNeg"), $2); }
+| '!' expr_nostruct                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnNot"), $2); }
+| '*' expr_nostruct                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnDeref"), $2); }
+| '&' maybe_mut expr_nostruct               { $$ = mk_node("ExprAddrOf", 2, $2, $3); }
 | lambda_expr_nostruct
+| proc_expr_nostruct
 ;
 
 nonblock_prefix_expr
-: '-' expr                         { $$ = mk_node("-", 1, $2); }
-| '*' maybe_mut_or_const expr      { $$ = mk_node("*", 2, $2, $3); }
-| '&' maybe_mut expr               { $$ = mk_node("&", 2, $2, $3); }
+: '-' expr                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnNeg"), $2); }
+| '!' expr                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnNot"), $2); }
+| '*' expr                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnDeref"), $2); }
+| '&' maybe_mut expr               { $$ = mk_node("ExprAddrOf", 2, $2, $3); }
 | lambda_expr
+| proc_expr
 ;
 
 lambda_expr
 : %prec LAMBDA
-  OROR expr                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
+  OROR expr                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
 | %prec LAMBDA
-  '|' inferrable_params '|' expr   { $$ = mk_node("lambda", 2, $2, $4); }
+  '|' '|'  expr                    { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
+| %prec LAMBDA
+  '|' inferrable_params '|' expr   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
 ;
 
 lambda_expr_nostruct
 : %prec LAMBDA
-  OROR expr_nostruct                        { $$ = mk_node("lambda", 2, mk_node("nil", 0), $2); }
+  OROR expr_nostruct                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
 | %prec LAMBDA
-  '|' inferrable_params '|' expr_nostruct   { $$ = mk_node("lambda", 2, $2, $4); }
+  '|' '|'  expr_nostruct                    { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
+| %prec LAMBDA
+  '|' inferrable_params '|' expr_nostruct   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
+;
+
+proc_expr
+: %prec LAMBDA
+  PROC '(' ')' expr                         { $$ = mk_node("ExprProc", 2, mk_none(), $4); }
+| %prec LAMBDA
+  PROC '(' inferrable_params ')' expr       { $$ = mk_node("ExprProc", 2, $3, $5); }
+;
+
+proc_expr_nostruct
+: %prec LAMBDA
+  PROC '(' ')' expr_nostruct                     { $$ = mk_node("ExprProc", 2, mk_none(), $4); }
+| %prec LAMBDA
+  PROC '(' inferrable_params ')' expr_nostruct   { $$ = mk_node("ExprProc", 2, $3, $5); }
 ;
 
 maybe_vec_expr
@@ -1272,7 +1299,8 @@ unpaired_token
 | BOX                        { $$ = mk_atom(yytext); }
 | CONST                      { $$ = mk_atom(yytext); }
 | TYPEOF                     { $$ = mk_atom(yytext); }
-| DOC_COMMENT                { $$ = mk_atom(yytext); }
+| INNER_DOC_COMMENT          { $$ = mk_atom(yytext); }
+| OUTER_DOC_COMMENT          { $$ = mk_atom(yytext); }
 | SHEBANG                    { $$ = mk_atom(yytext); }
 | STATIC_LIFETIME            { $$ = mk_atom(yytext); }
 | ';'                        { $$ = mk_atom(yytext); }

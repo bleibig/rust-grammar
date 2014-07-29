@@ -96,7 +96,8 @@ void print_token(int token) {
   case BOX: printf("IDENT(box)"); break;
   case CONST: printf("IDENT(const)"); break;
   case TYPEOF: printf("IDENT(typeof)"); break;
-  case DOC_COMMENT: printf("DOC_COMMENT(%s)", yytext); break;
+  case INNER_DOC_COMMENT: printf("INNER_DOC_COMMENT(%s)", yytext); break;
+  case OUTER_DOC_COMMENT: printf("OUTER_DOC_COMMENT(%s)", yytext); break;
   case SHEBANG: printf("POUND\nNOT"); break;
   case STATIC_LIFETIME: printf("LIFETIME('static)"); break;
   default: printf("can't print token %d", token);

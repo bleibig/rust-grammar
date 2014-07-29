@@ -59,7 +59,8 @@ enum Token {
   BOX,
   CONST,
   TYPEOF,
-  DOC_COMMENT,
+  INNER_DOC_COMMENT,
+  OUTER_DOC_COMMENT,
 
   // not in rustc:
   SHEBANG,

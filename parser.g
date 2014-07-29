@@ -62,7 +62,8 @@
 %token BOX;
 %token CONST;
 %token TYPEOF;
-%token DOC_COMMENT;
+%token INNER_DOC_COMMENT;
+%token OUTER_DOC_COMMENT;
 
 %token SHEBANG;
 %token STATIC_LIFETIME;
