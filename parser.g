@@ -16,11 +16,14 @@
 %token MOD_SEP;
 %token RARROW;
 %token FAT_ARROW;
+%token LIT_BYTE;
 %token LIT_CHAR;
 %token LIT_INTEGER;
 %token LIT_FLOAT;
 %token LIT_STR;
 %token LIT_STR_RAW;
+%token LIT_BINARY;
+%token LIT_BINARY_RAW;
 %token IDENT;
 %token UNDERSCORE;
 %token LIFETIME;
@@ -386,12 +389,13 @@ bracedelim : '{' token_tree '}' ;
 token_tree : [ non_delimiter | delimited ]* ;
 non_delimiter : '=' | '<' | '>' | '.' | '~' | ',' | ';' | ':' | '#' | '$'
     | LE | EQEQ | NE | GE | ANDAND | OROR | BINOPEQ | DOTDOT
-    | DOTDOTDOT | MOD_SEP | RARROW | FAT_ARROW | LIT_CHAR | LIT_INTEGER
-    | LIT_FLOAT | LIT_STR | LIT_STR_RAW | IDENT | UNDERSCORE | LIFETIME
-    | SELF | STATIC | AS | BREAK | CRATE | ELSE | ENUM | EXTERN | FALSE
-    | FN | FOR | IF | IMPL | IN | LET | LOOP | MATCH | MOD | MUT | ONCE
-    | PRIV | PUB | REF | RETURN | SHL | SHR | STRUCT | TRUE | TRAIT | TYPE
-    | UNSAFE | USE | WHILE | CONTINUE | PROC | BOX | TYPEOF | CONST
+    | DOTDOTDOT | MOD_SEP | RARROW | FAT_ARROW | LIT_BYTE | LIT_CHAR
+    | LIT_INTEGER | LIT_FLOAT | LIT_STR | LIT_STR_RAW | LIT_BINARY
+    | LIT_BINARY_RAW | IDENT | UNDERSCORE | LIFETIME | SELF | STATIC | AS
+    | BREAK | CRATE | ELSE | ENUM | EXTERN | FALSE | FN | FOR | IF | IMPL
+    | IN | LET | LOOP | MATCH | MOD | MUT | ONCE | PRIV | PUB | REF
+    | RETURN | SHL | SHR | STRUCT | TRUE | TRAIT | TYPE | UNSAFE | USE
+    | WHILE | CONTINUE | PROC | BOX | TYPEOF | CONST
     ;
 
 /// Utility rules

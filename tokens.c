@@ -52,11 +52,14 @@ void print_token(int token) {
   case MOD_SEP: printf("MOD_SEP"); break;
   case RARROW: printf("RARROW"); break;
   case FAT_ARROW: printf("FAT_ARROW"); break;
-  case LIT_CHAR: printf("LIT_CHAR(char)"); break;
+  case LIT_BYTE: printf("LIT_BYTE(%s)", yytext); break;
+  case LIT_CHAR: printf("LIT_CHAR(%s)", yytext); break;
   case LIT_INTEGER: printf("LIT_INTEGER(%s)", desugar_num(yytext, "")); break;
   case LIT_FLOAT: printf("LIT_FLOAT(%s)", yytext); break;
   case LIT_STR: printf("LIT_STR(%s)", yytext); break;
   case LIT_STR_RAW: printf("LIT_STR_RAW(%s)", yytext); break;
+  case LIT_BINARY: printf("LIT_BINARY(%s)", yytext); break;
+  case LIT_BINARY_RAW: printf("LIT_BINARY_RAW(%s)", yytext); break;
   case IDENT: printf("IDENT(%s)", yytext); break;
   case UNDERSCORE: printf("UNDERSCORE"); break;
   case LIFETIME: printf("LIFETIME(%s)", yytext); break;

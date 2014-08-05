@@ -27,11 +27,14 @@ extern char *yytext;
 %token MOD_SEP
 %token RARROW
 %token FAT_ARROW
+%token LIT_BYTE
 %token LIT_CHAR
 %token LIT_INTEGER
 %token LIT_FLOAT
 %token LIT_STR
 %token LIT_STR_RAW
+%token LIT_BINARY
+%token LIT_BINARY_RAW
 %token IDENT
 %token UNDERSCORE
 %token LIFETIME
@@ -1223,7 +1226,8 @@ item_static
 : STATIC pat ':' ty '=' expr ';'  { $$ = mk_node("ItemStatic", 3, $2, $4, $6); }
 
 lit
-: LIT_CHAR                   { $$ = mk_node("LitChar", 1, mk_atom(yytext)); }
+: LIT_BYTE                   { $$ = mk_node("LitByte", 1, mk_atom(yytext)); }
+| LIT_CHAR                   { $$ = mk_node("LitChar", 1, mk_atom(yytext)); }
 | LIT_INTEGER                { $$ = mk_node("LitInteger", 1, mk_atom(yytext)); }
 | LIT_FLOAT                  { $$ = mk_node("LitFloat", 1, mk_atom(yytext)); }
 | TRUE                       { $$ = mk_node("LitBool", 1, mk_atom(yytext)); }
@@ -1234,6 +1238,8 @@ lit
 str
 : LIT_STR                    { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("CookedStr")); }
 | LIT_STR_RAW                { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("RawStr")); }
+| LIT_BINARY                 { $$ = mk_node("LitBinary", 1, mk_atom(yytext), mk_atom("BinaryStr")); }
+| LIT_BINARY_RAW             { $$ = mk_node("LitBinary", 1, mk_atom(yytext), mk_atom("RawBinaryStr")); }
 ;
 
 ident
@@ -1255,11 +1261,14 @@ unpaired_token
 | MOD_SEP                    { $$ = mk_atom(yytext); }
 | RARROW                     { $$ = mk_atom(yytext); }
 | FAT_ARROW                  { $$ = mk_atom(yytext); }
+| LIT_BYTE                   { $$ = mk_atom(yytext); }
 | LIT_CHAR                   { $$ = mk_atom(yytext); }
 | LIT_INTEGER                { $$ = mk_atom(yytext); }
 | LIT_FLOAT                  { $$ = mk_atom(yytext); }
 | LIT_STR                    { $$ = mk_atom(yytext); }
 | LIT_STR_RAW                { $$ = mk_atom(yytext); }
+| LIT_BINARY                 { $$ = mk_atom(yytext); }
+| LIT_BINARY_RAW             { $$ = mk_atom(yytext); }
 | IDENT                      { $$ = mk_atom(yytext); }
 | UNDERSCORE                 { $$ = mk_atom(yytext); }
 | LIFETIME                   { $$ = mk_atom(yytext); }

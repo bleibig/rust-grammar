@@ -23,6 +23,10 @@ static int saw_non_hash;
 %x str
 %x rawstr
 %x rawstr_esc
+%x byte
+%x bytestr
+%x rawbytestr
+%x rawbytestr_nohash
 %x pound
 %x shebang_or_attr
 %x ltorchar
@@ -163,6 +167,61 @@ while    { return WHILE; }
 <ltorchar>.\x27                  { BEGIN(INITIAL); return LIT_CHAR; }
 <ltorchar><<EOF>>                { BEGIN(INITIAL); return -1; }
 
+b\x22              { BEGIN(bytestr); yymore(); }
+<bytestr>\x22      { BEGIN(INITIAL); return LIT_BINARY; }
+<bytestr>(.|\n)    { yymore(); }
+<bytestr><<EOF>>   { return -1; }
+
+br\x22                      { BEGIN(rawbytestr_nohash); yymore(); }
+<rawbytestr_nohash>\x22     { BEGIN(INITIAL); return LIT_BINARY_RAW; }
+<rawbytestr_nohash>(.|\n)   { yymore(); }
+<rawbytestr_nohash><<EOF>>  { return -1; }
+
+br/# {
+    BEGIN(rawbytestr);
+    yymore();
+    num_hashes = 0;
+    saw_non_hash = 0;
+    end_hashes = 0;
+}
+<rawbytestr># {
+    if (!saw_non_hash) {
+        num_hashes++;
+    } else if (end_hashes != 0) {
+        end_hashes++;
+        if (end_hashes == num_hashes) {
+            BEGIN(INITIAL);
+            return LIT_BINARY_RAW;
+        }
+    }
+    yymore();
+}
+<rawbytestr>\x22# {
+    end_hashes = 1;
+    if (end_hashes == num_hashes) {
+        BEGIN(INITIAL);
+        return LIT_BINARY_RAW;
+    }
+    yymore();
+}
+<rawbytestr>(.|\n) {
+    if (!saw_non_hash) {
+        saw_non_hash = 1;
+    }
+    if (end_hashes != 0) {
+        end_hashes = 0;
+    }
+    yymore();
+}
+<rawbytestr><<EOF>> { return -1; }
+
+b\x27                        { BEGIN(byte); }
+<byte>\\[nrt\\\x27\x220]\x27 { BEGIN(INITIAL); return LIT_BYTE; }
+<byte>\\x[0-9a-fA-F]{2}\x27  { BEGIN(INITIAL); return LIT_BYTE; }
+<byte>\\u[0-9a-fA-F]{4}\x27  { BEGIN(INITIAL); return LIT_BYTE; }
+<byte>\\U[0-9a-fA-F]{8}\x27  { BEGIN(INITIAL); return LIT_BYTE; }
+<byte>.\x27                  { BEGIN(INITIAL); return LIT_BYTE; }
+<byte><<EOF>>                { BEGIN(INITIAL); return -1; }
 
 r\x22           { BEGIN(rawstr); yymore(); }
 <rawstr>\x22    { BEGIN(INITIAL); return LIT_STR_RAW; }
