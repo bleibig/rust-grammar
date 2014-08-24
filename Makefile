@@ -4,7 +4,7 @@ ifeq ($(shell uname),Darwin)
 	LDFLAGS=-ll
 endif
 
-all: lexer parser parser-lalr rlex rparse
+all: lexer parser-lalr rlex rparse
 
 lexer: lexer_main.o lexer.o tokens.o
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -24,12 +24,6 @@ lexer.o: lex.yy.c tokens.h
 lexer-lalr.o: lex.yy.c parser-lalr.tab.h
 	$(CC) -include parser-lalr.tab.h -c -o $@ $<
 
-parser.o: parser.c
-	$(CC) -c -o $@ $<
-
-parser: parser.o lexer.o
-	$(CC) -o $@ $^ $(LDFLAGS)
-
 parser-lalr.o: parser-lalr.tab.c
 	$(CC) -c -o $@ $<
 
@@ -38,9 +32,6 @@ parser-lalr-main.o: parser-lalr-main.c
 
 parser-lalr: parser-lalr.o parser-lalr-main.o lexer-lalr.o
 	$(CC) -o $@ $^ $(LDFLAGS)
-
-parser.c: parser.g
-	LLnextgen $< --generate-lexer-wrapper=no --verbose
 
 parser-lalr.tab.c parser-lalr.tab.h: parser-lalr.y
 	bison $< -d -p rs -v --report=all --warnings=error=all

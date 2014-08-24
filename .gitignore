@@ -4,8 +4,8 @@ lexer
 parser
 rlex
 lex.yy.c
-parser.c
-parser.h
+ll/parser-ll.c
+ll/parser-ll.h
 parser-lalr
 parser-lalr.output
 parser-lalr.tab.c
