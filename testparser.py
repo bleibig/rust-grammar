@@ -4,70 +4,53 @@ import sys
 
 import os
 import subprocess
+import argparse
 
-# ARGUMENTS:
-# 1 - path to the parser executable
-# 2 - path to the parser-lalr executable
-# 3 - path to the source directory to look for *.rs files
+# usage: testparser.py [-h] [-p PARSER [PARSER ...]] -s SOURCE_DIR
 
-if len(sys.argv) != 4:
-    print 'usage: testparser.py <parser> <parser-lalr> <rust-src-dir>'
-    sys.exit(1)
+# Parsers should read from stdin and return exit status 0 for a
+# successful parse, and nonzero for an unsuccessful parse
 
-parser = sys.argv[1]
-parser_lalr = sys.argv[2]
+parser = argparse.ArgumentParser()
+parser.add_argument('-p', '--parser', nargs='+')
+parser.add_argument('-s', '--source-dir', nargs=1, required=True)
+args = parser.parse_args(sys.argv[1:])
 
 # flex dies on multibyte characters
 BLACKLIST = ['libstd/str.rs', 'libstd/strbuf.rs', 'libstd/ascii.rs']
 
-def chk(*args, **kwargs):
-    return subprocess.check_output(*args, **kwargs)
-
-def compare(p):
-    if chk(flex, stdin=open(p)) != chk(rlex, stdin=open(p)):
-        raise Exception("{} differed between the reference lexer and libsyntax's lexer".format(p))
-
 total = 0
-parser_ok = 0
-parser_lalr_ok = 0
-
-bad_parser = []
-bad_parser_lalr = []
+ok = {}
+bad = {}
+for parser in args.parser:
+    ok[parser] = 0
+    bad[parser] = []
+devnull = open(os.devnull, 'w')
 print "\n"
 
-for base, dirs, files in os.walk(sys.argv[3]):
+for base, dirs, files in os.walk(args.source_dir[0]):
     for f in filter(lambda p: p.endswith('.rs'), files):
         p = os.path.join(base, f)
         if any([p.endswith(b) for b in BLACKLIST]):
             continue
-
         total += 1
-        try:
-            if len(chk(parser, stdin=open(p), stderr=subprocess.STDOUT)) == 0:
-                parser_ok += 1
+        for parser in args.parser:
+            if subprocess.call(parser, stdin=open(p), stderr=subprocess.STDOUT, stdout=devnull) == 0:
+                ok[parser] += 1
             else:
-                bad_parser.append(p)
-        except subprocess.CalledProcessError:
-            bad_parser.append(p)
-            pass
-        try:
-            if "syntax error" not in chk(parser_lalr, stdin=open(p), stderr=subprocess.STDOUT):
-                parser_lalr_ok += 1
-            else:
-                bad_parser_lalr.append(p)
-        except subprocess.CalledProcessError:
-            bad_parser_lalr.append(p)
-            pass
+                bad[parser].append(p)
+        parser_stats = ', '.join(['{}: {}'.format(parser, ok[parser]) for parser in args.parser])
+        sys.stdout.write("\033[2K\r total: %d, %s, scanned %-60s" %
+                         (total, parser_stats, p))
 
-        sys.stdout.write("\033[2K\r total: %d, parser: %d, parser-lalr: %d, scanned %-60s" %
-                        (total, parser_ok, parser_lalr_ok, p))
+devnull.close()
 
 print "\n"
 
-for (filename, bad, parser) in [("parser.bad", bad_parser, parser),
-                                ("parser-lalr.bad", bad_parser_lalr, parser_lalr)]:
-    print("writing %d files that failed to parse with %s to %s" % (len(bad), parser, filename))
+for parser in args.parser:
+    filename = os.path.basename(parser) + '.bad'
+    print("writing %d files that failed to parse with %s to %s" % (len(bad[parser]), parser, filename))
     with open(filename, "w") as f:
-          for p in bad:
+          for p in bad[parser]:
               f.write(p)
               f.write("\n")
