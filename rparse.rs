@@ -122,7 +122,17 @@ fn print_sexp(indent: int, j: &json::Json) {
             print_indent(indent);
             out.write_str("false\n");
         }
-        json::Number(n) => {
+        json::I64(n) => {
+            print_indent(indent);
+            out.write_str(n.to_string().as_slice());
+            out.write_str("\n");
+        }
+        json::U64(n) => {
+            print_indent(indent);
+            out.write_str(n.to_string().as_slice());
+            out.write_str("\n");
+        }
+        json::F64(n) => {
             print_indent(indent);
             out.write_str(n.to_string().as_slice());
             out.write_str("\n");
