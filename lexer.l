@@ -106,6 +106,7 @@ type     { return TYPE; }
 typeof   { return TYPEOF; }
 unsafe   { return UNSAFE; }
 use      { return USE; }
+where    { return WHERE; }
 while    { return WHILE; }
 
 [a-zA-Z_][a-zA-Z0-9_]*      { return IDENT; }

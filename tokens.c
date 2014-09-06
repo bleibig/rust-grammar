@@ -98,6 +98,7 @@ void print_token(int token) {
   case PROC: printf("IDENT(proc)"); break;
   case BOX: printf("IDENT(box)"); break;
   case CONST: printf("IDENT(const)"); break;
+  case WHERE: printf("IDENT(where)"); break;
   case TYPEOF: printf("IDENT(typeof)"); break;
   case INNER_DOC_COMMENT: printf("INNER_DOC_COMMENT(%s)", yytext); break;
   case OUTER_DOC_COMMENT: printf("OUTER_DOC_COMMENT(%s)", yytext); break;

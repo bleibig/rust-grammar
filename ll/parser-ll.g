@@ -65,6 +65,7 @@
 %token BOX;
 %token CONST;
 %token TYPEOF;
+%token WHERE;
 %token INNER_DOC_COMMENT;
 %token OUTER_DOC_COMMENT;
 
@@ -395,7 +396,7 @@ non_delimiter : '=' | '<' | '>' | '.' | '~' | ',' | ';' | ':' | '#' | '$'
     | BREAK | CRATE | ELSE | ENUM | EXTERN | FALSE | FN | FOR | IF | IMPL
     | IN | LET | LOOP | MATCH | MOD | MUT | ONCE | PRIV | PUB | REF
     | RETURN | SHL | SHR | STRUCT | TRUE | TRAIT | TYPE | UNSAFE | USE
-    | WHILE | CONTINUE | PROC | BOX | TYPEOF | CONST
+    | WHILE | WHERE | CONTINUE | PROC | BOX | TYPEOF | CONST
     ;
 
 /// Utility rules

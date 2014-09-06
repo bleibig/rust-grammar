@@ -61,6 +61,7 @@ enum Token {
   PROC,
   BOX,
   CONST,
+  WHERE,
   TYPEOF,
   INNER_DOC_COMMENT,
   OUTER_DOC_COMMENT,

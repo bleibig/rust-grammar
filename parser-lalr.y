@@ -75,6 +75,7 @@ extern char *yytext;
 %token PROC
 %token BOX
 %token CONST
+%token WHERE
 %token TYPEOF
 %token INNER_DOC_COMMENT
 %token OUTER_DOC_COMMENT
@@ -430,7 +431,7 @@ item_foreign_static
 ;
 
 item_foreign_fn
-: FN ident generic_params fn_decl_allow_variadic ';'
+: FN ident generic_params maybe_where_clause fn_decl_allow_variadic ';'
 ;
 
 fn_decl_allow_variadic
@@ -459,11 +460,11 @@ idents
 ;
 
 item_type
-: TYPE ident generic_params '=' ty ';'  { $$ = mk_node("ItemTy", 3, $2, $3, $5); }
+: TYPE ident generic_params maybe_where_clause '=' ty ';'  { $$ = mk_node("ItemTy", 4, $2, $3, $4, $6); }
 ;
 
 item_trait
-: TRAIT ident generic_params maybe_supertraits '{' maybe_trait_methods '}'
+: TRAIT ident generic_params /* maybe_where_clause */ maybe_supertraits '{' maybe_trait_methods '}'
 {
   $$ = mk_node("ItemTrait", 4, $2, $3, $4, $6);
 }
@@ -500,16 +501,16 @@ trait_method
 ;
 
 type_method
-: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self ';'
+: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause ';'
 {
-  $$ = mk_node("TypeMethod", 5, $1, $2, $4, $5, $6);
+  $$ = mk_node("TypeMethod", 6, $1, $2, $4, $5, $6, $7);
 }
 ;
 
 method
-: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self inner_attrs_and_block
+: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
 {
-  $$ = mk_node("Method", 6, $1, $2, $4, $5, $6, $7);
+  $$ = mk_node("Method", 7, $1, $2, $4, $5, $6, $7, $8);
 }
 ;
 
@@ -529,9 +530,9 @@ method
 // they are ambiguous with traits. We do the same here, regrettably,
 // by splitting ty into ty and ty_prim.
 item_impl
-: IMPL generic_params ty_prim '{' maybe_impl_methods '}'           { $$ = mk_node("ItemImpl", 3, $2, $3, $5); }
-| IMPL generic_params '(' ty ')' '{' maybe_impl_methods '}'        { $$ = mk_node("ItemImpl", 3, $2, $4, $7); }
-| IMPL generic_params trait_ref FOR ty '{' maybe_impl_methods '}'  { $$ = mk_node("ItemImpl", 4, $2, $3, $5, $7); }
+: IMPL generic_params ty_prim maybe_where_clause '{' maybe_impl_methods '}'           { $$ = mk_node("ItemImpl", 4, $2, $3, $4, $6); }
+| IMPL generic_params maybe_where_clause '(' ty ')' '{' maybe_impl_methods '}'        { $$ = mk_node("ItemImpl", 4, $2, $3, $5, $8); }
+| IMPL generic_params trait_ref FOR ty maybe_where_clause '{' maybe_impl_methods '}'  { $$ = mk_node("ItemImpl", 5, $2, $3, $5, $6, $8); }
 ;
 
 maybe_impl_methods
@@ -545,9 +546,9 @@ impl_methods
 ;
 
 item_fn
-: maybe_unsafe FN ident generic_params fn_decl inner_attrs_and_block
+: maybe_unsafe FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
 {
-  $$ = mk_node("ItemFn", 5, $1, $3, $4, $5, $6);
+  $$ = mk_node("ItemFn", 6, $1, $3, $4, $5, $6, $7);
 }
 ;
 
@@ -636,6 +637,24 @@ generic_params
 | '<' ty_params '>'                   { $$ = mk_node("Generics", 2, mk_none(), $2); }
 | '<' ty_params SHR                   { push_back('>'); $$ = mk_node("Generics", 2, mk_none(), $2); }
 | %empty                              { $$ = mk_none(); }
+;
+
+maybe_where_clause
+: %empty                              { $$ = mk_none(); }
+| where_clause
+;
+
+where_clause
+: WHERE where_predicates              { $$ = mk_node("WhereClause", 1, $2); }
+;
+
+where_predicates
+: where_predicate                      { $$ = mk_node("WherePredicates", 1, $1); }
+| where_predicates ',' where_predicate { $$ = ext_node($1, 1, $3); }
+;
+
+where_predicate
+: ident ':' bounds                    { $$ = mk_node("WherePredicate", 2, $1, $3); }
 ;
 
 ty_params
@@ -767,7 +786,7 @@ trait_ref
 
 // structs
 item_struct
-: STRUCT ident generic_params struct_args     { $$ = mk_node("ItemStruct", 3, $2, $3, $4); }
+: STRUCT ident generic_params maybe_where_clause struct_args     { $$ = mk_node("ItemStruct", 4, $2, $3, $4, $5); }
 ;
 
 struct_args
@@ -800,8 +819,8 @@ struct_tuple_field
 
 // enums
 item_enum
-: ENUM ident generic_params '{' enum_defs '}'     { $$ = mk_node("ItemEnum", 0); }
-| ENUM ident generic_params '{' enum_defs ',' '}' { $$ = mk_node("ItemEnum", 0); }
+: ENUM ident generic_params maybe_where_clause '{' enum_defs '}'     { $$ = mk_node("ItemEnum", 0); }
+| ENUM ident generic_params maybe_where_clause '{' enum_defs ',' '}' { $$ = mk_node("ItemEnum", 0); }
 ;
 
 enum_defs
@@ -1308,6 +1327,7 @@ unpaired_token
 | PROC                       { $$ = mk_atom(yytext); }
 | BOX                        { $$ = mk_atom(yytext); }
 | CONST                      { $$ = mk_atom(yytext); }
+| WHERE                      { $$ = mk_atom(yytext); }
 | TYPEOF                     { $$ = mk_atom(yytext); }
 | INNER_DOC_COMMENT          { $$ = mk_atom(yytext); }
 | OUTER_DOC_COMMENT          { $$ = mk_atom(yytext); }
