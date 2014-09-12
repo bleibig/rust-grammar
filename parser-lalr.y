@@ -237,10 +237,12 @@ view_path
 | path_no_types_allowed MOD_SEP '{' idents '}' { $$ = mk_node("ViewPathList", 2, $1, $4); }
 | path_no_types_allowed MOD_SEP '*'            { $$ = mk_node("ViewPathGlob", 1, $1); }
 | ident '=' path_no_types_allowed              { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
+| path_no_types_allowed AS ident               { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
 ;
 
 block_item
 : item_fn
+| item_unsafe_fn
 | item_mod
 | item_foreign_mod          { $$ = mk_node("ItemForeignMod", 1, $1); }
 | item_struct
@@ -360,9 +362,9 @@ ty_prim
 
 ty_bare_fn
 :                         FN ty_fn_decl { $$ = $2; }
-|                  UNSAFE FN ty_fn_decl { $$ = $3; }
-| EXTERN maybe_abi        FN ty_fn_decl { $$ = $4; }
-| EXTERN maybe_abi UNSAFE FN ty_fn_decl { $$ = $5; }
+| UNSAFE                  FN ty_fn_decl { $$ = $3; }
+|        EXTERN maybe_abi FN ty_fn_decl { $$ = $4; }
+| UNSAFE EXTERN maybe_abi FN ty_fn_decl { $$ = $5; }
 ;
 
 ty_fn_decl
@@ -546,9 +548,9 @@ impl_methods
 ;
 
 item_fn
-: maybe_unsafe FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
+: FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
 {
-  $$ = mk_node("ItemFn", 6, $1, $3, $4, $5, $6, $7);
+  $$ = mk_node("ItemFn", 5, $2, $3, $4, $5, $6);
 }
 ;
 
@@ -660,6 +662,17 @@ where_predicate
 ty_params
 : ty_param
 | ty_params ',' ty_param
+;
+
+item_unsafe_fn
+: UNSAFE FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("ItemUnsafeFn", 5, $3, $4, $5, $6, $7);
+}
+| UNSAFE EXTERN maybe_abi FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("ItemUnsafeFn", 6, $3, $5, $6, $7, $8);
+}
 ;
 
 // A path with no type parameters; e.g. `foo::bar::Baz`
