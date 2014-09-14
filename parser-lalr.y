@@ -372,8 +372,8 @@ ty_fn_decl
 ;
 
 ty_closure
-: UNSAFE maybe_once generic_params '|' tys '|' maybe_bounds ret_ty
-|        maybe_once generic_params '|' tys '|' maybe_bounds ret_ty
+: UNSAFE maybe_once generic_params '|' anon_params '|' maybe_bounds ret_ty
+|        maybe_once generic_params '|' anon_params '|' maybe_bounds ret_ty
 | UNSAFE maybe_once generic_params OROR maybe_bounds ret_ty
 |        maybe_once generic_params OROR maybe_bounds ret_ty
 ;
