@@ -374,8 +374,8 @@ ty_fn_decl
 ty_closure
 : UNSAFE maybe_once generic_params '|' tys '|' maybe_bounds ret_ty
 |        maybe_once generic_params '|' tys '|' maybe_bounds ret_ty
-| UNSAFE maybe_once generic_params OROR ret_ty
-|        maybe_once generic_params OROR ret_ty
+| UNSAFE maybe_once generic_params OROR maybe_bounds ret_ty
+|        maybe_once generic_params OROR maybe_bounds ret_ty
 ;
 
 maybe_once
@@ -764,7 +764,7 @@ bounds
 ;
 
 bound
-: STATIC_LIFETIME  { $$ = mk_node("lifetime", 1, mk_atom("static")); }
+: lifetime
 | trait_ref
 ;
 
