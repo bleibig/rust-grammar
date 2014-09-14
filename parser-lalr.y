@@ -384,7 +384,7 @@ maybe_once
 ;
 
 ty_proc
-: PROC generic_params fn_params maybe_bounds ret_ty
+: PROC generic_params fn_params maybe_bounds ret_ty { $$ = mk_node("TyProc", 4, $2, $3, $4, $5); }
 ;
 
 maybe_mut
@@ -671,7 +671,7 @@ item_unsafe_fn
 }
 | UNSAFE EXTERN maybe_abi FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
 {
-  $$ = mk_node("ItemUnsafeFn", 6, $3, $5, $6, $7, $8);
+  $$ = mk_node("ItemUnsafeFn", 6, $3, $5, $6, $7, $8, $9);
 }
 ;
 
@@ -748,13 +748,13 @@ unsized
 
 maybe_bounds
 : %prec SHIFTPLUS
-  ':' bounds
-| %empty { $$ = mk_none(); }
+  ':' bounds       { $$ = $2; }
+| %empty           { $$ = mk_none(); }
 ;
 
 bounds
-: bound
-| bounds '+' bound
+: bound            { $$ = mk_node("bounds", 1, $1); }
+| bounds '+' bound { $$ = ext_node($1, 1, $3); }
 ;
 
 bound
