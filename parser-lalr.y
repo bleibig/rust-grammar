@@ -794,7 +794,7 @@ lifetime
 
 trait_ref
 : path_generic_args_without_colons
-| MOD_SEP path_generic_args_without_colons
+| MOD_SEP path_generic_args_without_colons { $$ = $2; }
 ;
 
 // structs
@@ -1134,7 +1134,7 @@ lambda_expr
 : %prec LAMBDA
   OROR expr                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
 | %prec LAMBDA
-  '|' '|'  expr                    { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
+  '|' '|'  expr                    { $$ = mk_node("ExprFnBlock", 2, mk_none(), $3); }
 | %prec LAMBDA
   '|' inferrable_params '|' expr   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
 ;
