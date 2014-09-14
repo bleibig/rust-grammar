@@ -599,6 +599,12 @@ inferrable_param
 : pat maybe_ty_ascription
 ;
 
+maybe_unboxed_closure_kind
+: %empty
+| ':'
+| '&' maybe_mut ':'
+;
+
 maybe_comma_anon_params
 : ',' anon_params { $$ = $2; }
 | %empty          { $$ = mk_none(); }
@@ -1132,20 +1138,29 @@ nonblock_prefix_expr
 
 lambda_expr
 : %prec LAMBDA
-  OROR expr                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
+  OROR expr                                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
 | %prec LAMBDA
-  '|' '|'  expr                    { $$ = mk_node("ExprFnBlock", 2, mk_none(), $3); }
+  '|' maybe_unboxed_closure_kind '|' expr          { $$ = mk_node("ExprFnBlock", 2, mk_none(), $4); }
 | %prec LAMBDA
-  '|' inferrable_params '|' expr   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
+  '|' inferrable_params '|' expr                   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
+| %prec LAMBDA
+  '|' '&' maybe_mut ':' inferrable_params '|' expr { $$ = mk_node("ExprFnBlock", 2, $5, $7); }
+| %prec LAMBDA
+  '|' ':' inferrable_params '|' expr               { $$ = mk_node("ExprFnBlock", 2, $3, $5); }
 ;
 
 lambda_expr_nostruct
 : %prec LAMBDA
-  OROR expr_nostruct                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
+  OROR expr_nostruct                                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
 | %prec LAMBDA
-  '|' '|'  expr_nostruct                    { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
+  '|' maybe_unboxed_closure_kind '|'  expr_nostruct         { $$ = mk_node("ExprFnBlock", 2, mk_none(), $4); }
 | %prec LAMBDA
-  '|' inferrable_params '|' expr_nostruct   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
+  '|' inferrable_params '|' expr_nostruct                   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
+| %prec LAMBDA
+  '|' '&' maybe_mut ':' inferrable_params '|' expr_nostruct { $$ = mk_node("ExprFnBlock", 2, $5, $7); }
+| %prec LAMBDA
+  '|' ':' inferrable_params '|' expr_nostruct               { $$ = mk_node("ExprFnBlock", 2, $3, $5); }
+
 ;
 
 proc_expr
