@@ -571,10 +571,10 @@ fn_anon_params
 ;
 
 fn_params_with_self
-: '(' SELF maybe_comma_anon_params ')'                        { $$ = mk_node("SelfValue", 1, $3); }
-| '(' '&' maybe_mut SELF maybe_comma_anon_params ')'          { $$ = mk_node("SelfRegion", 2, $3, $5); }
-| '(' '&' lifetime maybe_mut SELF maybe_comma_anon_params ')' { $$ = mk_node("SelfRegion", 3, $3, $4, $6); }
-| '(' maybe_params ')'                                        { $$ = mk_node("SelfStatic", 1, $2); }
+: '(' SELF maybe_ty_ascription maybe_comma_anon_params ')'                        { $$ = mk_node("SelfValue", 2, $3, $4); }
+| '(' '&' maybe_mut SELF maybe_ty_ascription maybe_comma_anon_params ')'          { $$ = mk_node("SelfRegion", 3, $3, $5, $6); }
+| '(' '&' lifetime maybe_mut SELF maybe_ty_ascription maybe_comma_anon_params ')' { $$ = mk_node("SelfRegion", 4, $3, $4, $6, $7); }
+| '(' maybe_params ')'                                                            { $$ = mk_node("SelfStatic", 1, $2); }
 ;
 
 maybe_params
