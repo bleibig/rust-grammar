@@ -194,7 +194,8 @@ meta_item
 ;
 
 meta_seq
-: meta_item                { $$ = mk_node("MetaItems", 1, $1); }
+: %empty                   { $$ = mk_none(); }
+| meta_item                { $$ = mk_node("MetaItems", 1, $1); }
 | meta_seq ',' meta_item   { $$ = ext_node($1, 1, $3); }
 ;
 
