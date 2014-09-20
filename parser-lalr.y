@@ -912,13 +912,9 @@ stmts
 | stmts ';'
 | stmts ';' nonblock_expr                          { $$ = ext_node($1, 1, $3); }
 | stmts block                                      { $$ = ext_node($1, 1, $2); }
+| stmts block nonblock_expr                        { $$ = ext_node($1, 1, $2); }
 | nonblock_expr                                    { $$ = mk_node("stmts", 1, $1); }
 | %empty                                           { $$ = mk_node("stmts", 0); }
-;
-
-nonblock_expr
-: nonblock_prefix_expr
-| nonblock_nonprefix_expr
 ;
 
 maybe_exprs
@@ -941,16 +937,16 @@ path_expr
 | MOD_SEP path_generic_args_with_colons  { $$ = $2; }
 ;
 
-nonblock_nonprefix_expr
+nonblock_expr
 : lit                                                           { $$ = mk_node("ExprLit", 1, $1); }
 | %prec IDENT
   path_expr                                                     { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                          { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' delimited_token_trees                           { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'              { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
-| nonblock_nonprefix_expr '.' ident                             { $$ = mk_node("ExprField", 2, $1, $3); }
-| nonblock_nonprefix_expr '[' expr ']'                          { $$ = mk_node("ExprIndex", 2, $1, $3); }
-| nonblock_nonprefix_expr '(' maybe_exprs ')'                   { $$ = mk_node("ExprCall", 2, $1, $3); }
+| nonblock_expr '.' ident                                       { $$ = mk_node("ExprField", 2, $1, $3); }
+| nonblock_expr '[' expr ']'                                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
+| nonblock_expr '(' maybe_exprs ')'                             { $$ = mk_node("ExprCall", 2, $1, $3); }
 | '[' maybe_vec_expr ']'                                        { $$ = mk_node("ExprVec", 1, $2); }
 | '(' maybe_exprs ')'                                           { $$ = mk_node("ExprParen", 1, $2); }
 | CONTINUE                                                      { $$ = mk_node("ExprAgain", 0); }
@@ -959,29 +955,30 @@ nonblock_nonprefix_expr
 | RETURN expr                                                   { $$ = mk_node("ExprRet", 1, $2); }
 | BREAK                                                         { $$ = mk_node("ExprBreak", 0); }
 | BREAK ident                                                   { $$ = mk_node("ExprBreak", 1, $2); }
-| nonblock_nonprefix_expr '=' expr                              { $$ = mk_node("ExprAssign", 2, $1, $3); }
-| nonblock_nonprefix_expr BINOPEQ expr                          { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
-| nonblock_nonprefix_expr OROR expr                             { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
-| nonblock_nonprefix_expr ANDAND expr                           { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
-| nonblock_nonprefix_expr EQEQ expr                             { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
-| nonblock_nonprefix_expr NE expr                               { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
-| nonblock_nonprefix_expr '<' expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
-| nonblock_nonprefix_expr '>' expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
-| nonblock_nonprefix_expr LE expr                               { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
-| nonblock_nonprefix_expr GE expr                               { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
-| nonblock_nonprefix_expr '|' expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
-| nonblock_nonprefix_expr '^' expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
-| nonblock_nonprefix_expr '&' expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
-| nonblock_nonprefix_expr SHL expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
-| nonblock_nonprefix_expr SHR expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
-| nonblock_nonprefix_expr '+' expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
-| nonblock_nonprefix_expr '-' expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
-| nonblock_nonprefix_expr '*' expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
-| nonblock_nonprefix_expr '/' expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
-| nonblock_nonprefix_expr '%' expr                              { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
-| nonblock_nonprefix_expr AS ty                                 { $$ = mk_node("ExprCast", 2, $1, $3); }
+| nonblock_expr '=' expr                                        { $$ = mk_node("ExprAssign", 2, $1, $3); }
+| nonblock_expr BINOPEQ expr                                    { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| nonblock_expr OROR expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
+| nonblock_expr ANDAND expr                                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
+| nonblock_expr EQEQ expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
+| nonblock_expr NE expr                                         { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
+| nonblock_expr '<' expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
+| nonblock_expr '>' expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
+| nonblock_expr LE expr                                         { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
+| nonblock_expr GE expr                                         { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
+| nonblock_expr '|' expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
+| nonblock_expr '^' expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
+| nonblock_expr '&' expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
+| nonblock_expr SHL expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
+| nonblock_expr SHR expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
+| nonblock_expr '+' expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
+| nonblock_expr '-' expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
+| nonblock_expr '*' expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
+| nonblock_expr '/' expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
+| nonblock_expr '%' expr                                        { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
+| nonblock_expr AS ty                                           { $$ = mk_node("ExprCast", 2, $1, $3); }
 | BOX nonparen_expr                                             { $$ = mk_node("ExprBox", 1, $2); }
-| %prec BOXPLACE BOX '(' maybe_expr ')' nonblock_nonprefix_expr { $$ = mk_node("ExprBox", 2, $3, $5); }
+| %prec BOXPLACE BOX '(' maybe_expr ')' nonblock_expr           { $$ = mk_node("ExprBox", 2, $3, $5); }
+| nonblock_prefix_expr
 ;
 
 expr
