@@ -222,6 +222,11 @@ item
 | item_type
 | block_item
 | view_item
+| item_macro
+;
+
+item_macro
+: path_expr '!' maybe_ident delimited_token_trees
 ;
 
 view_item
@@ -268,20 +273,21 @@ pats_or
 ;
 
 pat
-: UNDERSCORE                             { $$ = mk_atom("PatWild"); }
-| '&' pat                                { $$ = mk_node("PatRegion", 1, $2); }
-| '(' ')'                                { $$ = mk_atom("PatUnit"); }
-| '(' pat_tup ')'                        { $$ = mk_node("PatTup", 1, $2); }
-| '[' pat_vec ']'                        { $$ = mk_node("PatVec", 1, $2); }
+: UNDERSCORE                                      { $$ = mk_atom("PatWild"); }
+| '&' pat                                         { $$ = mk_node("PatRegion", 1, $2); }
+| '(' ')'                                         { $$ = mk_atom("PatUnit"); }
+| '(' pat_tup ')'                                 { $$ = mk_node("PatTup", 1, $2); }
+| '[' pat_vec ']'                                 { $$ = mk_node("PatVec", 1, $2); }
 | lit_or_path
-| lit_or_path DOTDOT lit_or_path         { $$ = mk_node("PatRange", 2, $1, $3); }
-| path_expr '{' pat_struct '}'           { $$ = mk_node("PatStruct", 2, $1, $3); }
-| path_expr '(' DOTDOT ')'               { $$ = mk_node("PatEnum", 1, $1); }
-| path_expr '(' pat_tup ')'              { $$ = mk_node("PatEnum", 2, $1, $3); }
-| binding_mode ident                     { $$ = mk_node("PatIdent", 2, $1, $2); }
-|              ident '@' pat             { $$ = mk_node("PatIdent", 3, mk_node("BindByValue", 1, mk_atom("MutImmutable")), $1, $3); }
-| binding_mode ident '@' pat             { $$ = mk_node("PatIdent", 3, $1, $2, $4); }
-| BOX pat                                { $$ = mk_node("PatUniq", 1, $2); }
+| lit_or_path DOTDOT lit_or_path                  { $$ = mk_node("PatRange", 2, $1, $3); }
+| path_expr '{' pat_struct '}'                    { $$ = mk_node("PatStruct", 2, $1, $3); }
+| path_expr '(' DOTDOT ')'                        { $$ = mk_node("PatEnum", 1, $1); }
+| path_expr '(' pat_tup ')'                       { $$ = mk_node("PatEnum", 2, $1, $3); }
+| path_expr '!' maybe_ident delimited_token_trees { $$ = mk_node("PatMac", 3, $1, $3, $4); }
+| binding_mode ident                              { $$ = mk_node("PatIdent", 2, $1, $2); }
+|              ident '@' pat                      { $$ = mk_node("PatIdent", 3, mk_node("BindByValue", 1, mk_atom("MutImmutable")), $1, $3); }
+| binding_mode ident '@' pat                      { $$ = mk_node("PatIdent", 3, $1, $2, $4); }
+| BOX pat                                         { $$ = mk_node("PatUniq", 1, $2); }
 ;
 
 binding_mode
@@ -544,8 +550,10 @@ maybe_impl_methods
 ;
 
 impl_methods
-: method                 { $$ = mk_node("ImplMethods", 1, $1); }
-| impl_methods method    { $$ = ext_node($1, 1, $2); }
+: method                  { $$ = mk_node("ImplMethods", 1, $1); }
+| item_macro              { $$ = mk_node("ImplMethods", 1, $1); }
+| impl_methods method     { $$ = ext_node($1, 1, $2); }
+| impl_methods item_macro { $$ = ext_node($1, 1, $2); }
 ;
 
 item_fn
@@ -942,7 +950,7 @@ nonblock_expr
 | %prec IDENT
   path_expr                                                     { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                          { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
-| path_expr '!' delimited_token_trees                           { $$ = mk_node("ExprMac", 2, $1, $3); }
+| path_expr '!' maybe_ident delimited_token_trees               { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'              { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | nonblock_expr '.' ident                                       { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonblock_expr '[' expr ']'                                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -986,7 +994,7 @@ expr
 | %prec IDENT
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
-| path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
+| path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | expr '.' ident                                      { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr '[' expr ']'                                   { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -1032,7 +1040,7 @@ nonparen_expr
 | %prec IDENT
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
-| path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
+| path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | nonparen_expr '.' ident                             { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonparen_expr '[' expr ']'                          { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -1077,7 +1085,7 @@ expr_nostruct
 | %prec IDENT
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
-| path_expr '!' delimited_token_trees                 { $$ = mk_node("ExprMac", 2, $1, $3); }
+| path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
 | expr_nostruct '.' ident                             { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr_nostruct '[' expr ']'                          { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | expr_nostruct '(' maybe_exprs ')'                   { $$ = mk_node("ExprCall", 2, $1, $3); }
@@ -1287,6 +1295,11 @@ str
 | LIT_STR_RAW                { $$ = mk_node("LitStr", 1, mk_atom(yytext), mk_atom("RawStr")); }
 | LIT_BINARY                 { $$ = mk_node("LitBinary", 1, mk_atom(yytext), mk_atom("BinaryStr")); }
 | LIT_BINARY_RAW             { $$ = mk_node("LitBinary", 1, mk_atom(yytext), mk_atom("RawBinaryStr")); }
+;
+
+maybe_ident
+: %empty { $$ = mk_none(); }
+| ident
 ;
 
 ident
