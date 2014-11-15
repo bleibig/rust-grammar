@@ -1,6 +1,5 @@
 extern crate syntax;
 extern crate rustc;
-extern crate debug;
 
 use rustc::driver::{session, config};
 
@@ -19,34 +18,34 @@ use std::io;
 
 fn token_to_string(tok: token::Token) -> String {
     match tok {
-        token::LIT_CHAR(c) => {
-            format!("LIT_CHAR({})", c.as_str())
+        token::LitByte(c) => {
+            format!("LitByte({})", c.as_str())
         },
-        token::LIT_INTEGER(c) => {
-            format!("LIT_INTEGER({})", c.as_str().to_string())
+        token::LitInteger(c) => {
+            format!("LitInteger({})", c.as_str().to_string())
         },
-        token::LIT_FLOAT(c) => {
-            format!("LIT_FLOAT({})", c.as_str().to_string())
+        token::LitFloat(c) => {
+            format!("LitFloat({})", c.as_str().to_string())
         },
-        token::LIT_STR(s) => {
-          format!("LIT_STR(\"{}\")", token::get_name(s).get().escape_default())
+        token::LitStr(s) => {
+          format!("LitStr(\"{}\")", token::get_name(s).get().escape_default())
         },
-        token::LIT_STR_RAW(s, n) => {
-            format!("LIT_STR_RAW(r{delim}\"{string}\"{delim})",
+        token::LitStrRaw(s, n) => {
+            format!("LitStrRaw(r{delim}\"{string}\"{delim})",
                      delim="#".repeat(n), string=token::get_name(s))
         },
-        token::IDENT(s, _) => {
-            format!("IDENT({})", token::get_ident(s).get().to_string())
+        token::Ident(s, _) => {
+            format!("Ident({})", token::get_ident(s).get().to_string())
         },
-        token::LIFETIME(s) => {
-            format!("LIFETIME({})", token::get_ident(s).get().to_string())
+        token::Lifetime(s) => {
+            format!("Lifetime({})", token::get_ident(s).get().to_string())
         },
-        token::DOC_COMMENT(s) => {
-            format!("DOC_COMMENT({})", token::get_name(s).get().to_string())
+        token::DocComment(s) => {
+            format!("DocComment({})", token::get_name(s).get().to_string())
         },
-        token::WS | token::COMMENT => "".to_string(),
+        token::Whitespace | token::Comment => "".to_string(),
         t => {
-            format!("{:?}", t)
+            format!("{}", t)
         }
     }
 }

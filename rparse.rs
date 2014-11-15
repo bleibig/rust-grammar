@@ -23,13 +23,13 @@ fn filter_json(j: &mut json::Json) {
     match *j {
         json::Object(ref mut ob) => {
             // remove
-            ob.pop(&String::from_str("span"));
-            ob.pop(&String::from_str("id"));
+            ob.remove(&String::from_str("span"));
+            ob.remove(&String::from_str("id"));
             let mut kv : Option<(String,Vec<Json>)> = None;
-            match ob.find(&String::from_str("node")) {
+            match ob.get(&String::from_str("node")) {
                 Some(&json::Object(ref ob2)) => {
-                    match (ob2.find(&String::from_str("variant")),
-                           ob2.find(&String::from_str("fields"))) {
+                    match (ob2.get(&String::from_str("variant")),
+                           ob2.get(&String::from_str("fields"))) {
                         (Some(&String(ref s)), Some(&List(ref ls))) => {
                             kv = Some((s.clone(), ls.clone()));
                         }
@@ -41,16 +41,16 @@ fn filter_json(j: &mut json::Json) {
             match kv {
                 None => (),
                 Some((k, v)) => {
-                    ob.pop(&String::from_str("node"));
+                    ob.remove(&String::from_str("node"));
                     ob.insert(k, List(v));
                 }
             }
-            for (_, v) in ob.mut_iter() {
+            for (_, v) in ob.iter_mut() {
                 filter_json(v);
             }
         }
         json::List(ref mut ls) => {
-            for v in ls.mut_iter() {
+            for v in ls.iter_mut() {
                 filter_json(v)
             }
             if ls.len() == 1 {
@@ -65,12 +65,12 @@ fn filter_json(j: &mut json::Json) {
     }
 }
 
-static indent_step: int = 4;
+static INDENT_STEP: int = 4;
 
 fn print_indent(indent: int) {
     let mut out = io::stdout();
     for i in range(0, indent) {
-        if i % indent_step == 0 {
+        if i % INDENT_STEP == 0 {
             out.write_str("|");
         } else {
             out.write_str(" ");
@@ -90,7 +90,7 @@ fn print_sexp(indent: int, j: &json::Json) {
                     out.write_str("(");
                     out.write_str(k.as_slice());
                     out.write_str("\n");
-                    print_sexp(indent + indent_step, v);
+                    print_sexp(indent + INDENT_STEP, v);
                     print_indent(indent);
                     out.write_str(")\n");
                 }
@@ -100,7 +100,7 @@ fn print_sexp(indent: int, j: &json::Json) {
             print_indent(indent);
             out.write_str("(\n");
             for v in ls.iter() {
-                print_sexp(indent + indent_step, v);
+                print_sexp(indent + INDENT_STEP, v);
             }
             print_indent(indent);
             out.write_str(")\n");
@@ -142,11 +142,11 @@ fn print_sexp(indent: int, j: &json::Json) {
 
 fn main() {
 
-    let args = os::args().move_iter().collect::<Vec<String>>();
+    let args = os::args().into_iter().collect::<Vec<String>>();
     let opts = [ optflag("j", "", "dump output in JSON, not sexp") ];
     let matches = match getopts(args.tail(), opts) {
         Ok(m) => { m }
-        Err(f) => { fail!(f) }
+        Err(f) => { panic!(f) }
     };
     let dump_json = matches.opt_present("j");
 
@@ -162,7 +162,7 @@ fn main() {
             // JSON-ify, meaning "encode then re-parse as just json", ugh.
             let ast_str = json::encode(&cr.module);
             let chars = ast_str.as_slice().chars().collect::<Vec<char>>();
-            let mut b = json::Builder::new(chars.move_iter());
+            let mut b = json::Builder::new(chars.into_iter());
             let mut j = b.build().ok().unwrap();
 
             filter_json(&mut j);
@@ -174,7 +174,7 @@ fn main() {
             }
         },
         Err(ioerr) => {
-            fail!("I/O Error: {}", ioerr.desc);
+            panic!("I/O Error: {}", ioerr.desc);
         }
     }
 }
