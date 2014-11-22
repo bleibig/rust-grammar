@@ -4,6 +4,7 @@ extern crate syntax;
 extern crate rustc;
 extern crate serialize;
 extern crate getopts;
+extern crate rustc_trans;
 
 use getopts::{optflag,getopts};
 
@@ -15,7 +16,10 @@ use serialize::json;
 use serialize::json::{Json, List, String, Object};
 use syntax::diagnostics::registry;
 
-use rustc::driver::{driver, session, config};
+use rustc::session;
+use rustc::session::config;
+
+use rustc_trans::driver::driver;
 
 fn filter_json(j: &mut json::Json) {
     let mut replace = None;
@@ -144,7 +148,7 @@ fn main() {
 
     let args = os::args().into_iter().collect::<Vec<String>>();
     let opts = [ optflag("j", "", "dump output in JSON, not sexp") ];
-    let matches = match getopts(args.tail(), opts) {
+    let matches = match getopts(args.tail(), &opts) {
         Ok(m) => { m }
         Err(f) => { panic!(f) }
     };
@@ -154,9 +158,9 @@ fn main() {
         Ok(text) => {
             let opt = config::basic_options();
             let sess = session::build_session(opt, None,
-                                              registry::Registry::new(rustc::DIAGNOSTICS));
+                                              registry::Registry::new(&rustc::DIAGNOSTICS));
             let cfg = config::build_configuration(&sess);
-            let input = driver::StrInput(text);
+            let input = driver::Input::StrInput(text);
             let cr = driver::phase_1_parse_input(&sess, cfg, &input);
 
             // JSON-ify, meaning "encode then re-parse as just json", ugh.
