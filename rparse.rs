@@ -13,7 +13,7 @@ use std::os;
 use std::io::Reader;
 use std::string::String;
 use serialize::json;
-use serialize::json::{Json, List, String, Object};
+use serialize::json::{Json};
 use syntax::diagnostics::registry;
 
 use rustc::session;
@@ -25,16 +25,16 @@ fn filter_json(j: &mut json::Json) {
     let mut replace = None;
 
     match *j {
-        json::Object(ref mut ob) => {
+        Json::Object(ref mut ob) => {
             // remove
             ob.remove(&String::from_str("span"));
             ob.remove(&String::from_str("id"));
             let mut kv : Option<(String,Vec<Json>)> = None;
             match ob.get(&String::from_str("node")) {
-                Some(&json::Object(ref ob2)) => {
+                Some(&Json::Object(ref ob2)) => {
                     match (ob2.get(&String::from_str("variant")),
                            ob2.get(&String::from_str("fields"))) {
-                        (Some(&String(ref s)), Some(&List(ref ls))) => {
+                        (Some(&Json::String(ref s)), Some(&Json::Array(ref ls))) => {
                             kv = Some((s.clone(), ls.clone()));
                         }
                         _ => ()
@@ -46,14 +46,14 @@ fn filter_json(j: &mut json::Json) {
                 None => (),
                 Some((k, v)) => {
                     ob.remove(&String::from_str("node"));
-                    ob.insert(k, List(v));
+                    ob.insert(k, Json::Array(v));
                 }
             }
             for (_, v) in ob.iter_mut() {
                 filter_json(v);
             }
         }
-        json::List(ref mut ls) => {
+        Json::Array(ref mut ls) => {
             for v in ls.iter_mut() {
                 filter_json(v)
             }
@@ -87,7 +87,7 @@ fn print_sexp(indent: int, j: &json::Json) {
 
     match *j {
 
-        json::Object(ref ob) => {
+        Json::Object(ref ob) => {
             {
                 for (k, v) in ob.iter() {
                     print_indent(indent);
@@ -100,7 +100,7 @@ fn print_sexp(indent: int, j: &json::Json) {
                 }
             }
         }
-        json::List(ref ls) => {
+        Json::Array(ref ls) => {
             print_indent(indent);
             out.write_str("(\n");
             for v in ls.iter() {
@@ -109,34 +109,34 @@ fn print_sexp(indent: int, j: &json::Json) {
             print_indent(indent);
             out.write_str(")\n");
         }
-        json::String(ref s) => {
+        Json::String(ref s) => {
             print_indent(indent);
             out.write_str(s.as_slice());
             out.write_str("\n");
         }
-        json::Null => {
+        Json::Null => {
             print_indent(indent);
             out.write_str("<nil>\n");
         }
-        json::Boolean(true) => {
+        Json::Boolean(true) => {
             print_indent(indent);
             out.write_str("true\n");
         }
-        json::Boolean(false) => {
+        Json::Boolean(false) => {
             print_indent(indent);
             out.write_str("false\n");
         }
-        json::I64(n) => {
+        Json::I64(n) => {
             print_indent(indent);
             out.write_str(n.to_string().as_slice());
             out.write_str("\n");
         }
-        json::U64(n) => {
+        Json::U64(n) => {
             print_indent(indent);
             out.write_str(n.to_string().as_slice());
             out.write_str("\n");
         }
-        json::F64(n) => {
+        Json::F64(n) => {
             print_indent(indent);
             out.write_str(n.to_string().as_slice());
             out.write_str("\n");
