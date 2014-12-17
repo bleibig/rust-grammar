@@ -5,6 +5,7 @@ extern crate rustc;
 extern crate serialize;
 extern crate getopts;
 extern crate rustc_trans;
+extern crate rustc_driver;
 
 use getopts::{optflag,getopts};
 
@@ -18,8 +19,9 @@ use syntax::diagnostics::registry;
 
 use rustc::session;
 use rustc::session::config;
+use rustc::session::config::Input;
 
-use rustc_trans::driver::driver;
+use rustc_driver::driver;
 
 fn filter_json(j: &mut json::Json) {
     let mut replace = None;
@@ -160,7 +162,7 @@ fn main() {
             let sess = session::build_session(opt, None,
                                               registry::Registry::new(&rustc::DIAGNOSTICS));
             let cfg = config::build_configuration(&sess);
-            let input = driver::Input::StrInput(text);
+            let input = Input::Str(text);
             let cr = driver::phase_1_parse_input(&sess, cfg, &input);
 
             // JSON-ify, meaning "encode then re-parse as just json", ugh.
