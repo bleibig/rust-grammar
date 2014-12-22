@@ -219,6 +219,7 @@ mod_item
 
 item
 : item_static
+| item_const
 | item_type
 | block_item
 | view_item
@@ -1278,7 +1279,13 @@ let
 ;
 
 item_static
-: STATIC pat ':' ty '=' expr ';'  { $$ = mk_node("ItemStatic", 3, $2, $4, $6); }
+: STATIC ident ':' ty '=' expr ';'  { $$ = mk_node("ItemStatic", 3, $2, $4, $6); }
+| STATIC MUT ident ':' ty '=' expr ';'  { $$ = mk_node("ItemStatic", 3, $3, $5, $7); }
+;
+
+item_const
+: CONST ident ':' ty '=' expr ';'  { $$ = mk_node("ItemConst", 3, $2, $4, $6); }
+;
 
 lit
 : LIT_BYTE                   { $$ = mk_node("LitByte", 1, mk_atom(yytext)); }
