@@ -779,6 +779,17 @@ bound
 | trait_ref
 ;
 
+maybe_ltbounds
+: %prec SHIFTPLUS
+  ':' ltbounds       { $$ = $2; }
+| %empty             { $$ = mk_none(); }
+;
+
+ltbounds
+: LIFETIME              { $$ = mk_node("ltbounds", 1, mk_atom(yytext)); }
+| ltbounds '+' LIFETIME { $$ = ext_node($1, 1, $3); }
+;
+
 maybe_ty_default
 : '=' ty
 | %empty
@@ -805,8 +816,8 @@ lifetimes
 ;
 
 lifetime
-: LIFETIME                      { $$ = mk_node("lifetime", 1, mk_atom(yytext)); }
-| STATIC_LIFETIME               { $$ = mk_atom("static_lifetime"); }
+: LIFETIME maybe_ltbounds         { $$ = mk_node("lifetime", 2, mk_atom(yytext), $2); }
+| STATIC_LIFETIME                 { $$ = mk_atom("static_lifetime"); }
 ;
 
 trait_ref
@@ -912,6 +923,8 @@ stmts
 | stmts let nonblock_expr                          { $$ = ext_node($1, 2, $2, $3); }
 | stmts item_static                                { $$ = ext_node($1, 1, $2); }
 | stmts item_static nonblock_expr                  { $$ = ext_node($1, 2, $2, $3); }
+| stmts item_const                                 { $$ = ext_node($1, 1, $2); }
+| stmts item_const nonblock_expr                   { $$ = ext_node($1, 2, $2, $3); }
 | stmts item_type                                  { $$ = ext_node($1, 1, $2); }
 | stmts item_type nonblock_expr                    { $$ = ext_node($1, 2, $2, $3); }
 | stmts block_item                                 { $$ = ext_node($1, 1, $2); }

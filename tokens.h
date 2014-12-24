@@ -1,5 +1,5 @@
 enum Token {
-  SHL = 257, // The first 256 LLnextgen reserves for chars
+  SHL = 257, // Parser generators reserve 0-256 for char literals
   SHR,
   LE,
   EQEQ,
