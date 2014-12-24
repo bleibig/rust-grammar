@@ -362,6 +362,7 @@ ty_prim
 | '&' maybe_lifetime maybe_mut ty      { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
 | '[' ty ']'                           { $$ = mk_node("TyVec", 1, $2); }
 | '[' ty ',' DOTDOT expr ']'           { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
+| '[' ty ';' expr ']'                  { $$ = mk_node("TyFixedLengthVec", 2, $2, $4); }
 | TYPEOF '(' expr ')'                  { $$ = mk_node("TyTypeof", 1, $3); }
 | UNDERSCORE                           { $$ = mk_atom("TyInfer"); }
 | ty_bare_fn
@@ -1207,6 +1208,7 @@ vec_expr
 : expr
 | vec_expr ',' expr
 | vec_expr ',' DOTDOT expr
+| vec_expr ';' expr
 ;
 
 field_inits
