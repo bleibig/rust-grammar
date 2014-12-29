@@ -747,8 +747,52 @@ path_generic_args_and_bounds
 ;
 
 generic_args
-: '<' lifetimes_or_tys '>' { $$ = $2; }
-| '<' lifetimes_or_tys SHR { push_back('>'); $$ = $2; }
+: '<' generic_values '>' { $$ = $2; }
+| '<' generic_values SHR { push_back('>'); $$ = $2; }
+;
+
+generic_values
+: maybe_lifetimes maybe_ty_sums              { $$ = mk_node("GenericValues", 2, $1, $2); }
+| maybe_lifetimes maybe_ty_sums '=' bindings { $$ = mk_node("GenericValues", 3, $1, $2, $4); }
+;
+
+maybe_ty_sums
+: ty_sums
+| %empty { $$ = mk_none(); }
+;
+
+ty_sums
+: ty_sum             { $$ = mk_node("TySums", 1, $1); }
+| ty_sums ',' ty_sum { $$ = ext_node($1, 1, $3); }
+;
+
+ty_sum
+: ty                     { $$ = mk_node("TySum", 1, $1); }
+| ty '+' ty_param_bounds { $$ = mk_node("TySum", 2, $1, $3); }
+;
+
+ty_param_bounds
+: boundseq
+| %empty { $$ = mk_none(); }
+;
+
+boundseq
+: polybound
+| boundseq '+' polybound { $$ = ext_node($1, 1, $3); }
+;
+
+polybound
+: FOR '<' maybe_lifetimes '>' bound { $$ = mk_node("PolyBound", 2, $3, $5); }
+| bound
+;
+
+bindings
+: binding              { $$ = mk_node("Bindings", 1, $1); } 
+| bindings ',' binding { $$ = ext_node($1, 1, $3); }
+;
+
+binding
+: ident '=' ty { mk_node("Binding", 2, $1, $3); }
 ;
 
 ty_param
@@ -796,18 +840,14 @@ maybe_ty_default
 | %empty
 ;
 
-lifetimes_or_tys
-: lifetime_or_ty                          { $$ = mk_node("LifetimesOrTys", 1, $1); }
-| lifetimes_or_tys ',' lifetime_or_ty     { $$ = ext_node($1, 1, $3); }
-;
-
-lifetime_or_ty
-: lifetime
-| ty
-;
-
 maybe_lifetime
 : lifetime
+| %empty { $$ = mk_none(); }
+;
+
+maybe_lifetimes
+: lifetimes
+| lifetimes ','
 | %empty { $$ = mk_none(); }
 ;
 
