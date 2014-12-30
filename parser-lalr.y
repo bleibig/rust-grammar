@@ -720,6 +720,8 @@ path_generic_args_without_colons
 | %prec IDENT
   ident generic_args     { $$ = mk_node("components", 2, $1, $2); }
 | %prec IDENT
+  ident '(' maybe_ty_sum ')' { $$ = mk_node("components", 2, $1, $3); }
+| %prec IDENT
   path_generic_args_without_colons MOD_SEP ident      { $$ = ext_node($1, 1, $3); }
 | %prec IDENT
   path_generic_args_without_colons MOD_SEP ident generic_args { $$ = ext_node($1, 2, $3, $4); }
@@ -762,6 +764,11 @@ maybe_ty_sums
 | %empty { $$ = mk_none(); }
 ;
 
+maybe_ty_sum
+: ty_sum
+| %empty { $$ = mk_none(); }
+;
+
 ty_sums
 : ty_sum             { $$ = mk_node("TySums", 1, $1); }
 | ty_sums ',' ty_sum { $$ = ext_node($1, 1, $3); }
@@ -798,6 +805,7 @@ binding
 
 ty_param
 : maybe_unsized ident maybe_bounds maybe_ty_default
+| maybe_unsized ident '?' ident maybe_bounds maybe_ty_default
 ;
 
 maybe_unsized
@@ -1238,6 +1246,7 @@ proc_expr_nostruct
 
 maybe_vec_expr
 : vec_expr
+| vec_expr ','
 | %empty { $$ = mk_none(); }
 ;
 

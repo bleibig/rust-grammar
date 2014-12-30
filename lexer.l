@@ -143,6 +143,7 @@ while    { return WHILE; }
 ::     { return MOD_SEP; }
 :      { return ':'; }
 \$     { return '$'; }
+\?     { return '?'; }
 
 ==    { return EQEQ; }
 =>    { return FAT_ARROW; }

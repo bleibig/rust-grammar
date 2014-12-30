@@ -26,6 +26,7 @@ void print_token(int token) {
   case '~': printf("TILDE"); break;
   case ':': printf("COLON"); break;
   case '$': printf("DOLLAR"); break;
+  case '?': printf("QUESTION"); break;
   case '=': printf("EQ"); break;
   case '!': printf("NOT"); break;
   case '<': printf("LT"); break;
