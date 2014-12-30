@@ -121,7 +121,7 @@ extern char *yytext;
 // though it might well consider reducing the type "bar" and then
 // going on to "<" as a subsequent binop. The "+" case is with
 // trailing type-bounds ("foo as bar:A+B"), for the same reason.
-%precedence SHIFTPLUS SHIFTLT
+%precedence SHIFTPLUS
 
 // Binops & unops, and their precedences
 %precedence BOX
@@ -355,17 +355,17 @@ ty
 ;
 
 ty_prim
-: path_generic_args_without_colons     { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
-| MOD_SEP path_generic_args_and_bounds { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
-| BOX ty                               { $$ = mk_node("TyBox", 1, $2); }
-| '*' maybe_mut_or_const ty            { $$ = mk_node("TyPtr", 2, $2, $3); }
-| '&' maybe_mut ty                     { $$ = mk_node("TyRptr", 2, $2, $3); }
-| '&' lifetime maybe_mut ty            { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
-| '[' ty ']'                           { $$ = mk_node("TyVec", 1, $2); }
-| '[' ty ',' DOTDOT expr ']'           { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
-| '[' ty ';' expr ']'                  { $$ = mk_node("TyFixedLengthVec", 2, $2, $4); }
-| TYPEOF '(' expr ')'                  { $$ = mk_node("TyTypeof", 1, $3); }
-| UNDERSCORE                           { $$ = mk_atom("TyInfer"); }
+: path_generic_args_without_colons         { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
+| MOD_SEP path_generic_args_without_colons { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
+| BOX ty                                   { $$ = mk_node("TyBox", 1, $2); }
+| '*' maybe_mut_or_const ty                { $$ = mk_node("TyPtr", 2, $2, $3); }
+| '&' maybe_mut ty                         { $$ = mk_node("TyRptr", 2, $2, $3); }
+| '&' lifetime maybe_mut ty                { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
+| '[' ty ']'                               { $$ = mk_node("TyVec", 1, $2); }
+| '[' ty ',' DOTDOT expr ']'               { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
+| '[' ty ';' expr ']'                      { $$ = mk_node("TyFixedLengthVec", 2, $2, $4); }
+| TYPEOF '(' expr ')'                      { $$ = mk_node("TyTypeof", 1, $3); }
+| UNDERSCORE                               { $$ = mk_atom("TyInfer"); }
 | ty_bare_fn
 | ty_proc
 ;
@@ -675,7 +675,8 @@ where_predicates
 ;
 
 where_predicate
-: ident ':' bounds                    { $$ = mk_node("WherePredicate", 2, $1, $3); }
+: lifetime ':' bounds    { $$ = mk_node("WherePredicate", 2, $1, $3); }
+| path_generic_args_without_colons ':' ty_param_bounds   { $$ = mk_node("WherePredicate", 2, $1, $1); }
 ;
 
 ty_params
@@ -736,17 +737,6 @@ path_generic_args_with_colons
 : ident  { $$ = mk_node("components", 1, $1); }
 | path_generic_args_with_colons MOD_SEP ident { $$ = ext_node($1, 1, $3); }
 | path_generic_args_with_colons MOD_SEP generic_args { $$ = ext_node($1, 1, $3); }
-;
-
-// A path with a lifetime and type parameters with bounds before the last
-// set of type parameters only; e.g. `foo::bar<'a>::Baz:X+Y<T>` This
-// form does not use extra double colons.
-path_generic_args_and_bounds
-: path_generic_args_without_colons ':' bounds generic_args  { $$ = ext_node($1, 2, $3, $4); }
-| %prec SHIFTLT
-  path_generic_args_without_colons ':' bounds  { $$ = ext_node($1, 1, $3); }
-| %prec SHIFTLT
-  path_generic_args_without_colons
 ;
 
 generic_args
@@ -856,13 +846,18 @@ maybe_lifetimes
 ;
 
 lifetimes
-: lifetime
-| lifetimes ',' lifetime
+: lifetime_and_bounds
+| lifetimes ',' lifetime_and_bounds
+;
+
+lifetime_and_bounds
+: LIFETIME maybe_ltbounds         { $$ = mk_node("lifetime", 2, mk_atom(yytext), $2); }
+| STATIC_LIFETIME                 { $$ = mk_atom("static_lifetime"); }
 ;
 
 lifetime
-: LIFETIME maybe_ltbounds         { $$ = mk_node("lifetime", 2, mk_atom(yytext), $2); }
-| STATIC_LIFETIME                 { $$ = mk_atom("static_lifetime"); }
+: LIFETIME         { $$ = mk_node("lifetime", 1, mk_atom(yytext)); }
+| STATIC_LIFETIME  { $$ = mk_atom("static_lifetime"); }
 ;
 
 trait_ref
