@@ -350,8 +350,9 @@ tys
 ty
 : ty_prim
 | ty_closure
-| '(' tys ')'                          { $$ = mk_node("TyTup", 1, $2); }
-| '(' ')'                              { $$ = mk_atom("TyNil"); }
+| '<' ty_sum AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, $2, $4, $7); }
+| '(' tys ')'                               { $$ = mk_node("TyTup", 1, $2); }
+| '(' ')'                                   { $$ = mk_atom("TyNil"); }
 ;
 
 ty_prim
@@ -382,15 +383,10 @@ ty_fn_decl
 ;
 
 ty_closure
-: UNSAFE maybe_once generic_params '|' anon_params '|' maybe_bounds ret_ty
-|        maybe_once generic_params '|' anon_params '|' maybe_bounds ret_ty
-| UNSAFE maybe_once generic_params OROR maybe_bounds ret_ty
-|        maybe_once generic_params OROR maybe_bounds ret_ty
-;
-
-maybe_once
-: ONCE   { $$ = mk_atom("Once"); }
-| %empty { $$ = mk_atom("Many"); }
+: UNSAFE '|' anon_params '|' maybe_bounds ret_ty { $$ = mk_node("TyClosure", 3, $3, $5, $6); }
+|        '|' anon_params '|' maybe_bounds ret_ty { $$ = mk_node("TyClosure", 3, $2, $4, $5); }
+| UNSAFE OROR maybe_bounds ret_ty                { $$ = mk_node("TyClosure", 2, $3, $4); }
+|        OROR maybe_bounds ret_ty                { $$ = mk_node("TyClosure", 2, $2, $3); }
 ;
 
 ty_proc
@@ -476,9 +472,9 @@ item_type
 ;
 
 item_trait
-: TRAIT ident generic_params /* maybe_where_clause */ maybe_supertraits '{' maybe_trait_methods '}'
+: TRAIT ident generic_params maybe_where_clause maybe_supertraits '{' maybe_trait_items '}'
 {
-  $$ = mk_node("ItemTrait", 4, $2, $3, $4, $6);
+  $$ = mk_node("ItemTrait", 5, $2, $3, $4, $5, $7);
 }
 ;
 
@@ -492,14 +488,23 @@ supertraits
 | supertraits '+' trait_ref   { $$ = ext_node($1, 1, $3); }
 ;
 
-maybe_trait_methods
-: trait_methods
+maybe_trait_items
+: trait_items
 | %empty { $$ = mk_none(); }
 ;
 
-trait_methods
-: trait_method                 { $$ = mk_node("TraitMethods", 1, $1); }
-| trait_methods trait_method   { $$ = ext_node($1, 1, $2); }
+trait_items
+: trait_item               { $$ = mk_node("TraitItems", 1, $1); }
+| trait_item trait_items   { $$ = ext_node($1, 1, $2); }
+;
+
+trait_item
+: trait_type
+| trait_method
+;
+
+trait_type
+: TYPE ty_param ';' { $$ = mk_node("TypeTraitItem", 1, $2); }
 ;
 
 maybe_unsafe
