@@ -9,7 +9,6 @@ extern char *yytext;
 
 static char *binop_text(char*);
 static char *desugar_num(char*, char*);
-static char *strip_number_suffix(char*);
 static char *escape_string(char*);
 
 void print_token(int token) {
@@ -57,9 +56,9 @@ void print_token(int token) {
   case FAT_ARROW: printf("FatArrow"); break;
   case LIT_BYTE: printf("Byte(%s)", yytext); break;
   case LIT_CHAR: printf("Char(%s)", yytext); break;
-  case LIT_INTEGER: printf("Integer(%s)", strip_number_suffix(yytext)); break;
-  case LIT_FLOAT: printf("Float(%s)", strip_number_suffix(yytext)); break;
-  case LIT_STR: printf("Str(\"\")"); break;
+  case LIT_INTEGER: printf("Integer(%s)", yytext); break;
+  case LIT_FLOAT: printf("Float(%s)", yytext); break;
+  case LIT_STR: printf("Str(%s)", escape_string(yytext)); break;
   case LIT_STR_RAW: printf("StrRaw(%s)", yytext); break;
   case LIT_BINARY: printf("Binary(%s)", yytext); break;
   case LIT_BINARY_RAW: printf("BinaryRaw(%s)", yytext); break;
@@ -225,26 +224,11 @@ static char *desugar_num(char *tok, char *default_suffix) {
     return res;
 }
 
-static char *strip_number_suffix(char *str) {
-  int len = strlen(str);
-  char *res = malloc(64);
-  int j = 0;
-  for (int i = 0; i < len; ++i) {
-    char c = str[i];
-    if (c == 'i' || c == 'u' || c == 'f') {
-      break;
-    } else {
-      res[j++] = c;
-    }
-  }
-  res[j] = '\0';
-  return res;
-}
-
 static char *escape_string(char *str) {
   int len = strlen(str);
   char *res = malloc(sizeof(char) * len * 2 + 1);
   int j = 0;
+  res[j++] = '"';
   for (int i = 1; i < len - 1; ++i) {
     char c = str[i];
     switch (c) {
@@ -276,5 +260,7 @@ static char *escape_string(char *str) {
       res[j++] = c;
     }
   }
+  res[j++] = '"';
+  res[j++] = '\0';
   return res;
 }

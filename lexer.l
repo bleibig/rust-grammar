@@ -34,10 +34,12 @@ static int saw_non_hash;
 %x doc_line
 %x blockcomment
 %x doc_block
-
-suf (i8|i16|i32|i64|i|u8|u16|u32|u64|u)
+%x suffix
 
 %%
+
+<suffix>[a-zA-Z_][a-zA-Z0-9_]*      { BEGIN(INITIAL); }
+<suffix>(.|\n)                      { unput(yytext[0]); BEGIN(INITIAL); }
 
 [ \n\t\r]             { }
 
@@ -111,15 +113,14 @@ while    { return WHILE; }
 
 [a-zA-Z_][a-zA-Z0-9_]*      { return IDENT; }
 
-0x[0-9a-fA-F_]+{suf}?                              { return LIT_INTEGER; }
-0o[0-8_]+{suf}?                                    { return LIT_INTEGER; }
-0b[01_]+{suf}?                                     { return LIT_INTEGER; }
-[0-9][0-9_]*{suf}?                                 { return LIT_INTEGER; }
-[0-9][0-9_]*\.(\.|[a-zA-Z])    { yyless(yyleng - 2); return LIT_INTEGER; }
+0x[0-9a-fA-F_]+                                    { BEGIN(suffix); return LIT_INTEGER; }
+0o[0-8_]+                                          { BEGIN(suffix); return LIT_INTEGER; }
+0b[01_]+                                           { BEGIN(suffix); return LIT_INTEGER; }
+[0-9][0-9_]*                                       { BEGIN(suffix); return LIT_INTEGER; }
+[0-9][0-9_]*\.(\.|[a-zA-Z])    { yyless(yyleng - 2); BEGIN(suffix); return LIT_INTEGER; }
 
-[0-9][0-9_]*\.[0-9]*([eE][-\+]?[0-9]+)?(f32|f64)?   { return LIT_FLOAT; }
-[0-9][0-9_]*(\.[0-9]*)?[eE][-\+]?[0-9]+(f32|f64)?   { return LIT_FLOAT; }
-[0-9][0-9_]*(f32|f64)                               { return LIT_FLOAT; }
+[0-9][0-9_]*\.[0-9_]*([eE][-\+]?[0-9_]+)?          { BEGIN(suffix); return LIT_FLOAT; }
+[0-9][0-9_]*(\.[0-9_]*)?[eE][-\+]?[0-9_]+          { BEGIN(suffix); return LIT_FLOAT; }
 
 ;      { return ';'; }
 ,      { return ','; }
@@ -162,20 +163,19 @@ while    { return WHILE; }
 \x27                             { BEGIN(ltorchar); yymore(); }
 <ltorchar>static                 { BEGIN(INITIAL); return STATIC_LIFETIME; }
 <ltorchar>[a-zA-Z_][a-zA-Z0-9_]* { BEGIN(INITIAL); return LIFETIME; }
-<ltorchar>\\[nrt\\\x27\x220]\x27 { BEGIN(INITIAL); return LIT_CHAR; }
-<ltorchar>\\x[0-9a-fA-F]{2}\x27  { BEGIN(INITIAL); return LIT_CHAR; }
-<ltorchar>\\u[0-9a-fA-F]{4}\x27  { BEGIN(INITIAL); return LIT_CHAR; }
-<ltorchar>\\U[0-9a-fA-F]{8}\x27  { BEGIN(INITIAL); return LIT_CHAR; }
-<ltorchar>.\x27                  { BEGIN(INITIAL); return LIT_CHAR; }
+<ltorchar>\\[nrt\\\x27\x220]\x27 { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar>\\x[0-9a-fA-F]{2}\x27  { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar>\\u\{[0-9a-fA-F]?{6}\}\x27  { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar>.\x27                  { BEGIN(suffix); return LIT_CHAR; }
 <ltorchar><<EOF>>                { BEGIN(INITIAL); return -1; }
 
 b\x22              { BEGIN(bytestr); yymore(); }
-<bytestr>\x22      { BEGIN(INITIAL); return LIT_BINARY; }
+<bytestr>\x22      { BEGIN(suffix); return LIT_BINARY; }
 <bytestr>(.|\n)    { yymore(); }
 <bytestr><<EOF>>   { return -1; }
 
 br\x22                      { BEGIN(rawbytestr_nohash); yymore(); }
-<rawbytestr_nohash>\x22     { BEGIN(INITIAL); return LIT_BINARY_RAW; }
+<rawbytestr_nohash>\x22     { BEGIN(suffix); return LIT_BINARY_RAW; }
 <rawbytestr_nohash>(.|\n)   { yymore(); }
 <rawbytestr_nohash><<EOF>>  { return -1; }
 
@@ -226,7 +226,7 @@ b\x27                        { BEGIN(byte); yymore(); }
 <byte><<EOF>>                { BEGIN(INITIAL); return -1; }
 
 r\x22           { BEGIN(rawstr); yymore(); }
-<rawstr>\x22    { BEGIN(INITIAL); return LIT_STR_RAW; }
+<rawstr>\x22    { BEGIN(suffix); return LIT_STR_RAW; }
 <rawstr>(.|\n)  { yymore(); }
 <rawstr><<EOF>> { return -1; }
 
@@ -273,27 +273,7 @@ r/#             {
 <rawstr_esc><<EOF>> { return -1; }
 
 \x22                     { BEGIN(str); yymore(); }
-<str>\x22                {
-    BEGIN(INITIAL);
-    // escaped newlines need to be removed.
-    for (int i = 0, j = yyleng, k = 0; i < j; i++) {
-        if (yytext[i] == '\\') {
-            if (yytext[i + 1] == '\n') {
-                k = i + 2;
-                // with an escaped newline, rustc will ignore all whitespace
-                // until the next non-whitespace character
-                for (; k < yyleng; k++) {
-                    if (!isblank(yytext[k])) {
-                        break;
-                    }
-                }
-                memmove(yytext + i, yytext + k, j - i);
-                j -= k - i;
-            }
-        }
-    }
-    return LIT_STR;
-}
+<str>\x22                { BEGIN(suffix); return LIT_STR; }
 
 <str><<EOF>>               { return -1; }
 <str>\\[n\nrt\\\x27\x220]  { yymore(); }
