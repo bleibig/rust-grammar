@@ -16,12 +16,19 @@ rlex = sys.argv[2]
 # flex dies on multibyte characters
 BLACKLIST = ['libstd/str.rs', 'libstd/strbuf.rs', 'libstd/ascii.rs']
 
+outfile = open('lexer.bad', 'w')
+
 def chk(*args, **kwargs):
-    return subprocess.check_output(*args, **kwargs)
+    output = ""
+    try:
+        output = subprocess.check_output(*args, **kwargs)
+    except CalledProcessError:
+        pass
+    return output
 
 def compare(p):
     if chk(flex, stdin=open(p)) != chk(rlex, stdin=open(p)):
-        raise Exception("{} differed between the reference lexer and libsyntax's lexer".format(p))
+        outfile.write(p + '\n')
 
 for base, dirs, files in os.walk(sys.argv[3]):
     for f in filter(lambda p: p.endswith('.rs'), files):
@@ -33,8 +40,14 @@ for base, dirs, files in os.walk(sys.argv[3]):
                 die = True
                 break
 
+        if "compile-fail" in p:
+            print("skipping {}".format(p))
+            die = True
+
         if die:
             continue
 
         print("comparing {}".format(p))
         compare(p)
+
+outfile.close()

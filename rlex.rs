@@ -11,6 +11,7 @@ use syntax::parse::token::{Lit, Token};
 use syntax::parse;
 
 use std::io;
+use std::iter;
 
 /* This is a simple standalone lexer based on rustc's lexer. The main
  * difference is a custom to_str function for tokens that prints in
@@ -22,23 +23,32 @@ fn token_to_string(tok: token::Token) -> String {
     match tok {
         Token::Literal(l, _) => match l {
             Lit::Byte(c) => {
-                format!("LitByte({})", c.as_str())
+                format!("Byte(b'{}')", c.as_str())
+            },
+            Lit::Char(c) => {
+                format!("Char('{}')", c.as_str())
             },
             Lit::Integer(c) => {
-                format!("LitInteger({})", c.as_str().to_string())
+                format!("Integer({})", c.as_str().to_string())
             },
             Lit::Float(c) => {
-                format!("LitFloat({})", c.as_str().to_string())
+                format!("Float({})", c.as_str().to_string())
             },
             Lit::Str_(s) => {
-                format!("LitStr(\"{}\")", token::get_name(s).get().escape_default())
+                format!("Str(\"{}\")", token::get_name(s).get().escape_default())
             },
             Lit::StrRaw(s, n) => {
-            format!("LitStrRaw(r{delim}\"{string}\"{delim})",
-                    delim="#".repeat(n), string=token::get_name(s))
+                format!("StrRaw(r{delim}\"{string}\"{delim})",
+                        delim=iter::repeat("#").take(n).collect::<String>(),
+                        string=token::get_name(s))
             },
-            l_ => {
-                format!("{}", l_)
+            Lit::Binary(s) => {
+                format!("Binary(b\"{}\")", s.as_str())
+            },
+            Lit::BinaryRaw(s, n) => {
+                format!("BinaryRaw(b{delim}\"{string}\"{delim})",
+                        delim=iter::repeat("#").take(n).collect::<String>(),
+                        string=token::get_name(s))                        
             },
         },
         Token::Ident(s, _) => {

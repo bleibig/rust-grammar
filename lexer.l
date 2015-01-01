@@ -217,7 +217,7 @@ br/# {
 }
 <rawbytestr><<EOF>> { return -1; }
 
-b\x27                        { BEGIN(byte); }
+b\x27                        { BEGIN(byte); yymore(); }
 <byte>\\[nrt\\\x27\x220]\x27 { BEGIN(INITIAL); return LIT_BYTE; }
 <byte>\\x[0-9a-fA-F]{2}\x27  { BEGIN(INITIAL); return LIT_BYTE; }
 <byte>\\u[0-9a-fA-F]{4}\x27  { BEGIN(INITIAL); return LIT_BYTE; }
