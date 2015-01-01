@@ -13,9 +13,6 @@ import subprocess
 flex = sys.argv[1]
 rlex = sys.argv[2]
 
-# flex dies on multibyte characters
-BLACKLIST = ['libstd/str.rs', 'libstd/strbuf.rs', 'libstd/ascii.rs']
-
 outfile = open('lexer.bad', 'w')
 
 def chk(*args, **kwargs):
@@ -33,20 +30,12 @@ def compare(p):
 for base, dirs, files in os.walk(sys.argv[3]):
     for f in filter(lambda p: p.endswith('.rs'), files):
         p = os.path.join(base, f)
-        die = False
-        for black in BLACKLIST:
-            if p.endswith(black):
-                print("skipping {}".format(p))
-                die = True
-                break
-
-        if "compile-fail" in p:
+        # compile-fail programs should be ignored
+        # also, the lexer doesn't work with multibyte characters so
+        # ignore programs that contain them
+        if "compile-fail" in p or not all(ord(c) < 128 for c in open(p).read()):
             print("skipping {}".format(p))
-            die = True
-
-        if die:
             continue
-
         print("comparing {}".format(p))
         compare(p)
 
