@@ -182,8 +182,13 @@ while    { return WHILE; }
 
 b\x22              { BEGIN(bytestr); yymore(); }
 <bytestr>\x22      { BEGIN(suffix); return LIT_BINARY; }
-<bytestr>(.|\n)    { yymore(); }
-<bytestr><<EOF>>   { return -1; }
+
+<bytestr><<EOF>>                { return -1; }
+<bytestr>\\[n\nrt\\\x27\x220]   { yymore(); }
+<bytestr>\\x[0-9a-fA-F]{2}      { yymore(); }
+<bytestr>\\u\{[0-9a-fA-F]?{6}\} { yymore(); }
+<bytestr>\\[^n\nrt\\\x27\x220]  { return -1; }
+<bytestr>(.|\n)                 { yymore(); }
 
 br\x22                      { BEGIN(rawbytestr_nohash); yymore(); }
 <rawbytestr_nohash>\x22     { BEGIN(suffix); return LIT_BINARY_RAW; }
@@ -286,13 +291,12 @@ r/#             {
 \x22                     { BEGIN(str); yymore(); }
 <str>\x22                { BEGIN(suffix); return LIT_STR; }
 
-<str><<EOF>>               { return -1; }
-<str>\\[n\nrt\\\x27\x220]  { yymore(); }
-<str>\\x[0-9a-fA-F]{2}     { yymore(); }
-<str>\\u[0-9a-fA-F]{4}     { yymore(); }
-<str>\U[0-9a-fA-F]{8}      { yymore(); }
-<str>\\[^n\nrt\\\x27\x220] { return -1; }
-<str>(.|\n)                { yymore(); }
+<str><<EOF>>                { return -1; }
+<str>\\[n\nrt\\\x27\x220]   { yymore(); }
+<str>\\x[0-9a-fA-F]{2}      { yymore(); }
+<str>\\u\{[0-9a-fA-F]?{6}\} { yymore(); }
+<str>\\[^n\nrt\\\x27\x220]  { return -1; }
+<str>(.|\n)                 { yymore(); }
 
 -\>  { return RARROW; }
 -    { return '-'; }

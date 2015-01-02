@@ -2,6 +2,7 @@
 #include "tokens.h"
 
 extern int yylex();
+extern int yyget_lineno();
 
 int main(void) {
   while (1) {
@@ -10,7 +11,7 @@ int main(void) {
       break;
     }
     if (token < 0) {
-      printf("error\n");
+      printf("error on line %d\n", yyget_lineno());
       break;
     }
     print_token(token);
