@@ -3,15 +3,6 @@
 #include <stdio.h>
 #include <ctype.h>
 
-  // # Notes
-  // This is lacking the folowing:
-  // * Doc comments (they don't have much of a significance to the
-  //   grammar and can just be treated as regular comments)
-  //
-  // This adds the following tokens not specified in the rust lexer:
-  // * SHEBANG "#!" - this is neccesary to avoid first/first conficts
-  //   with attribute parsing
-
 static int num_hashes;
 static int end_hashes;
 static int saw_non_hash;
@@ -19,6 +10,7 @@ static int saw_non_hash;
 %}
 
 %option stack
+%option yylineno
 
 %x str
 %x rawstr
@@ -39,7 +31,7 @@ static int saw_non_hash;
 %%
 
 <suffix>[a-zA-Z_][a-zA-Z0-9_]*      { BEGIN(INITIAL); }
-<suffix>(.|\n)                      { unput(yytext[0]); BEGIN(INITIAL); }
+<suffix>(.|\n)                      { yyless(0); BEGIN(INITIAL); }
 
 [ \n\t\r]             { }
 
@@ -134,11 +126,30 @@ while    { return WHILE; }
 \[     { return '['; }
 \]     { return ']'; }
 @      { return '@'; }
-#      { BEGIN(pound); }
-<pound>\! { BEGIN(shebang_or_attr); }
-<shebang_or_attr>\[ { BEGIN(INITIAL); yyless(0); return SHEBANG; }
-<shebang_or_attr>[^\[\n]*\n  { BEGIN(INITIAL); }
-<pound>. { BEGIN(INITIAL); yyless(0); return '#'; }
+#      { BEGIN(pound); yymore(); }
+<pound>\! { BEGIN(shebang_or_attr); yymore(); }
+<shebang_or_attr>\[ {
+  BEGIN(INITIAL);
+  yyless(2);
+  unput('!');
+  return '#';
+}
+<shebang_or_attr>[^\[\n]*\n {
+  // Since the \n was eaten as part of the token, yylineno will have
+  // been incremented to the value 2 if the shebang was on the first
+  // line. This yyless undoes that, setting yylineno back to 1.
+  yyless(yyleng - 1);
+  if (yyget_lineno() == 1) {
+    BEGIN(INITIAL);
+    return SHEBANG;
+  } else {
+    BEGIN(INITIAL);
+    yyless(2);
+    unput('!');
+    return '#';
+  }
+}
+<pound>. { BEGIN(INITIAL); yyless(1); return '#'; }
 
 \~     { return '~'; }
 ::     { return MOD_SEP; }
@@ -160,14 +171,14 @@ while    { return WHILE; }
 \>\>= { return BINOPEQ; }
 \>    { return '>'; }
 
-\x27                             { BEGIN(ltorchar); yymore(); }
-<ltorchar>static                 { BEGIN(INITIAL); return STATIC_LIFETIME; }
-<ltorchar>[a-zA-Z_][a-zA-Z0-9_]* { BEGIN(INITIAL); return LIFETIME; }
-<ltorchar>\\[nrt\\\x27\x220]\x27 { BEGIN(suffix); return LIT_CHAR; }
-<ltorchar>\\x[0-9a-fA-F]{2}\x27  { BEGIN(suffix); return LIT_CHAR; }
+\x27                                  { BEGIN(ltorchar); yymore(); }
+<ltorchar>static                      { BEGIN(INITIAL); return STATIC_LIFETIME; }
+<ltorchar>[a-zA-Z_][a-zA-Z0-9_]*      { BEGIN(INITIAL); return LIFETIME; }
+<ltorchar>\\[nrt\\\x27\x220]\x27      { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar>\\x[0-9a-fA-F]{2}\x27       { BEGIN(suffix); return LIT_CHAR; }
 <ltorchar>\\u\{[0-9a-fA-F]?{6}\}\x27  { BEGIN(suffix); return LIT_CHAR; }
-<ltorchar>.\x27                  { BEGIN(suffix); return LIT_CHAR; }
-<ltorchar><<EOF>>                { BEGIN(INITIAL); return -1; }
+<ltorchar>.\x27                       { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar><<EOF>>                     { BEGIN(INITIAL); return -1; }
 
 b\x22              { BEGIN(bytestr); yymore(); }
 <bytestr>\x22      { BEGIN(suffix); return LIT_BINARY; }

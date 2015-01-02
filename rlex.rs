@@ -61,9 +61,12 @@ fn token_to_string(tok: token::Token) -> String {
             format!("DocComment({})", token::get_name(s).get().to_string())
         },
         Token::Whitespace | Token::Comment => "".to_string(),
+        Token::Shebang(s) => {
+            format!("Shebang({})", token::get_name(s).get().to_string())
+        },
         t => {
             format!("{}", t)
-        }
+        },
     }
 }
 
