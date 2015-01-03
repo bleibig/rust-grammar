@@ -46,7 +46,7 @@ fn token_to_string(tok: token::Token) -> String {
                 format!("Binary(b\"{}\")", s.as_str())
             },
             Lit::BinaryRaw(s, n) => {
-                format!("BinaryRaw(b{delim}\"{string}\"{delim})",
+                format!("BinaryRaw(br{delim}\"{string}\"{delim})",
                         delim=iter::repeat("#").take(n).collect::<String>(),
                         string=token::get_name(s))                        
             },

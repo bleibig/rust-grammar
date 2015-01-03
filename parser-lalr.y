@@ -154,7 +154,13 @@ extern char *yytext;
 %%
 
 crate
-: maybe_inner_attrs maybe_mod_items  { mk_node("crate", 2, $1, $2); }
+: maybe_shebang inner_attrs maybe_mod_items  { mk_node("crate", 2, $2, $3); }
+| maybe_shebang maybe_mod_items  { mk_node("crate", 1, $2); }
+;
+
+maybe_shebang
+: SHEBANG
+| %empty
 ;
 
 maybe_inner_attrs
@@ -168,7 +174,7 @@ inner_attrs
 ;
 
 inner_attr
-: SHEBANG '[' meta_item ']'   { $$ = mk_node("InnerAttr", 1, $3); }
+: '#' '!' '[' meta_item ']'   { $$ = mk_node("InnerAttr", 1, $4); }
 | INNER_DOC_COMMENT           { $$ = mk_node("InnerAttr", 1, mk_node("doc-comment", 1, mk_atom(yytext))); }
 ;
 
@@ -406,11 +412,13 @@ maybe_mut_or_const
 
 item_mod
 : MOD ident ';'                                       { $$ = mk_node("ItemMod", 1, $2); }
-| MOD ident '{' maybe_inner_attrs maybe_mod_items '}' { $$ = mk_node("ItemMod", 3, $2, $4, $5); }
+| MOD ident '{' maybe_mod_items '}' { $$ = mk_node("ItemMod", 2, $2, $4); }
+| MOD ident '{' inner_attrs maybe_mod_items '}' { $$ = mk_node("ItemMod", 3, $2, $4, $5); }
 ;
 
 item_foreign_mod
-: EXTERN maybe_abi '{' maybe_inner_attrs maybe_foreign_items '}' { $$ = mk_node("ItemForeignMod", 2, $4, $5); }
+: EXTERN maybe_abi '{' maybe_foreign_items '}' { $$ = mk_node("ItemForeignMod", 1, $4); }
+| EXTERN maybe_abi '{' inner_attrs maybe_foreign_items '}' { $$ = mk_node("ItemForeignMod", 2, $4, $5); }
 ;
 
 maybe_abi
