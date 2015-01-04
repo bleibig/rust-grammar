@@ -558,9 +558,9 @@ method
 // they are ambiguous with traits. We do the same here, regrettably,
 // by splitting ty into ty and ty_prim.
 item_impl
-: IMPL generic_params ty_prim maybe_where_clause '{' maybe_impl_items '}'           { $$ = mk_node("ItemImpl", 4, $2, $3, $4, $6); }
-| IMPL generic_params maybe_where_clause '(' ty ')' '{' maybe_impl_items '}'        { $$ = mk_node("ItemImpl", 4, $2, $3, $5, $8); }
-| IMPL generic_params trait_ref FOR ty maybe_where_clause '{' maybe_impl_items '}'  { $$ = mk_node("ItemImpl", 5, $2, $3, $5, $6, $8); }
+: maybe_unsafe IMPL generic_params ty_prim maybe_where_clause '{' maybe_impl_items '}'           { $$ = mk_node("ItemImpl", 4, $3, $4, $5, $7); }
+| maybe_unsafe IMPL generic_params maybe_where_clause '(' ty ')' '{' maybe_impl_items '}'        { $$ = mk_node("ItemImpl", 4, $3, $4, $6, $9); }
+| maybe_unsafe IMPL generic_params trait_ref FOR ty maybe_where_clause '{' maybe_impl_items '}'  { $$ = mk_node("ItemImpl", 5, $3, $4, $6, $7, $9); }
 ;
 
 maybe_impl_items
