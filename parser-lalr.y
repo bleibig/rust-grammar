@@ -282,6 +282,7 @@ pats_or
 pat
 : UNDERSCORE                                      { $$ = mk_atom("PatWild"); }
 | '&' pat                                         { $$ = mk_node("PatRegion", 1, $2); }
+| ANDAND pat                                      { $$ = mk_node("PatRegion", 1, mk_node("PatRegion", 1, $2)); }
 | '(' ')'                                         { $$ = mk_atom("PatUnit"); }
 | '(' pat_tup ')'                                 { $$ = mk_node("PatTup", 1, $2); }
 | '[' pat_vec ']'                                 { $$ = mk_node("PatVec", 1, $2); }
@@ -367,7 +368,9 @@ ty_prim
 | BOX ty                                   { $$ = mk_node("TyBox", 1, $2); }
 | '*' maybe_mut_or_const ty                { $$ = mk_node("TyPtr", 2, $2, $3); }
 | '&' maybe_mut ty                         { $$ = mk_node("TyRptr", 2, $2, $3); }
+| ANDAND maybe_mut ty                      { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, $2, $3)); }
 | '&' lifetime maybe_mut ty                { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
+| ANDAND lifetime maybe_mut ty             { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 3, $2, $3, $4)); }
 | '[' ty ']'                               { $$ = mk_node("TyVec", 1, $2); }
 | '[' ty ',' DOTDOT expr ']'               { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
 | '[' ty ';' expr ']'                      { $$ = mk_node("TyFixedLengthVec", 2, $2, $4); }
@@ -1202,6 +1205,7 @@ nonblock_prefix_expr_nostruct
 | '!' expr_nostruct                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnNot"), $2); }
 | '*' expr_nostruct                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnDeref"), $2); }
 | '&' maybe_mut expr_nostruct               { $$ = mk_node("ExprAddrOf", 2, $2, $3); }
+| ANDAND maybe_mut expr_nostruct            { $$ = mk_node("ExprAddrOf", 1, mk_node("ExprAddrOf", 2, $2, $3)); }
 | lambda_expr_nostruct
 | proc_expr_nostruct
 ;
@@ -1211,6 +1215,7 @@ nonblock_prefix_expr
 | '!' expr                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnNot"), $2); }
 | '*' expr                         { $$ = mk_node("ExprUnary", 2, mk_atom("UnDeref"), $2); }
 | '&' maybe_mut expr               { $$ = mk_node("ExprAddrOf", 2, $2, $3); }
+| ANDAND maybe_mut expr            { $$ = mk_node("ExprAddrOf", 1, mk_node("ExprAddrOf", 2, $2, $3)); }
 | lambda_expr
 | proc_expr
 ;
