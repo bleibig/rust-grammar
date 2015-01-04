@@ -789,8 +789,14 @@ ty_sum
 | ty '+' ty_param_bounds { $$ = mk_node("TySum", 2, $1, $3); }
 ;
 
+maybe_ty_param_bounds
+: ':' ty_param_bounds { $$ = $2; }
+| %empty              { $$ = mk_none(); }
+;
+
 ty_param_bounds
 : boundseq
+| '?' boundseq { $$ = $2; }
 | %empty { $$ = mk_none(); }
 ;
 
@@ -814,17 +820,8 @@ binding
 ;
 
 ty_param
-: maybe_unsized ident maybe_bounds maybe_ty_default
-| maybe_unsized ident '?' ident maybe_bounds maybe_ty_default
-;
-
-maybe_unsized
-: unsized
-| %empty { $$ = mk_none(); }
-;
-
-unsized
-: TYPE
+: ident maybe_ty_param_bounds maybe_ty_default
+| ident '?' ident maybe_ty_param_bounds maybe_ty_default
 ;
 
 maybe_bounds
@@ -855,7 +852,7 @@ ltbounds
 ;
 
 maybe_ty_default
-: '=' ty
+: '=' ty_sum
 | %empty
 ;
 
