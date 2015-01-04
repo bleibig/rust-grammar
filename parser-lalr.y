@@ -503,7 +503,7 @@ maybe_trait_items
 
 trait_items
 : trait_item               { $$ = mk_node("TraitItems", 1, $1); }
-| trait_item trait_items   { $$ = ext_node($1, 1, $2); }
+| trait_items trait_item   { $$ = ext_node($1, 1, $2); }
 ;
 
 trait_item
@@ -555,21 +555,25 @@ method
 // they are ambiguous with traits. We do the same here, regrettably,
 // by splitting ty into ty and ty_prim.
 item_impl
-: IMPL generic_params ty_prim maybe_where_clause '{' maybe_impl_methods '}'           { $$ = mk_node("ItemImpl", 4, $2, $3, $4, $6); }
-| IMPL generic_params maybe_where_clause '(' ty ')' '{' maybe_impl_methods '}'        { $$ = mk_node("ItemImpl", 4, $2, $3, $5, $8); }
-| IMPL generic_params trait_ref FOR ty maybe_where_clause '{' maybe_impl_methods '}'  { $$ = mk_node("ItemImpl", 5, $2, $3, $5, $6, $8); }
+: IMPL generic_params ty_prim maybe_where_clause '{' maybe_impl_items '}'           { $$ = mk_node("ItemImpl", 4, $2, $3, $4, $6); }
+| IMPL generic_params maybe_where_clause '(' ty ')' '{' maybe_impl_items '}'        { $$ = mk_node("ItemImpl", 4, $2, $3, $5, $8); }
+| IMPL generic_params trait_ref FOR ty maybe_where_clause '{' maybe_impl_items '}'  { $$ = mk_node("ItemImpl", 5, $2, $3, $5, $6, $8); }
 ;
 
-maybe_impl_methods
-: impl_methods
+maybe_impl_items
+: impl_items
 | %empty { $$ = mk_none(); }
 ;
 
-impl_methods
-: method                  { $$ = mk_node("ImplMethods", 1, $1); }
-| item_macro              { $$ = mk_node("ImplMethods", 1, $1); }
-| impl_methods method     { $$ = ext_node($1, 1, $2); }
-| impl_methods item_macro { $$ = ext_node($1, 1, $2); }
+impl_items
+: impl_item               { $$ = mk_node("ImplItems", 1, $1); }
+| impl_item impl_items    { $$ = ext_node($1, 1, $2); }
+;
+
+impl_item
+: method
+| item_macro
+| trait_type
 ;
 
 item_fn
