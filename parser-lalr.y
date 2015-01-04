@@ -762,11 +762,36 @@ path_generic_args_with_colons
 generic_args
 : '<' generic_values '>' { $$ = $2; }
 | '<' generic_values SHR { push_back('>'); $$ = $2; }
+// If generic_args starts with "<<", the first arg must be a
+// TyQualifiedPath because that's the only type that can start with a
+// '<'. This rule parses that as the first ty_sum and then continues
+// with the rest of generic_values.
+| SHL ty_qualified_path_and_generic_values '>' { $$ = $2; }
+| SHL ty_qualified_path_and_generic_values SHR { push_back('>'); $$ = $2; }
 ;
 
 generic_values
-: maybe_lifetimes maybe_ty_sums              { $$ = mk_node("GenericValues", 2, $1, $2); }
-| maybe_lifetimes maybe_ty_sums '=' bindings { $$ = mk_node("GenericValues", 3, $1, $2, $4); }
+: maybe_lifetimes maybe_ty_sums maybe_bindings { $$ = mk_node("GenericValues", 3, $1, $2, $3); }
+;
+
+maybe_bindings
+: '=' bindings { $$ = $2; }
+| %empty       { $$ = mk_none(); }
+;
+
+ty_qualified_path_and_generic_values
+: ty_qualified_path maybe_bindings
+{
+  $$ = mk_node("GenericValues", 3, mk_none(), mk_node("TySums", 1, mk_node("TySum", 1, $1)), $2);
+}
+| ty_qualified_path ',' ty_sums maybe_bindings
+{
+  $$ = mk_node("GenericValues", 3, mk_none(), ext_node(mk_node("TySums", 1, $1), 1, $3), $4); }
+;
+
+ty_qualified_path
+: ty_sum AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, $1, $3, $6); }
+| ty_sum AS trait_ref '>' MOD_SEP ident '+' ty_param_bounds { $$ = mk_node("TyQualifiedPath", 3, $1, $3, $6); }
 ;
 
 maybe_ty_sums
