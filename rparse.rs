@@ -173,8 +173,7 @@ fn main() {
 
             filter_json(&mut j);
             if dump_json {
-                let mut writer = io::stdout();
-                j.to_pretty_writer(&mut writer as &mut io::Writer);
+                println!("{}", j.pretty());
             } else {
                 print_sexp(0, &j);
             }
