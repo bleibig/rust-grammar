@@ -287,7 +287,7 @@ pat
 | '(' pat_tup ')'                                 { $$ = mk_node("PatTup", 1, $2); }
 | '[' pat_vec ']'                                 { $$ = mk_node("PatVec", 1, $2); }
 | lit_or_path
-| lit_or_path DOTDOT lit_or_path                  { $$ = mk_node("PatRange", 2, $1, $3); }
+| lit_or_path DOTDOTDOT lit_or_path               { $$ = mk_node("PatRange", 2, $1, $3); }
 | path_expr '{' pat_struct '}'                    { $$ = mk_node("PatStruct", 2, $1, $3); }
 | path_expr '(' DOTDOT ')'                        { $$ = mk_node("PatEnum", 1, $1); }
 | path_expr '(' pat_tup ')'                       { $$ = mk_node("PatEnum", 2, $1, $3); }
@@ -378,6 +378,7 @@ ty_prim
 | UNDERSCORE                               { $$ = mk_atom("TyInfer"); }
 | ty_bare_fn
 | ty_proc
+| for_in_type
 ;
 
 ty_bare_fn
@@ -400,6 +401,17 @@ ty_closure
 
 ty_proc
 : PROC generic_params fn_params maybe_bounds ret_ty { $$ = mk_node("TyProc", 4, $2, $3, $4, $5); }
+;
+
+for_in_type
+: FOR '<' maybe_lifetimes '>' for_in_type_suffix { $$ = mk_node("ForInType", 2, $3, $5); }
+;
+
+for_in_type_suffix
+: ty_proc
+| ty_bare_fn
+| trait_ref
+| ty_closure
 ;
 
 maybe_mut
@@ -479,7 +491,7 @@ idents
 ;
 
 item_type
-: TYPE ident generic_params maybe_where_clause '=' ty ';'  { $$ = mk_node("ItemTy", 4, $2, $3, $4, $6); }
+: TYPE ident generic_params maybe_where_clause '=' ty_sum ';'  { $$ = mk_node("ItemTy", 4, $2, $3, $4, $6); }
 ;
 
 item_trait
@@ -519,7 +531,7 @@ trait_type
 ;
 
 maybe_unsafe
-: UNSAFE
+: UNSAFE { $$ = mk_atom("Unsafe"); }
 | %empty { $$ = mk_none(); }
 ;
 
@@ -533,12 +545,20 @@ type_method
 {
   $$ = mk_node("TypeMethod", 6, $1, $2, $4, $5, $6, $7);
 }
+| attrs_and_vis maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self maybe_where_clause ';'
+{
+  $$ = mk_node("TypeMethod", 7, $1, $2, $4, $6, $7, $8, $9);
+}
 ;
 
 method
 : attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
 {
   $$ = mk_node("Method", 7, $1, $2, $4, $5, $6, $7, $8);
+}
+| attrs_and_vis maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("Method", 8, $1, $2, $4, $6, $7, $8, $9, $10);
 }
 ;
 
