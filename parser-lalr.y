@@ -488,9 +488,9 @@ item_type
 ;
 
 item_trait
-: TRAIT ident generic_params maybe_where_clause maybe_supertraits '{' maybe_trait_items '}'
+: maybe_unsafe TRAIT ident generic_params maybe_where_clause maybe_supertraits '{' maybe_trait_items '}'
 {
-  $$ = mk_node("ItemTrait", 5, $2, $3, $4, $5, $7);
+  $$ = mk_node("ItemTrait", 6, $1, $3, $4, $5, $6, $8);
 }
 ;
 
@@ -1367,12 +1367,12 @@ match_clauses_ending_in_block
 ;
 
 nonblock_match_clause
-: pats_or maybe_guard FAT_ARROW nonblock_expr         { $$ = mk_node("Arm", 3, $1, $2, $4); }
-| pats_or maybe_guard FAT_ARROW block_expr            { $$ = mk_node("Arm", 3, $1, $2, $4); }
+: maybe_outer_attrs pats_or maybe_guard FAT_ARROW nonblock_expr { $$ = mk_node("Arm", 4, $1, $2, $3, $5); }
+| maybe_outer_attrs pats_or maybe_guard FAT_ARROW block_expr    { $$ = mk_node("Arm", 4, $1, $2, $3, $5); }
 ;
 
 block_match_clause
-: pats_or maybe_guard FAT_ARROW block                 { $$ = mk_node("Arm", 3, $1, $2, $4); }
+: maybe_outer_attrs pats_or maybe_guard FAT_ARROW block { $$ = mk_node("Arm", 4, $1, $2, $3, $5); }
 ;
 
 maybe_guard
