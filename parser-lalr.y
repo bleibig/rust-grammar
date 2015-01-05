@@ -312,8 +312,10 @@ lit_or_path
 ;
 
 pat_field
-: ident            { $$ = mk_node("PatField", 1, $1); }
-| ident ':' pat    { $$ = mk_node("PatField", 2, $1, $3); }
+:              ident            { $$ = mk_node("PatField", 1, $1); }
+| binding_mode ident            { $$ = mk_node("PatField", 2, $1, $2); }
+|              ident ':' pat    { $$ = mk_node("PatField", 2, $1, $3); }
+| binding_mode ident ':' pat    { $$ = mk_node("PatField", 3, $1, $2, $4); }
 ;
 
 pat_fields
@@ -323,6 +325,7 @@ pat_fields
 
 pat_struct
 : pat_fields                 { $$ = mk_node("PatStruct", 2, $1, mk_atom("false")); }
+| pat_fields ','             { $$ = mk_node("PatStruct", 2, $1, mk_atom("false")); }
 | pat_fields ',' DOTDOT      { $$ = mk_node("PatStruct", 2, $1, mk_atom("true")); }
 | DOTDOT                     { $$ = mk_node("PatStruct", 1, mk_atom("true")); }
 ;
@@ -616,7 +619,7 @@ fn_anon_params
 ;
 
 fn_params_with_self
-: '(' SELF maybe_ty_ascription maybe_comma_anon_params ')'                        { $$ = mk_node("SelfValue", 2, $3, $4); }
+: '(' maybe_mut SELF maybe_ty_ascription maybe_comma_anon_params ')'              { $$ = mk_node("SelfValue", 3, $2, $4, $5); }
 | '(' '&' maybe_mut SELF maybe_ty_ascription maybe_comma_anon_params ')'          { $$ = mk_node("SelfRegion", 3, $3, $5, $6); }
 | '(' '&' lifetime maybe_mut SELF maybe_ty_ascription maybe_comma_anon_params ')' { $$ = mk_node("SelfRegion", 4, $3, $4, $6, $7); }
 | '(' maybe_anon_params ')'                                                       { $$ = mk_node("SelfStatic", 1, $2); }
@@ -1069,8 +1072,8 @@ nonblock_expr
 | SELF                                                          { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' maybe_ident delimited_token_trees               { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'              { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
-| nonblock_expr '.' ident                                       { $$ = mk_node("ExprField", 2, $1, $3); }
-| nonblock_expr '[' index_expr ']'                                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
+| nonblock_expr '.' path_generic_args_with_colons               { $$ = mk_node("ExprField", 2, $1, $3); }
+| nonblock_expr '[' index_expr ']'                              { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | nonblock_expr '(' maybe_exprs ')'                             { $$ = mk_node("ExprCall", 2, $1, $3); }
 | '[' maybe_vec_expr ']'                                        { $$ = mk_node("ExprVec", 1, $2); }
 | '(' maybe_exprs ')'                                           { $$ = mk_node("ExprParen", 1, $2); }
@@ -1113,8 +1116,8 @@ expr
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
-| expr '.' ident                                      { $$ = mk_node("ExprField", 2, $1, $3); }
-| expr '[' index_expr ']'                                   { $$ = mk_node("ExprIndex", 2, $1, $3); }
+| expr '.' path_generic_args_with_colons              { $$ = mk_node("ExprField", 2, $1, $3); }
+| expr '[' index_expr ']'                             { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | expr '(' maybe_exprs ')'                            { $$ = mk_node("ExprCall", 2, $1, $3); }
 | '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
 | '[' maybe_vec_expr ']'                              { $$ = mk_node("ExprVec", 1, $2); }
@@ -1159,8 +1162,8 @@ nonparen_expr
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
-| nonparen_expr '.' ident                             { $$ = mk_node("ExprField", 2, $1, $3); }
-| nonparen_expr '[' index_expr ']'                          { $$ = mk_node("ExprIndex", 2, $1, $3); }
+| nonparen_expr '.' path_generic_args_with_colons     { $$ = mk_node("ExprField", 2, $1, $3); }
+| nonparen_expr '[' index_expr ']'                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | nonparen_expr '(' maybe_exprs ')'                   { $$ = mk_node("ExprCall", 2, $1, $3); }
 | '[' maybe_vec_expr ']'                              { $$ = mk_node("ExprVec", 1, $2); }
 | CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
@@ -1203,8 +1206,8 @@ expr_nostruct
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
-| expr_nostruct '.' ident                             { $$ = mk_node("ExprField", 2, $1, $3); }
-| expr_nostruct '[' index_expr ']'                          { $$ = mk_node("ExprIndex", 2, $1, $3); }
+| expr_nostruct '.' path_generic_args_with_colons     { $$ = mk_node("ExprField", 2, $1, $3); }
+| expr_nostruct '[' index_expr ']'                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | expr_nostruct '(' maybe_exprs ')'                   { $$ = mk_node("ExprCall", 2, $1, $3); }
 | '[' maybe_vec_expr ']'                              { $$ = mk_node("ExprVec", 1, $2); }
 | '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
