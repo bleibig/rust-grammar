@@ -246,11 +246,12 @@ view_item
 
 
 view_path
-: path_no_types_allowed                        { $$ = mk_node("ViewPathSimple", 1, $1); }
-| path_no_types_allowed MOD_SEP '{' idents '}' { $$ = mk_node("ViewPathList", 2, $1, $4); }
-| path_no_types_allowed MOD_SEP '*'            { $$ = mk_node("ViewPathGlob", 1, $1); }
-| ident '=' path_no_types_allowed              { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
-| path_no_types_allowed AS ident               { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
+: path_no_types_allowed                            { $$ = mk_node("ViewPathSimple", 1, $1); }
+| path_no_types_allowed MOD_SEP '{' idents '}'     { $$ = mk_node("ViewPathList", 2, $1, $4); }
+| path_no_types_allowed MOD_SEP '{' idents ',' '}' { $$ = mk_node("ViewPathList", 2, $1, $4); }
+| path_no_types_allowed MOD_SEP '*'                { $$ = mk_node("ViewPathGlob", 1, $1); }
+| ident '=' path_no_types_allowed                  { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
+| path_no_types_allowed AS ident                   { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
 ;
 
 block_item
@@ -892,8 +893,8 @@ maybe_ltbounds
 ;
 
 ltbounds
-: LIFETIME              { $$ = mk_node("ltbounds", 1, mk_atom(yytext)); }
-| ltbounds '+' LIFETIME { $$ = ext_node($1, 1, $3); }
+: lifetime              { $$ = mk_node("ltbounds", 1, $1); }
+| ltbounds '+' lifetime { $$ = ext_node($1, 1, $3); }
 ;
 
 maybe_ty_default
