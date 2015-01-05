@@ -346,23 +346,12 @@ pat_vec_elts
 | pat_vec_elts ',' pat   { $$ = ext_node($1, 1, $3); }
 ;
 
-maybe_tys
-: tys
-| tys ','
-| %empty  { $$ = mk_none(); }
-;
-
-tys
-: ty                 { $$ = mk_node("tys", 1, $1); }
-| tys ',' ty         { $$ = ext_node($1, 1, $3); }
-;
-
 ty
 : ty_prim
 | ty_closure
 | '<' ty_sum AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, $2, $4, $7); }
-| '(' tys ')'                               { $$ = mk_node("TyTup", 1, $2); }
-| '(' tys ',' ')'                               { $$ = mk_node("TyTup", 1, $2); }
+| '(' ty_sums ')'                           { $$ = mk_node("TyTup", 1, $2); }
+| '(' ty_sums ',' ')'                       { $$ = mk_node("TyTup", 1, $2); }
 | '(' ')'                                   { $$ = mk_atom("TyNil"); }
 ;
 
@@ -720,7 +709,7 @@ where_predicates
 
 where_predicate
 : lifetime ':' bounds    { $$ = mk_node("WherePredicate", 2, $1, $3); }
-| path_generic_args_without_colons ':' ty_param_bounds   { $$ = mk_node("WherePredicate", 2, $1, $1); }
+| path_generic_args_without_colons ':' ty_param_bounds   { $$ = mk_node("WherePredicate", 2, $1, $3); }
 ;
 
 ty_params
@@ -827,6 +816,11 @@ ty_qualified_path
 
 maybe_ty_sum
 : ty_sum
+| %empty { $$ = mk_none(); }
+;
+
+maybe_ty_sums
+: ty_sums
 | %empty { $$ = mk_none(); }
 ;
 
@@ -985,7 +979,7 @@ enum_def
 enum_args
 : '{' struct_decl_fields '}'
 | '{' struct_decl_fields ',' '}'
-| '(' maybe_tys ')'
+| '(' maybe_ty_sums ')'
 | '=' expr
 | %empty { $$ = mk_none(); }
 ;
