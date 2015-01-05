@@ -286,6 +286,7 @@ pat
 | ANDAND pat                                      { $$ = mk_node("PatRegion", 1, mk_node("PatRegion", 1, $2)); }
 | '(' ')'                                         { $$ = mk_atom("PatUnit"); }
 | '(' pat_tup ')'                                 { $$ = mk_node("PatTup", 1, $2); }
+| '(' pat_tup ',' ')'                                 { $$ = mk_node("PatTup", 1, $2); }
 | '[' pat_vec ']'                                 { $$ = mk_node("PatVec", 1, $2); }
 | lit_or_path
 | lit_or_path DOTDOTDOT lit_or_path               { $$ = mk_node("PatRange", 2, $1, $3); }
@@ -347,6 +348,7 @@ pat_vec_elts
 
 maybe_tys
 : tys
+| tys ','
 | %empty  { $$ = mk_none(); }
 ;
 
@@ -360,6 +362,7 @@ ty
 | ty_closure
 | '<' ty_sum AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, $2, $4, $7); }
 | '(' tys ')'                               { $$ = mk_node("TyTup", 1, $2); }
+| '(' tys ',' ')'                               { $$ = mk_node("TyTup", 1, $2); }
 | '(' ')'                                   { $$ = mk_atom("TyNil"); }
 ;
 
