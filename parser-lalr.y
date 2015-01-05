@@ -792,11 +792,18 @@ generic_args
 ;
 
 generic_values
-: maybe_lifetimes maybe_ty_sums maybe_bindings { $$ = mk_node("GenericValues", 3, $1, $2, $3); }
+: maybe_lifetimes maybe_ty_sums_and_or_bindings { $$ = mk_node("GenericValues", 2, $1, $2); }
+;
+
+maybe_ty_sums_and_or_bindings
+: ty_sums
+| ty_sums ',' bindings { $$ = mk_node("TySumsAndBindings", 2, $1, $3); }
+| bindings
+| %empty               { $$ = mk_none(); }
 ;
 
 maybe_bindings
-: '=' bindings { $$ = $2; }
+: ',' bindings { $$ = $2; }
 | %empty       { $$ = mk_none(); }
 ;
 
@@ -813,11 +820,6 @@ ty_qualified_path_and_generic_values
 ty_qualified_path
 : ty_sum AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, $1, $3, $6); }
 | ty_sum AS trait_ref '>' MOD_SEP ident '+' ty_param_bounds { $$ = mk_node("TyQualifiedPath", 3, $1, $3, $6); }
-;
-
-maybe_ty_sums
-: ty_sums
-| %empty { $$ = mk_none(); }
 ;
 
 maybe_ty_sum
