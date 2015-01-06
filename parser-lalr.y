@@ -764,7 +764,7 @@ path_generic_args_without_colons
 | %prec IDENT
   ident generic_args     { $$ = mk_node("components", 2, $1, $2); }
 | %prec IDENT
-  ident '(' maybe_ty_sum ')' { $$ = mk_node("components", 2, $1, $3); }
+  ident '(' maybe_ty_sums ')' { $$ = mk_node("components", 2, $1, $3); }
 | %prec IDENT
   path_generic_args_without_colons MOD_SEP ident      { $$ = ext_node($1, 1, $3); }
 | %prec IDENT
@@ -822,11 +822,6 @@ ty_qualified_path_and_generic_values
 ty_qualified_path
 : ty_sum AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, $1, $3, $6); }
 | ty_sum AS trait_ref '>' MOD_SEP ident '+' ty_param_bounds { $$ = mk_node("TyQualifiedPath", 3, $1, $3, $6); }
-;
-
-maybe_ty_sum
-: ty_sum
-| %empty { $$ = mk_none(); }
 ;
 
 maybe_ty_sums
@@ -1078,7 +1073,7 @@ nonblock_expr
   path_expr                                                     { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                          { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' maybe_ident delimited_token_trees               { $$ = mk_node("ExprMac", 2, $1, $3); }
-| path_expr '{' field_inits default_field_init '}'              { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
+| path_expr '{' struct_expr_fields '}'                          { $$ = mk_node("ExprStruct", 2, $1, $3); }
 | nonblock_expr '.' path_generic_args_with_colons               { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonblock_expr '.' LIT_INTEGER                                 { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | nonblock_expr '[' index_expr ']'                              { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -1123,7 +1118,7 @@ expr
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
-| path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
+| path_expr '{' struct_expr_fields '}'                { $$ = mk_node("ExprStruct", 2, $1, $3); }
 | expr '.' path_generic_args_with_colons              { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr '.' LIT_INTEGER                                { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | expr '[' index_expr ']'                             { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -1170,7 +1165,7 @@ nonparen_expr
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
-| path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
+| path_expr '{' struct_expr_fields '}'                { $$ = mk_node("ExprStruct", 2, $1, $3); }
 | nonparen_expr '.' path_generic_args_with_colons     { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonparen_expr '.' LIT_INTEGER                       { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | nonparen_expr '[' index_expr ']'                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -1340,19 +1335,29 @@ index_expr
 | %empty           { $$ = mk_none(); }
 ;
 
+struct_expr_fields
+: field_inits
+| field_inits ','
+| maybe_field_inits default_field_init { $$ = ext_node($1, 1, $2); }
+;
+
+maybe_field_inits
+: field_inits
+| field_inits ','
+| %empty { $$ = mk_none(); }
+;
+
 field_inits
-: field_init
-| field_inits ',' field_init
+: field_init                 { $$ = mk_node("FieldInits", 1, $1); }
+| field_inits ',' field_init { $$ = ext_node($1, 1, $3); }
 ;
 
 field_init
-: maybe_mut ident ':' expr
+: ident ':' expr   { $$ = mk_node("FieldInit", 2, $1, $3); }
 ;
 
 default_field_init
-: ','               { $$ = mk_none(); }
-| ',' DOTDOT expr   { $$ = $3; }
-| %empty            { $$ = mk_none(); }
+: DOTDOT expr   { $$ = mk_node("DefaultFieldInit", 1, $2); }
 ;
 
 block_expr
