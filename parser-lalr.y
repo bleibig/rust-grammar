@@ -585,7 +585,7 @@ method
 // they are ambiguous with traits. We do the same here, regrettably,
 // by splitting ty into ty and ty_prim.
 item_impl
-: maybe_unsafe IMPL generic_params ty_prim maybe_where_clause '{' maybe_impl_items '}'           { $$ = mk_node("ItemImpl", 4, $3, $4, $5, $7); }
+: maybe_unsafe IMPL generic_params ty_prim_sum maybe_where_clause '{' maybe_impl_items '}'       { $$ = mk_node("ItemImpl", 4, $3, $4, $5, $7); }
 | maybe_unsafe IMPL generic_params maybe_where_clause '(' ty ')' '{' maybe_impl_items '}'        { $$ = mk_node("ItemImpl", 4, $3, $4, $6, $9); }
 | maybe_unsafe IMPL generic_params trait_ref FOR ty maybe_where_clause '{' maybe_impl_items '}'  { $$ = mk_node("ItemImpl", 5, $3, $4, $6, $7, $9); }
 ;
@@ -854,6 +854,11 @@ ty_sums
 ty_sum
 : ty                     { $$ = mk_node("TySum", 1, $1); }
 | ty '+' ty_param_bounds { $$ = mk_node("TySum", 2, $1, $3); }
+;
+
+ty_prim_sum
+: ty_prim                     { $$ = mk_node("TySum", 1, $1); }
+| ty_prim '+' ty_param_bounds { $$ = mk_node("TySum", 2, $1, $3); }
 ;
 
 maybe_ty_param_bounds
