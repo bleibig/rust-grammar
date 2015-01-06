@@ -490,10 +490,16 @@ item_type
 : TYPE ident generic_params maybe_where_clause '=' ty_sum ';'  { $$ = mk_node("ItemTy", 4, $2, $3, $4, $6); }
 ;
 
+for_sized
+: FOR '?' ident { $$ = mk_node("ForSized", 1, $3); }
+| FOR ident '?' { $$ = mk_node("ForSized", 1, $2); }
+| %empty        { $$ = mk_none(); }
+;
+
 item_trait
-: maybe_unsafe TRAIT ident generic_params maybe_where_clause maybe_supertraits '{' maybe_trait_items '}'
+: maybe_unsafe TRAIT ident generic_params for_sized maybe_where_clause maybe_supertraits '{' maybe_trait_items '}'
 {
-  $$ = mk_node("ItemTrait", 6, $1, $3, $4, $5, $6, $8);
+  $$ = mk_node("ItemTrait", 7, $1, $3, $4, $5, $6, $7, $9);
 }
 ;
 
@@ -844,7 +850,6 @@ maybe_ty_param_bounds
 
 ty_param_bounds
 : boundseq
-| '?' boundseq { $$ = $2; }
 | %empty { $$ = mk_none(); }
 ;
 
@@ -856,6 +861,7 @@ boundseq
 polybound
 : FOR '<' maybe_lifetimes '>' bound { $$ = mk_node("PolyBound", 2, $3, $5); }
 | bound
+| '?' bound { $$ = $2; }
 ;
 
 bindings
@@ -868,8 +874,8 @@ binding
 ;
 
 ty_param
-: ident maybe_ty_param_bounds maybe_ty_default
-| ident '?' ident maybe_ty_param_bounds maybe_ty_default
+: ident maybe_ty_param_bounds maybe_ty_default           { $$ = mk_node("TyParam", 3, $1, $2, $3); }
+| ident '?' ident maybe_ty_param_bounds maybe_ty_default { $$ = mk_node("TyParam", 4, $1, $3, $4, $5); }
 ;
 
 maybe_bounds
@@ -900,8 +906,8 @@ ltbounds
 ;
 
 maybe_ty_default
-: '=' ty_sum
-| %empty
+: '=' ty_sum { $$ = mk_node("TyDefault", 1, $2); }
+| %empty     { $$ = mk_none(); }
 ;
 
 maybe_lifetimes
@@ -1073,6 +1079,7 @@ nonblock_expr
 | path_expr '!' maybe_ident delimited_token_trees               { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'              { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | nonblock_expr '.' path_generic_args_with_colons               { $$ = mk_node("ExprField", 2, $1, $3); }
+| nonblock_expr '.' LIT_INTEGER                                 { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | nonblock_expr '[' index_expr ']'                              { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | nonblock_expr '(' maybe_exprs ')'                             { $$ = mk_node("ExprCall", 2, $1, $3); }
 | '[' maybe_vec_expr ']'                                        { $$ = mk_node("ExprVec", 1, $2); }
@@ -1117,6 +1124,7 @@ expr
 | path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | expr '.' path_generic_args_with_colons              { $$ = mk_node("ExprField", 2, $1, $3); }
+| expr '.' LIT_INTEGER                                { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | expr '[' index_expr ']'                             { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | expr '(' maybe_exprs ')'                            { $$ = mk_node("ExprCall", 2, $1, $3); }
 | '(' maybe_exprs ')'                                 { $$ = mk_node("ExprParen", 1, $2); }
@@ -1163,6 +1171,7 @@ nonparen_expr
 | path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
 | path_expr '{' field_inits default_field_init '}'    { $$ = mk_node("ExprStruct", 3, $1, $3, $4); }
 | nonparen_expr '.' path_generic_args_with_colons     { $$ = mk_node("ExprField", 2, $1, $3); }
+| nonparen_expr '.' LIT_INTEGER                       { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | nonparen_expr '[' index_expr ']'                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | nonparen_expr '(' maybe_exprs ')'                   { $$ = mk_node("ExprCall", 2, $1, $3); }
 | '[' maybe_vec_expr ']'                              { $$ = mk_node("ExprVec", 1, $2); }
@@ -1207,6 +1216,7 @@ expr_nostruct
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
 | expr_nostruct '.' path_generic_args_with_colons     { $$ = mk_node("ExprField", 2, $1, $3); }
+| expr_nostruct '.' LIT_INTEGER                       { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | expr_nostruct '[' index_expr ']'                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
 | expr_nostruct '(' maybe_exprs ')'                   { $$ = mk_node("ExprCall", 2, $1, $3); }
 | '[' maybe_vec_expr ']'                              { $$ = mk_node("ExprVec", 1, $2); }
