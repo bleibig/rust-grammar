@@ -195,9 +195,10 @@ outer_attr
 ;
 
 meta_item
-: ident                    { $$ = mk_node("MetaWord", 1, $1); }
-| ident '=' lit            { $$ = mk_node("MetaNameValue", 2, $1, $3); }
-| ident '(' meta_seq ')'   { $$ = mk_node("MetaList", 2, $1, $3); }
+: ident                      { $$ = mk_node("MetaWord", 1, $1); }
+| ident '=' lit              { $$ = mk_node("MetaNameValue", 2, $1, $3); }
+| ident '(' meta_seq ')'     { $$ = mk_node("MetaList", 2, $1, $3); }
+| ident '(' meta_seq ',' ')' { $$ = mk_node("MetaList", 2, $1, $3); }
 ;
 
 meta_seq
@@ -287,7 +288,7 @@ pat
 | ANDAND pat                                      { $$ = mk_node("PatRegion", 1, mk_node("PatRegion", 1, $2)); }
 | '(' ')'                                         { $$ = mk_atom("PatUnit"); }
 | '(' pat_tup ')'                                 { $$ = mk_node("PatTup", 1, $2); }
-| '(' pat_tup ',' ')'                                 { $$ = mk_node("PatTup", 1, $2); }
+| '(' pat_tup ',' ')'                             { $$ = mk_node("PatTup", 1, $2); }
 | '[' pat_vec ']'                                 { $$ = mk_node("PatVec", 1, $2); }
 | lit_or_path
 | lit_or_path DOTDOTDOT lit_or_path               { $$ = mk_node("PatRange", 2, $1, $3); }
@@ -337,12 +338,15 @@ pat_tup
 ;
 
 pat_vec
-: pat_vec_elts                                  { $$ = mk_node("PatVec", 3, $1, mk_none(), mk_none()); }
-| pat_vec_elts ',' DOTDOT pat                   { $$ = mk_node("PatVec", 3, $1, $4, mk_none()); }
-| pat_vec_elts ',' DOTDOT pat ',' pat_vec_elts  { $$ = mk_node("PatVec", 3, $1, $4, $6); }
-|                  DOTDOT pat ',' pat_vec_elts  { $$ = mk_node("PatVec", 3, mk_none(), $2, $4); }
-|                  DOTDOT pat                   { $$ = mk_node("PatVec", 3, mk_none(), $2, mk_none()); }
-| %empty                                        { $$ = mk_node("PatVec", 3, mk_none(), mk_none(), mk_none()); }
+: pat_vec_elts                                  { $$ = mk_node("PatVec", 2, $1, mk_none()); }
+| pat_vec_elts                             ','  { $$ = mk_node("PatVec", 2, $1, mk_none()); }
+| pat_vec_elts     DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, $1, $4); }
+| pat_vec_elts     DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, $1, $4); }
+| pat_vec_elts ',' DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, $1, $5); }
+| pat_vec_elts ',' DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, $1, $5); }
+|                  DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, mk_none(), $3); }
+|                  DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, mk_none(), $3); }
+| %empty                                        { $$ = mk_node("PatVec", 2, mk_none(), mk_none()); }
 ;
 
 pat_vec_elts
@@ -634,6 +638,7 @@ fn_params_with_self
 
 maybe_params
 : params
+| params ','
 | %empty  { $$ = mk_none(); }
 ;
 
@@ -662,12 +667,15 @@ maybe_unboxed_closure_kind
 ;
 
 maybe_comma_anon_params
-: ',' anon_params { $$ = $2; }
-| %empty          { $$ = mk_none(); }
+: ','                 { $$ = mk_none(); }
+| ',' anon_params     { $$ = $2; }
+| ',' anon_params ',' { $$ = $2; }
+| %empty              { $$ = mk_none(); }
 ;
 
 maybe_anon_params
 : anon_params
+| anon_params ','
 | %empty      { $$ = mk_none(); }
 ;
 
@@ -695,11 +703,17 @@ ret_ty
 
 generic_params
 : '<' lifetimes '>'                   { $$ = mk_node("Generics", 2, $2, mk_none()); }
+| '<' lifetimes ',' '>'               { $$ = mk_node("Generics", 2, $2, mk_none()); }
 | '<' lifetimes SHR                   { push_back('>'); $$ = mk_node("Generics", 2, $2, mk_none()); }
+| '<' lifetimes ',' SHR               { push_back('>'); $$ = mk_node("Generics", 2, $2, mk_none()); }
 | '<' lifetimes ',' ty_params '>'     { $$ = mk_node("Generics", 2, $2, $4); }
+| '<' lifetimes ',' ty_params ',' '>' { $$ = mk_node("Generics", 2, $2, $4); }
 | '<' lifetimes ',' ty_params SHR     { push_back('>'); $$ = mk_node("Generics", 2, $2, $4); }
+| '<' lifetimes ',' ty_params ',' SHR { push_back('>'); $$ = mk_node("Generics", 2, $2, $4); }
 | '<' ty_params '>'                   { $$ = mk_node("Generics", 2, mk_none(), $2); }
+| '<' ty_params ',' '>'               { $$ = mk_node("Generics", 2, mk_none(), $2); }
 | '<' ty_params SHR                   { push_back('>'); $$ = mk_node("Generics", 2, mk_none(), $2); }
+| '<' ty_params ',' SHR               { push_back('>'); $$ = mk_node("Generics", 2, mk_none(), $2); }
 | %empty                              { $$ = mk_none(); }
 ;
 
@@ -799,8 +813,10 @@ generic_values
 
 maybe_ty_sums_and_or_bindings
 : ty_sums
+| ty_sums ','
 | ty_sums ',' bindings { $$ = mk_node("TySumsAndBindings", 2, $1, $3); }
 | bindings
+| bindings ','
 | %empty               { $$ = mk_none(); }
 ;
 
@@ -826,6 +842,7 @@ ty_qualified_path
 
 maybe_ty_sums
 : ty_sums
+| ty_sums ','
 | %empty { $$ = mk_none(); }
 ;
 
