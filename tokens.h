@@ -44,6 +44,7 @@ enum Token {
   LOOP,
   MATCH,
   MOD,
+  MOVE,
   MUT,
   ONCE,
   PRIV,

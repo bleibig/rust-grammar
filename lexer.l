@@ -84,6 +84,7 @@ let      { return LET; }
 loop     { return LOOP; }
 match    { return MATCH; }
 mod      { return MOD; }
+move     { return MOVE; }
 mut      { return MUT; }
 once     { return ONCE; }
 priv     { return PRIV; }

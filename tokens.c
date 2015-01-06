@@ -83,6 +83,7 @@ void print_token(int token) {
   case LOOP: printf("Ident(loop)"); break;
   case MATCH: printf("Ident(match)"); break;
   case MOD: printf("Ident(mod)"); break;
+  case MOVE: printf("Ident(move)"); break;
   case MUT: printf("Ident(mut)"); break;
   case ONCE: printf("Ident(once)"); break;
   case PRIV: printf("Ident(priv)"); break;

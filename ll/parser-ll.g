@@ -47,6 +47,7 @@
 %token LOOP;
 %token MATCH;
 %token MOD;
+%token MOVE;
 %token MUT;
 %token ONCE;
 %token PRIV;

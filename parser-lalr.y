@@ -58,6 +58,7 @@ extern char *yytext;
 %token LOOP
 %token MATCH
 %token MOD
+%token MOVE
 %token MUT
 %token ONCE
 %token PRIV
@@ -1262,6 +1263,7 @@ nonblock_prefix_expr_nostruct
 | '&' maybe_mut expr_nostruct               { $$ = mk_node("ExprAddrOf", 2, $2, $3); }
 | ANDAND maybe_mut expr_nostruct            { $$ = mk_node("ExprAddrOf", 1, mk_node("ExprAddrOf", 2, $2, $3)); }
 | lambda_expr_nostruct
+| MOVE lambda_expr_nostruct                 { $$ = $2; }
 | proc_expr_nostruct
 ;
 
@@ -1272,6 +1274,7 @@ nonblock_prefix_expr
 | '&' maybe_mut expr               { $$ = mk_node("ExprAddrOf", 2, $2, $3); }
 | ANDAND maybe_mut expr            { $$ = mk_node("ExprAddrOf", 1, mk_node("ExprAddrOf", 2, $2, $3)); }
 | lambda_expr
+| MOVE lambda_expr                 { $$ = $2; }
 | proc_expr
 ;
 
@@ -1498,6 +1501,7 @@ unpaired_token
 | LOOP                       { $$ = mk_atom(yytext); }
 | MATCH                      { $$ = mk_atom(yytext); }
 | MOD                        { $$ = mk_atom(yytext); }
+| MOVE                       { $$ = mk_atom(yytext); }
 | MUT                        { $$ = mk_atom(yytext); }
 | ONCE                       { $$ = mk_atom(yytext); }
 | PRIV                       { $$ = mk_atom(yytext); }
