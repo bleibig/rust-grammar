@@ -1385,7 +1385,9 @@ default_field_init
 block_expr
 : expr_match
 | expr_if
+| expr_if_let
 | expr_while
+| expr_while_let
 | expr_loop
 | expr_for
 | UNSAFE block                               { $$ = mk_node("UnsafeBlock", 1, $2); }
@@ -1428,13 +1430,23 @@ expr_if
 | IF expr_nostruct block ELSE block_or_if             { $$ = mk_node("ExprIf", 3, $2, $3, $5); }
 ;
 
+expr_if_let
+: IF LET pat '=' expr_nostruct block                  { $$ = mk_node("ExprIfLet", 3, $3, $5, $6); }
+| IF LET pat '=' expr_nostruct block ELSE block_or_if { $$ = mk_node("ExprIfLet", 4, $3, $5, $6, $8); }
+;
+
 block_or_if
 : block
 | expr_if
+| expr_if_let
 ;
 
 expr_while
 : WHILE expr_nostruct block                           { $$ = mk_node("ExprWhile", 2, $2, $3); }
+;
+
+expr_while_let
+: WHILE LET pat '=' expr_nostruct block               { $$ = mk_node("ExprWhileLet", 3, $3, $5, $6); }
 ;
 
 expr_loop
