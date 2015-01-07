@@ -975,7 +975,7 @@ struct_decl_fields
 ;
 
 struct_decl_field
-: attrs_and_vis ident ':' ty                  { $$ = mk_node("StructField", 3, $1, $2, $4); }
+: attrs_and_vis ident ':' ty_sum              { $$ = mk_node("StructField", 3, $1, $2, $4); }
 ;
 
 struct_tuple_fields
@@ -984,7 +984,7 @@ struct_tuple_fields
 ;
 
 struct_tuple_field
-: maybe_outer_attrs ty                        { $$ = mk_node("StructField", 2, $1, $2); }
+: maybe_outer_attrs ty_sum                    { $$ = mk_node("StructField", 2, $1, $2); }
 ;
 
 // enums
