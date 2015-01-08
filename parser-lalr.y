@@ -626,7 +626,8 @@ fn_params
 ;
 
 fn_anon_params
-: '(' maybe_anon_params ')' { $$ = $2; }
+: '(' anon_param anon_params_allow_variadic_tail ')' { $$ = ext_node($2, 1, $3); }
+| '(' ')'                                            { $$ = mk_none(); }
 ;
 
 fn_params_with_self
@@ -687,6 +688,12 @@ anon_params
 anon_param
 : plain_ident_or_underscore ':' ty   { $$ = mk_node("Arg", 2, $1, $3); }
 | ty
+;
+
+anon_params_allow_variadic_tail
+: ',' DOTDOTDOT                                  { $$ = mk_none(); }
+| ',' anon_param anon_params_allow_variadic_tail { $$ = mk_node("Args", 2, $2, $3); }
+| %empty                                         { $$ = mk_none(); }
 ;
 
 plain_ident_or_underscore
