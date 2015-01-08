@@ -590,9 +590,22 @@ method
 // they are ambiguous with traits. We do the same here, regrettably,
 // by splitting ty into ty and ty_prim.
 item_impl
-: maybe_unsafe IMPL generic_params ty_prim_sum maybe_where_clause '{' maybe_impl_items '}'       { $$ = mk_node("ItemImpl", 4, $3, $4, $5, $7); }
-| maybe_unsafe IMPL generic_params maybe_where_clause '(' ty ')' '{' maybe_impl_items '}'        { $$ = mk_node("ItemImpl", 4, $3, $4, $6, $9); }
-| maybe_unsafe IMPL generic_params trait_ref FOR ty maybe_where_clause '{' maybe_impl_items '}'  { $$ = mk_node("ItemImpl", 5, $3, $4, $6, $7, $9); }
+: maybe_unsafe IMPL generic_params ty_prim_sum maybe_where_clause '{' maybe_impl_items '}'
+{
+  $$ = mk_node("ItemImpl", 5, $1, $3, $4, $5, $7);
+}
+| maybe_unsafe IMPL generic_params '(' ty ')' maybe_where_clause '{' maybe_impl_items '}'
+{
+  $$ = mk_node("ItemImpl", 5, $1, $3, 5, $6, $9);
+}
+| maybe_unsafe IMPL generic_params trait_ref FOR ty maybe_where_clause '{' maybe_impl_items '}'
+{
+  $$ = mk_node("ItemImpl", 5, $3, $4, $6, $7, $9);
+}
+| maybe_unsafe IMPL generic_params '!' trait_ref FOR ty maybe_where_clause '{' maybe_impl_items '}'
+{
+  $$ = mk_node("ItemImplNeg", 6, $1, $3, $5, $7, $8, $10);
+}
 ;
 
 maybe_impl_items
