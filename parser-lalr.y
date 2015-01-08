@@ -248,12 +248,12 @@ view_item
 
 
 view_path
-: path_no_types_allowed                            { $$ = mk_node("ViewPathSimple", 1, $1); }
-| path_no_types_allowed MOD_SEP '{' idents '}'     { $$ = mk_node("ViewPathList", 2, $1, $4); }
-| path_no_types_allowed MOD_SEP '{' idents ',' '}' { $$ = mk_node("ViewPathList", 2, $1, $4); }
-| path_no_types_allowed MOD_SEP '*'                { $$ = mk_node("ViewPathGlob", 1, $1); }
-| ident '=' path_no_types_allowed                  { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
-| path_no_types_allowed AS ident                   { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
+: path_no_types_allowed                                    { $$ = mk_node("ViewPathSimple", 1, $1); }
+| path_no_types_allowed MOD_SEP '{' idents_or_self '}'     { $$ = mk_node("ViewPathList", 2, $1, $4); }
+| path_no_types_allowed MOD_SEP '{' idents_or_self ',' '}' { $$ = mk_node("ViewPathList", 2, $1, $4); }
+| path_no_types_allowed MOD_SEP '*'                        { $$ = mk_node("ViewPathGlob", 1, $1); }
+| ident '=' path_no_types_allowed                          { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
+| path_no_types_allowed AS ident                           { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
 ;
 
 block_item
@@ -486,9 +486,14 @@ visibility
 | %empty   { $$ = mk_atom("Inherited"); }
 ;
 
-idents
-: ident            { $$ = mk_node("ident", 1, $1); }
-| idents ',' ident { $$ = ext_node($1, 1, $3); }
+idents_or_self
+: ident_or_self                    { $$ = mk_node("IdentsOrSelf", 1, $1); }
+| idents_or_self ',' ident_or_self { $$ = ext_node($1, 1, $3); }
+;
+
+ident_or_self
+: ident
+| SELF  { $$ = mk_atom(yytext); }
 ;
 
 item_type
@@ -764,8 +769,9 @@ item_unsafe_fn
 // These show up in 'use' view-items, because these are processed
 // without respect to types.
 path_no_types_allowed
-: ident
-| path_no_types_allowed MOD_SEP ident
+: ident                               { $$ = mk_node("ViewPath", 1, $1); }
+| SELF                                { $$ = mk_node("ViewPath", 1, mk_atom("Self")); }
+| path_no_types_allowed MOD_SEP ident { $$ = ext_node($1, 1, $3); }
 ;
 
 // A path with a lifetime and type parameters, with no double colons
@@ -1094,6 +1100,7 @@ exprs
 path_expr
 : path_generic_args_with_colons
 | MOD_SEP path_generic_args_with_colons  { $$ = $2; }
+| SELF MOD_SEP path_generic_args_with_colons { $$ = mk_node("SelfPath", 1, $3); }
 ;
 
 nonblock_expr
