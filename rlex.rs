@@ -65,7 +65,7 @@ fn token_to_string(tok: token::Token) -> String {
             format!("Shebang({})", token::get_name(s).get().to_string())
         },
         t => {
-            format!("{}", t)
+            format!("{:?}", t)
         },
     }
 }
