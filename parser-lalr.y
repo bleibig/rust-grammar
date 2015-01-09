@@ -982,16 +982,28 @@ trait_ref
 
 // structs
 item_struct
-: STRUCT ident generic_params maybe_where_clause struct_args     { $$ = mk_node("ItemStruct", 4, $2, $3, $4, $5); }
+: STRUCT ident generic_params maybe_where_clause struct_decl_args
+{
+  $$ = mk_node("ItemStruct", 4, $2, $3, $4, $5);
+}
+| STRUCT ident generic_params struct_tuple_args maybe_where_clause ';'
+{
+  $$ = mk_node("ItemStruct", 4, $2, $3, $4, $5);
+}
+| STRUCT ident generic_params maybe_where_clause ';'
+{
+  $$ = mk_node("ItemStruct", 3, $2, $3, $4);
+}
 ;
 
-struct_args
+struct_decl_args
 : '{' struct_decl_fields '}'                  { $$ = $2; }
 | '{' struct_decl_fields ',' '}'              { $$ = $2; }
-| '(' ')' ';'                                 { $$ = mk_none(); }
-| '(' struct_tuple_fields ')' ';'             { $$ = $2; }
-| '(' struct_tuple_fields ',' ')' ';'         { $$ = $2; }
-| ';'                                         { $$ = mk_none(); }
+;
+
+struct_tuple_args
+: '(' struct_tuple_fields ')'                 { $$ = $2; }
+| '(' struct_tuple_fields ',' ')'             { $$ = $2; }
 ;
 
 struct_decl_fields
