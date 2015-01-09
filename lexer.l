@@ -132,8 +132,7 @@ while    { return WHILE; }
 <shebang_or_attr>\[ {
   BEGIN(INITIAL);
   yyless(2);
-  unput('!');
-  return '#';
+  return SHEBANG;
 }
 <shebang_or_attr>[^\[\n]*\n {
   // Since the \n was eaten as part of the token, yylineno will have
@@ -142,12 +141,11 @@ while    { return WHILE; }
   yyless(yyleng - 1);
   if (yyget_lineno() == 1) {
     BEGIN(INITIAL);
-    return SHEBANG;
+    return SHEBANG_LINE;
   } else {
     BEGIN(INITIAL);
     yyless(2);
-    unput('!');
-    return '#';
+    return SHEBANG;
   }
 }
 <pound>. { BEGIN(INITIAL); yyless(1); return '#'; }

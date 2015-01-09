@@ -82,6 +82,7 @@ extern char *yytext;
 %token OUTER_DOC_COMMENT
 
 %token SHEBANG
+%token SHEBANG_LINE
 %token STATIC_LIFETIME
 
  /*
@@ -160,7 +161,7 @@ crate
 ;
 
 maybe_shebang
-: SHEBANG
+: SHEBANG_LINE
 | %empty
 ;
 
@@ -175,7 +176,7 @@ inner_attrs
 ;
 
 inner_attr
-: '#' '!' '[' meta_item ']'   { $$ = mk_node("InnerAttr", 1, $4); }
+: SHEBANG '[' meta_item ']'   { $$ = mk_node("InnerAttr", 1, $3); }
 | INNER_DOC_COMMENT           { $$ = mk_node("InnerAttr", 1, mk_node("doc-comment", 1, mk_atom(yytext))); }
 ;
 
@@ -225,6 +226,7 @@ mod_item
 : attrs_and_vis item    { $$ = mk_node("Item", 2, $1, $2); }
 ;
 
+// items that can appear outside of a fn block
 item
 : item_static
 | item_const
@@ -234,25 +236,40 @@ item
 | item_macro
 ;
 
+// items that can appear in "stmts"
+stmt_item
+: item_static
+| item_const
+| item_type
+| block_item
+| use_item
+;
+
 item_macro
 : path_expr '!' maybe_ident delimited_token_trees
 ;
 
 view_item
-: USE view_path ';'                           { $$ = mk_node("ViewItemUse", 1, $2); }
+: use_item
 | EXTERN CRATE ident ';'                      { $$ = mk_node("ViewItemExternCrate", 1, $3); }
 | EXTERN CRATE ident '=' str ';'              { $$ = mk_node("ViewItemExternCrate", 2, $3, $5); }
 | EXTERN CRATE str AS ident ';'               { $$ = mk_node("ViewItemExternCrate", 2, $3, $5); }
 | EXTERN maybe_abi item_fn                    { $$ = mk_node("ViewItemExternFn", 2, $2, $3); }
 ;
 
+use_item
+: USE view_path ';'                           { $$ = mk_node("ViewItemUse", 1, $2); }
+;
 
 view_path
 : path_no_types_allowed                                    { $$ = mk_node("ViewPathSimple", 1, $1); }
+| path_no_types_allowed MOD_SEP '{'                '}'     { $$ = mk_node("ViewPathList", 2, $1, mk_atom("ViewPathListEmpty")); }
 | path_no_types_allowed MOD_SEP '{' idents_or_self '}'     { $$ = mk_node("ViewPathList", 2, $1, $4); }
 | path_no_types_allowed MOD_SEP '{' idents_or_self ',' '}' { $$ = mk_node("ViewPathList", 2, $1, $4); }
 | path_no_types_allowed MOD_SEP '*'                        { $$ = mk_node("ViewPathGlob", 1, $1); }
-| ident '=' path_no_types_allowed                          { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
+|                               '{'                '}'     { $$ = mk_atom("ViewPathListEmpty"); }
+|                               '{' idents_or_self '}'     { $$ = mk_node("ViewPathList", 1, $2); }
+|                               '{' idents_or_self ',' '}' { $$ = mk_node("ViewPathList", 1, $2); }
 | path_no_types_allowed AS ident                           { $$ = mk_node("ViewPathSimple", 2, $1, $3); }
 ;
 
@@ -783,7 +800,9 @@ item_unsafe_fn
 // without respect to types.
 path_no_types_allowed
 : ident                               { $$ = mk_node("ViewPath", 1, $1); }
+| MOD_SEP ident                       { $$ = mk_node("ViewPath", 1, $2); }
 | SELF                                { $$ = mk_node("ViewPath", 1, mk_atom("Self")); }
+| MOD_SEP SELF                        { $$ = mk_node("ViewPath", 1, mk_atom("Self")); }
 | path_no_types_allowed MOD_SEP ident { $$ = ext_node($1, 1, $3); }
 ;
 
@@ -1088,14 +1107,10 @@ block
 stmts
 : stmts let                                        { $$ = ext_node($1, 1, $2); }
 | stmts let nonblock_expr                          { $$ = ext_node($1, 2, $2, $3); }
-| stmts item_static                                { $$ = ext_node($1, 1, $2); }
-| stmts item_static nonblock_expr                  { $$ = ext_node($1, 2, $2, $3); }
-| stmts item_const                                 { $$ = ext_node($1, 1, $2); }
-| stmts item_const nonblock_expr                   { $$ = ext_node($1, 2, $2, $3); }
-| stmts item_type                                  { $$ = ext_node($1, 1, $2); }
-| stmts item_type nonblock_expr                    { $$ = ext_node($1, 2, $2, $3); }
-| stmts block_item                                 { $$ = ext_node($1, 1, $2); }
-| stmts block_item nonblock_expr                   { $$ = ext_node($1, 2, $2, $3); }
+| stmts             stmt_item                      { $$ = ext_node($1, 1, $2); }
+| stmts outer_attrs stmt_item                      { $$ = ext_node($1, 2, $2, $3); }
+| stmts             stmt_item nonblock_expr        { $$ = ext_node($1, 2, $2, $3); }
+| stmts outer_attrs stmt_item nonblock_expr        { $$ = ext_node($1, 3, $2, $3, $4); }
 | stmts block_expr                                 { $$ = ext_node($1, 1, $2); }
 | stmts block_expr nonblock_expr                   { $$ = ext_node($1, 2, $2, $3); }
 | stmts ';'

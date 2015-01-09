@@ -71,6 +71,7 @@
 %token OUTER_DOC_COMMENT;
 
 %token SHEBANG;
+%token SHEBANG_LINE;
 %token STATIC_LIFETIME;
 
 {

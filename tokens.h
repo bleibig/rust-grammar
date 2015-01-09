@@ -67,8 +67,8 @@ enum Token {
   INNER_DOC_COMMENT,
   OUTER_DOC_COMMENT,
 
-  // not in rustc:
   SHEBANG,
+  SHEBANG_LINE,
   STATIC_LIFETIME
 };
 
