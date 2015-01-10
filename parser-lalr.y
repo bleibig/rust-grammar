@@ -107,6 +107,10 @@ extern char *yytext;
 // things like proc() a + b to parse as proc() { a + b }.
 %precedence LAMBDA
 
+// MUT should be lower precedence than IDENT so that in the pat rule,
+// "& MUT pat" has higher precedence than "binding_mode ident [@ pat]"
+%precedence MUT
+
 // IDENT needs to be lower than '{' so that 'foo {' is shifted when
 // trying to decide if we've got a struct-construction expr (esp. in
 // contexts like 'if foo { .')
@@ -302,6 +306,7 @@ pats_or
 pat
 : UNDERSCORE                                      { $$ = mk_atom("PatWild"); }
 | '&' pat                                         { $$ = mk_node("PatRegion", 1, $2); }
+| '&' MUT pat                                     { $$ = mk_node("PatRegion", 1, $3); }
 | ANDAND pat                                      { $$ = mk_node("PatRegion", 1, mk_node("PatRegion", 1, $2)); }
 | '(' ')'                                         { $$ = mk_atom("PatUnit"); }
 | '(' pat_tup ')'                                 { $$ = mk_node("PatTup", 1, $2); }
