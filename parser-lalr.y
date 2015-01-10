@@ -151,7 +151,6 @@ extern char *yytext;
 // like 'return if foo { 10 } else { 22 }' shifts 'if' rather
 // than reducing a no-argument return.
 %precedence RETURN
-%precedence FOR IF LOOP MATCH UNSAFE WHILE
 
 %precedence '{' '[' '(' '.'
 
@@ -250,7 +249,9 @@ stmt_item
 ;
 
 item_macro
-: path_expr '!' maybe_ident delimited_token_trees
+: path_expr '!' maybe_ident parens_delimited_token_trees ';'
+| path_expr '!' maybe_ident braces_delimited_token_trees
+| path_expr '!' maybe_ident brackets_delimited_token_trees ';'
 ;
 
 view_item
@@ -1078,11 +1079,18 @@ enum_args
 ///////////////////////////////////////////////////////////////////////
 
 inner_attrs_and_block
-: '{' maybe_inner_attrs stmts '}'        { $$ = $3; }
+: '{' maybe_inner_attrs maybe_stmts '}'        { $$ = $3; }
 ;
 
 block
-: '{' stmts '}'               { $$ = mk_node("ExprBlock", 1, $2); }
+: '{' maybe_stmts '}'                          { $$ = mk_node("ExprBlock", 1, $2); }
+;
+
+maybe_stmts
+: stmts
+| stmts nonblock_expr { $$ = ext_node($1, 1, $2); }
+| nonblock_expr
+| %empty              { $$ = mk_none(); }
 ;
 
 // There are two sub-grammars within a "stmts: exprs" derivation
@@ -1110,20 +1118,18 @@ block
 // In non-stmts contexts, expr can relax this trichotomy.
 
 stmts
-: stmts let                                        { $$ = ext_node($1, 1, $2); }
-| stmts let nonblock_expr                          { $$ = ext_node($1, 2, $2, $3); }
-| stmts             stmt_item                      { $$ = ext_node($1, 1, $2); }
-| stmts outer_attrs stmt_item                      { $$ = ext_node($1, 2, $2, $3); }
-| stmts             stmt_item nonblock_expr        { $$ = ext_node($1, 2, $2, $3); }
-| stmts outer_attrs stmt_item nonblock_expr        { $$ = ext_node($1, 3, $2, $3, $4); }
-| stmts block_expr                                 { $$ = ext_node($1, 1, $2); }
-| stmts block_expr nonblock_expr                   { $$ = ext_node($1, 2, $2, $3); }
-| stmts ';'
-| stmts ';' nonblock_expr                          { $$ = ext_node($1, 1, $3); }
-| stmts block                                      { $$ = ext_node($1, 1, $2); }
-| stmts block nonblock_expr                        { $$ = ext_node($1, 1, $2); }
-| nonblock_expr                                    { $$ = mk_node("stmts", 1, $1); }
-| %empty                                           { $$ = mk_node("stmts", 0); }
+: stmt           { $$ = mk_node("stmts", 1, $1); }
+| stmts stmt     { $$ = ext_node($1, 1, $2); }
+;
+
+stmt
+: let
+| stmt_item
+| outer_attrs stmt_item { $$ = $2; }
+| block_expr
+| block
+| nonblock_expr ';'
+| ';'                   { $$ = mk_none(); }
 ;
 
 maybe_exprs
@@ -1148,12 +1154,17 @@ path_expr
 | SELF MOD_SEP path_generic_args_with_colons { $$ = mk_node("SelfPath", 1, $3); }
 ;
 
+macro_expr
+: path_expr '!' maybe_ident parens_delimited_token_trees
+| path_expr '!' maybe_ident brackets_delimited_token_trees
+;
+
 nonblock_expr
 : lit                                                           { $$ = mk_node("ExprLit", 1, $1); }
 | %prec IDENT
   path_expr                                                     { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                          { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
-| path_expr '!' maybe_ident delimited_token_trees               { $$ = mk_node("ExprMac", 2, $1, $3); }
+| macro_expr                                                    { $$ = mk_node("ExprMac", 1, $1); }
 | path_expr '{' struct_expr_fields '}'                          { $$ = mk_node("ExprStruct", 2, $1, $3); }
 | nonblock_expr '.' path_generic_args_with_colons               { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonblock_expr '.' LIT_INTEGER                                 { $$ = mk_node("ExprTupleIndex", 1, $1); }
@@ -1198,7 +1209,7 @@ expr
 | %prec IDENT
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
-| path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
+| macro_expr                                          { $$ = mk_node("ExprMac", 1, $1); }
 | path_expr '{' struct_expr_fields '}'                { $$ = mk_node("ExprStruct", 2, $1, $3); }
 | expr '.' path_generic_args_with_colons              { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr '.' LIT_INTEGER                                { $$ = mk_node("ExprTupleIndex", 1, $1); }
@@ -1245,7 +1256,7 @@ nonparen_expr
 | %prec IDENT
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
-| path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
+| macro_expr                                          { $$ = mk_node("ExprMac", 1, $1); }
 | path_expr '{' struct_expr_fields '}'                { $$ = mk_node("ExprStruct", 2, $1, $3); }
 | nonparen_expr '.' path_generic_args_with_colons     { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonparen_expr '.' LIT_INTEGER                       { $$ = mk_node("ExprTupleIndex", 1, $1); }
@@ -1291,7 +1302,7 @@ expr_nostruct
 | %prec IDENT
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
-| path_expr '!' maybe_ident delimited_token_trees     { $$ = mk_node("ExprMac", 2, $1, $3); }
+| macro_expr                                          { $$ = mk_node("ExprMac", 1, $1); }
 | expr_nostruct '.' path_generic_args_with_colons     { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr_nostruct '.' LIT_INTEGER                       { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | expr_nostruct '[' index_expr ']'                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -1450,6 +1461,7 @@ block_expr
 | expr_loop
 | expr_for
 | UNSAFE block                               { $$ = mk_node("UnsafeBlock", 1, $2); }
+| path_expr '!' maybe_ident braces_delimited_token_trees
 ;
 
 expr_match
@@ -1656,6 +1668,12 @@ token_tree
 ;
 
 delimited_token_trees
+: parens_delimited_token_trees
+| braces_delimited_token_trees
+| brackets_delimited_token_trees
+;
+
+parens_delimited_token_trees
 : '(' token_trees ')'
 {
   $$ = mk_node("TTDelim", 3,
@@ -1663,16 +1681,20 @@ delimited_token_trees
                $2,
                mk_node("TTTok", 1, mk_atom(")")));
 }
+;
 
-| '{' token_trees '}'
+braces_delimited_token_trees
+: '{' token_trees '}'
 {
   $$ = mk_node("TTDelim", 3,
                mk_node("TTTok", 1, mk_atom("{")),
                $2,
                mk_node("TTTok", 1, mk_atom("}")));
 }
+;
 
-| '[' token_trees ']'
+brackets_delimited_token_trees
+: '[' token_trees ']'
 {
   $$ = mk_node("TTDelim", 3,
                mk_node("TTTok", 1, mk_atom("[")),
