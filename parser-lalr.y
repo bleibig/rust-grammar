@@ -129,6 +129,9 @@ extern char *yytext;
 // trailing type-bounds ("foo as bar:A+B"), for the same reason.
 %precedence SHIFTPLUS
 
+%precedence MOD_SEP
+%precedence RARROW ':'
+
 // Binops & unops, and their precedences
 %precedence BOX
 %precedence BOXPLACE
@@ -387,8 +390,8 @@ ty
 ;
 
 ty_prim
-: path_generic_args_without_colons         { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
-| MOD_SEP path_generic_args_without_colons { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
+: %prec IDENT path_generic_args_without_colons         { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
+| %prec IDENT MOD_SEP path_generic_args_without_colons { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
 | BOX ty                                   { $$ = mk_node("TyBox", 1, $2); }
 | '*' maybe_mut_or_const ty                { $$ = mk_node("TyPtr", 2, $2, $3); }
 | '&' maybe_mut ty                         { $$ = mk_node("TyRptr", 2, $2, $3); }
@@ -744,9 +747,9 @@ plain_ident_or_underscore
 ;
 
 ret_ty
-: RARROW '!' { $$ = mk_none(); }
-| RARROW ty { $$ = mk_node("ret-ty", 1, $2); }
-| %empty { $$ = mk_none(); }
+: RARROW '!'         { $$ = mk_none(); }
+| RARROW ty          { $$ = mk_node("ret-ty", 1, $2); }
+| %prec IDENT %empty { $$ = mk_none(); }
 ;
 
 generic_params
@@ -825,15 +828,17 @@ path_no_types_allowed
 // be ambiguous with.
 path_generic_args_without_colons
 : %prec IDENT
-  ident                  { $$ = mk_node("components", 1, $1); }
+  ident                                                                       { $$ = mk_node("components", 1, $1); }
 | %prec IDENT
-  ident generic_args     { $$ = mk_node("components", 2, $1, $2); }
+  ident generic_args                                                          { $$ = mk_node("components", 2, $1, $2); }
 | %prec IDENT
-  ident '(' maybe_ty_sums ')' { $$ = mk_node("components", 2, $1, $3); }
+  ident '(' maybe_ty_sums ')' ret_ty                                          { $$ = mk_node("components", 2, $1, $3); }
 | %prec IDENT
-  path_generic_args_without_colons MOD_SEP ident      { $$ = ext_node($1, 1, $3); }
+  path_generic_args_without_colons MOD_SEP ident                              { $$ = ext_node($1, 1, $3); }
 | %prec IDENT
-  path_generic_args_without_colons MOD_SEP ident generic_args { $$ = ext_node($1, 2, $3, $4); }
+  path_generic_args_without_colons MOD_SEP ident generic_args                 { $$ = ext_node($1, 2, $3, $4); }
+| %prec IDENT
+  path_generic_args_without_colons MOD_SEP ident '(' maybe_ty_sums ')' ret_ty { $$ = ext_node($1, 2, $3, $5); }
 ;
 
 // A path with a lifetime and type parameters with double colons before
@@ -949,8 +954,8 @@ ty_param
 
 maybe_bounds
 : %prec SHIFTPLUS
-  ':' bounds       { $$ = $2; }
-| %empty           { $$ = mk_none(); }
+  ':' bounds             { $$ = $2; }
+| %prec SHIFTPLUS %empty { $$ = mk_none(); }
 ;
 
 bounds
@@ -1001,8 +1006,8 @@ lifetime
 ;
 
 trait_ref
-: path_generic_args_without_colons
-| MOD_SEP path_generic_args_without_colons { $$ = $2; }
+: %prec IDENT path_generic_args_without_colons
+| %prec IDENT MOD_SEP path_generic_args_without_colons { $$ = $2; }
 ;
 
 // structs
