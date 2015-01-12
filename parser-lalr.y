@@ -366,12 +366,15 @@ pat_tup
 pat_vec
 : pat_vec_elts                                  { $$ = mk_node("PatVec", 2, $1, mk_none()); }
 | pat_vec_elts                             ','  { $$ = mk_node("PatVec", 2, $1, mk_none()); }
+| pat_vec_elts     DOTDOT                       { $$ = mk_node("PatVec", 2, $1, mk_none()); }
+| pat_vec_elts ',' DOTDOT                       { $$ = mk_node("PatVec", 2, $1, mk_none()); }
 | pat_vec_elts     DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, $1, $4); }
 | pat_vec_elts     DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, $1, $4); }
 | pat_vec_elts ',' DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, $1, $5); }
 | pat_vec_elts ',' DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, $1, $5); }
 |                  DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, mk_none(), $3); }
 |                  DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, mk_none(), $3); }
+|                  DOTDOT                       { $$ = mk_node("PatVec", 2, mk_none(), mk_none()); }
 | %empty                                        { $$ = mk_node("PatVec", 2, mk_none(), mk_none()); }
 ;
 
@@ -775,6 +778,7 @@ maybe_where_clause
 
 where_clause
 : WHERE where_predicates              { $$ = mk_node("WhereClause", 1, $2); }
+| WHERE where_predicates ','          { $$ = mk_node("WhereClause", 1, $2); }
 ;
 
 where_predicates
