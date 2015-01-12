@@ -1372,15 +1372,15 @@ nonblock_prefix_expr
 
 lambda_expr
 : %prec LAMBDA
-  OROR expr                                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
+  OROR ret_ty expr                                        { $$ = mk_node("ExprFnBlock", 3, mk_none(), $2, $3); }
 | %prec LAMBDA
-  '|' maybe_unboxed_closure_kind '|' expr          { $$ = mk_node("ExprFnBlock", 2, mk_none(), $4); }
+  '|' maybe_unboxed_closure_kind '|' ret_ty expr          { $$ = mk_node("ExprFnBlock", 3, mk_none(), $4, $5); }
 | %prec LAMBDA
-  '|' inferrable_params '|' expr                   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
+  '|' inferrable_params '|' ret_ty expr                   { $$ = mk_node("ExprFnBlock", 3, $2, $4, $5); }
 | %prec LAMBDA
-  '|' '&' maybe_mut ':' inferrable_params '|' expr { $$ = mk_node("ExprFnBlock", 2, $5, $7); }
+  '|' '&' maybe_mut ':' inferrable_params '|' ret_ty expr { $$ = mk_node("ExprFnBlock", 3, $5, $7, $8); }
 | %prec LAMBDA
-  '|' ':' inferrable_params '|' expr               { $$ = mk_node("ExprFnBlock", 2, $3, $5); }
+  '|' ':' inferrable_params '|' ret_ty expr               { $$ = mk_node("ExprFnBlock", 3, $3, $5, $6); }
 ;
 
 lambda_expr_nostruct
