@@ -1178,11 +1178,11 @@ nonblock_expr
 | '[' maybe_vec_expr ']'                                        { $$ = mk_node("ExprVec", 1, $2); }
 | '(' maybe_exprs ')'                                           { $$ = mk_node("ExprParen", 1, $2); }
 | CONTINUE                                                      { $$ = mk_node("ExprAgain", 0); }
-| CONTINUE ident                                                { $$ = mk_node("ExprAgain", 1, $2); }
+| CONTINUE lifetime                                             { $$ = mk_node("ExprAgain", 1, $2); }
 | RETURN                                                        { $$ = mk_node("ExprRet", 0); }
 | RETURN expr                                                   { $$ = mk_node("ExprRet", 1, $2); }
 | BREAK                                                         { $$ = mk_node("ExprBreak", 0); }
-| BREAK ident                                                   { $$ = mk_node("ExprBreak", 1, $2); }
+| BREAK lifetime                                                { $$ = mk_node("ExprBreak", 1, $2); }
 | nonblock_expr '=' expr                                        { $$ = mk_node("ExprAssign", 2, $1, $3); }
 | nonblock_expr BINOPEQ expr                                    { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
 | nonblock_expr OROR expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
@@ -1518,19 +1518,24 @@ block_or_if
 ;
 
 expr_while
-: WHILE expr_nostruct block                           { $$ = mk_node("ExprWhile", 2, $2, $3); }
+: maybe_label WHILE expr_nostruct block               { $$ = mk_node("ExprWhile", 3, $1, $3, $4); }
 ;
 
 expr_while_let
-: WHILE LET pat '=' expr_nostruct block               { $$ = mk_node("ExprWhileLet", 3, $3, $5, $6); }
+: maybe_label WHILE LET pat '=' expr_nostruct block   { $$ = mk_node("ExprWhileLet", 4, $1, $4, $6, $7); }
 ;
 
 expr_loop
-: LOOP block                                          { $$ = mk_node("ExprLoop", 1, $2); }
+: maybe_label LOOP block                              { $$ = mk_node("ExprLoop", 2, $1, $3); }
 ;
 
 expr_for
-: FOR pat IN expr_nostruct block                      { $$ = mk_node("ExprForLoop", 3, $2, $4, $5); }
+: maybe_label FOR pat IN expr_nostruct block          { $$ = mk_node("ExprForLoop", 4, $1, $3, $5, $6); }
+;
+
+maybe_label
+: lifetime ':'
+| %empty { $$ = mk_none(); }
 ;
 
 let
