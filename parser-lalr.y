@@ -337,6 +337,7 @@ binding_mode
 lit_or_path
 : path_expr    { $$ = mk_node("PatLit", 1, $1); }
 | lit          { $$ = mk_node("PatLit", 1, $1); }
+| '-' lit      { $$ = mk_node("PatLit", 1, $2); }
 ;
 
 pat_field
@@ -492,7 +493,7 @@ item_foreign_static
 ;
 
 item_foreign_fn
-: FN ident generic_params maybe_where_clause fn_decl_allow_variadic ';'
+: FN ident generic_params fn_decl_allow_variadic maybe_where_clause ';'
 ;
 
 fn_decl_allow_variadic
@@ -788,7 +789,7 @@ where_predicates
 
 where_predicate
 : lifetime ':' bounds    { $$ = mk_node("WherePredicate", 2, $1, $3); }
-| path_generic_args_without_colons ':' ty_param_bounds   { $$ = mk_node("WherePredicate", 2, $1, $3); }
+| ty ':' ty_param_bounds { $$ = mk_node("WherePredicate", 2, $1, $3); }
 ;
 
 ty_params
@@ -1133,8 +1134,10 @@ stmts
 
 stmt
 : let
-| stmt_item
-| outer_attrs stmt_item { $$ = $2; }
+|                 stmt_item
+|             PUB stmt_item { $$ = $2; }
+| outer_attrs     stmt_item { $$ = $2; }
+| outer_attrs PUB stmt_item { $$ = $3; }
 | block_expr
 | block
 | nonblock_expr ';'
