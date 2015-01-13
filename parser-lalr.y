@@ -1477,21 +1477,21 @@ block_expr
 ;
 
 expr_match
-: MATCH expr_nostruct '{' match_clauses '}'           { $$ = mk_node("ExprMatch", 2, $2, $4); }
-| MATCH expr_nostruct '{' '}'                         { $$ = mk_node("ExprMatch", 1, $2); }
-| MATCH expr_nostruct '{' match_clauses ',' '}'       { $$ = mk_node("ExprMatch", 2, $2, $4); }
+: MATCH expr_nostruct '{' '}'                                     { $$ = mk_node("ExprMatch", 1, $2); }
+| MATCH expr_nostruct '{' match_clauses                       '}' { $$ = mk_node("ExprMatch", 2, $2, $4); }
+| MATCH expr_nostruct '{' match_clauses nonblock_match_clause '}' { $$ = mk_node("ExprMatch", 2, $2, ext_node($4, 1, $5)); }
+| MATCH expr_nostruct '{'               nonblock_match_clause '}' { $$ = mk_node("ExprMatch", 2, $2, mk_node("Arms", 1, $4)); }
 ;
 
 match_clauses
-: nonblock_match_clause                                 { $$ = mk_node("Arms", 1, $1); }
-| match_clauses_ending_in_block                         { $$ = mk_node("Arms", 1, $1); }
-| match_clauses_ending_in_block nonblock_match_clause   { $$ = ext_node($1, 1, $2); }
-| match_clauses ',' nonblock_match_clause               { $$ = ext_node($1, 1, $3); }
-| match_clauses ',' match_clauses_ending_in_block       { $$ = ext_node($1, 1, $3); }
+: match_clause               { $$ = mk_node("Arms", 1, $1); }
+| match_clauses match_clause { $$ = ext_node($1, 1, $2); }
+;
 
-match_clauses_ending_in_block
-: block_match_clause                                    { $$ = mk_node("Arms", 1, $1); }
-| match_clauses_ending_in_block block_match_clause      { $$ = ext_node($1, 1, $2) ; }
+match_clause
+: nonblock_match_clause ','
+| block_match_clause
+| block_match_clause ','
 ;
 
 nonblock_match_clause
