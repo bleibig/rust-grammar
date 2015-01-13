@@ -28,12 +28,21 @@ static int saw_non_hash;
 %x doc_block
 %x suffix
 
+ident [a-zA-Z\x80-\xff_][a-zA-Z0-9\x80-\xff_]*
+
 %%
 
-<suffix>[a-zA-Z_][a-zA-Z0-9_]*      { BEGIN(INITIAL); }
-<suffix>(.|\n)                      { yyless(0); BEGIN(INITIAL); }
+<suffix>{ident}            { BEGIN(INITIAL); }
+<suffix>(.|\n)  { yyless(0); BEGIN(INITIAL); }
 
 [ \n\t\r]             { }
+
+\xef\xbb\xbf {
+  // UTF-8 byte order mark (BOM), ignore if in line 1, error otherwise
+  if (yyget_lineno() != 1) {
+    return -1;
+  }
+}
 
 \/\/(\/|\!)           { BEGIN(doc_line); yymore(); }
 <doc_line>\n          { BEGIN(INITIAL);
@@ -104,7 +113,7 @@ use      { return USE; }
 where    { return WHERE; }
 while    { return WHILE; }
 
-[a-zA-Z_][a-zA-Z0-9_]*      { return IDENT; }
+{ident}  { return IDENT; }
 
 0x[0-9a-fA-F_]+                                    { BEGIN(suffix); return LIT_INTEGER; }
 0o[0-8_]+                                          { BEGIN(suffix); return LIT_INTEGER; }
@@ -172,11 +181,12 @@ while    { return WHILE; }
 
 \x27                                  { BEGIN(ltorchar); yymore(); }
 <ltorchar>static                      { BEGIN(INITIAL); return STATIC_LIFETIME; }
-<ltorchar>[a-zA-Z_][a-zA-Z0-9_]*      { BEGIN(INITIAL); return LIFETIME; }
+<ltorchar>{ident}                     { BEGIN(INITIAL); return LIFETIME; }
 <ltorchar>\\[nrt\\\x27\x220]\x27      { BEGIN(suffix); return LIT_CHAR; }
 <ltorchar>\\x[0-9a-fA-F]{2}\x27       { BEGIN(suffix); return LIT_CHAR; }
 <ltorchar>\\u\{[0-9a-fA-F]?{6}\}\x27  { BEGIN(suffix); return LIT_CHAR; }
 <ltorchar>.\x27                       { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar>[\x80-\xff]{2,4}\x27        { BEGIN(suffix); return LIT_CHAR; }
 <ltorchar><<EOF>>                     { BEGIN(INITIAL); return -1; }
 
 b\x22              { BEGIN(bytestr); yymore(); }

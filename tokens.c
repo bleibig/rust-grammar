@@ -9,7 +9,6 @@ extern char *yytext;
 
 static char *binop_text(char*);
 static char *desugar_num(char*, char*);
-static char *escape_string(char*);
 
 void print_token(int token) {
   switch (token) {
@@ -58,7 +57,7 @@ void print_token(int token) {
   case LIT_CHAR: printf("Char(%s)", yytext); break;
   case LIT_INTEGER: printf("Integer(%s)", yytext); break;
   case LIT_FLOAT: printf("Float(%s)", yytext); break;
-  case LIT_STR: printf("Str(%s)", escape_string(yytext)); break;
+  case LIT_STR: printf("Str(%s)", yytext); break;
   case LIT_STR_RAW: printf("StrRaw(%s)", yytext); break;
   case LIT_BINARY: printf("Binary(%s)", yytext); break;
   case LIT_BINARY_RAW: printf("BinaryRaw(%s)", yytext); break;
@@ -224,45 +223,4 @@ static char *desugar_num(char *tok, char *default_suffix) {
         snprintf(res, 64, "%lld%s", val, (end == len -1) ? default_suffix : tok + end);
     }
     return res;
-}
-
-static char *escape_string(char *str) {
-  int len = strlen(str);
-  char *res = malloc(sizeof(char) * len * 2 + 1);
-  int j = 0;
-  res[j++] = '"';
-  for (int i = 1; i < len - 1; ++i) {
-    char c = str[i];
-    switch (c) {
-    case '\t':
-      res[j++] = '\\';
-      res[j++] = 't';
-      break;
-    case '\r':
-      res[j++] = '\\';
-      res[j++] = 'r';
-      break;
-    case '\n':
-      res[j++] = '\\';
-      res[j++] = 'n';
-      break;
-    case '\\':
-      res[j++] = '\\';
-      res[j++] = '\\';
-      break;
-    case '\'':
-      res[j++] = '\\';
-      res[j++] = '\'';
-      break;
-    case '\"':
-      res[j++] = '\\';
-      res[j++] = '\"';
-      break;
-    default:
-      res[j++] = c;
-    }
-  }
-  res[j++] = '"';
-  res[j++] = '\0';
-  return res;
 }

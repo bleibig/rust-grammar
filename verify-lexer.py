@@ -31,9 +31,7 @@ for base, dirs, files in os.walk(sys.argv[3]):
     for f in filter(lambda p: p.endswith('.rs'), files):
         p = os.path.join(base, f)
         # compile-fail programs should be ignored
-        # also, the lexer doesn't work with multibyte characters so
-        # ignore programs that contain them
-        if "compile-fail" in p or not all(ord(c) < 128 for c in open(p).read()):
+        if "compile-fail" in p:
             print("skipping {}".format(p))
             continue
         print("comparing {}".format(p))

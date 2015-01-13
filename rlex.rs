@@ -35,7 +35,7 @@ fn token_to_string(tok: token::Token) -> String {
                 format!("Float({})", c.as_str().to_string())
             },
             Lit::Str_(s) => {
-                format!("Str(\"{}\")", token::get_name(s).get().escape_default())
+                format!("Str(\"{}\")", token::get_name(s).get())
             },
             Lit::StrRaw(s, n) => {
                 format!("StrRaw(r{delim}\"{string}\"{delim})",
