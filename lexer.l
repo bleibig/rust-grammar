@@ -172,11 +172,11 @@ while    { return WHILE; }
 \!    { return '!'; }
 \<=   { return LE; }
 \<\<  { return SHL; }
-\<\<= { return BINOPEQ; }
+\<\<= { return SHLEQ; }
 \<    { return '<'; }
 \>=   { return GE; }
 \>\>  { return SHR; }
-\>\>= { return BINOPEQ; }
+\>\>= { return SHREQ; }
 \>    { return '>'; }
 
 \x27                                  { BEGIN(ltorchar); yymore(); }
@@ -309,23 +309,23 @@ r/#             {
 
 -\>  { return RARROW; }
 -    { return '-'; }
--=   { return BINOPEQ; }
+-=   { return MINUSEQ; }
 &&   { return ANDAND; }
 &    { return '&'; }
-&=   { return BINOPEQ; }
+&=   { return ANDEQ; }
 \|\| { return OROR; }
 \|   { return '|'; }
-\|=  { return BINOPEQ; }
+\|=  { return OREQ; }
 \+   { return '+'; }
-\+=  { return BINOPEQ; }
+\+=  { return PLUSEQ; }
 \*   { return '*'; }
-\*=  { return BINOPEQ; }
+\*=  { return STAREQ; }
 \/   { return '/'; }
-\/=  { return BINOPEQ; }
+\/=  { return SLASHEQ; }
 \^   { return '^'; }
-\^=  { return BINOPEQ; }
+\^=  { return CARETEQ; }
 %    { return '%'; }
-%=   { return BINOPEQ; }
+%=   { return PERCENTEQ; }
 
 <<EOF>> { return 0; }
 

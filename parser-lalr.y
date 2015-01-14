@@ -21,7 +21,16 @@ extern char *yytext;
 %token GE
 %token ANDAND
 %token OROR
-%token BINOPEQ
+%token SHLEQ
+%token SHREQ
+%token MINUSEQ
+%token ANDEQ
+%token OREQ
+%token PLUSEQ
+%token STAREQ
+%token SLASHEQ
+%token CARETEQ
+%token PERCENTEQ
 %token DOTDOT
 %token DOTDOTDOT
 %token MOD_SEP
@@ -137,7 +146,7 @@ extern char *yytext;
 // Binops & unops, and their precedences
 %precedence BOX
 %precedence BOXPLACE
-%left '=' BINOPEQ
+%left '=' SHLEQ SHREQ MINUSEQ ANDEQ OREQ PLUSEQ STAREQ SLASHEQ CARETEQ PERCENTEQ
 %left OROR
 %left ANDAND
 %left EQEQ NE
@@ -890,14 +899,18 @@ path_generic_args_with_colons
 ;
 
 generic_args
-: '<' generic_values '>' { $$ = $2; }
-| '<' generic_values SHR { push_back('>'); $$ = $2; }
+: '<' generic_values '>'   { $$ = $2; }
+| '<' generic_values SHR   { push_back('>'); $$ = $2; }
+| '<' generic_values GE    { push_back('='); $$ = $2; }
+| '<' generic_values SHREQ { push_back('>'); push_back('='); $$ = $2; }
 // If generic_args starts with "<<", the first arg must be a
 // TyQualifiedPath because that's the only type that can start with a
 // '<'. This rule parses that as the first ty_sum and then continues
 // with the rest of generic_values.
-| SHL ty_qualified_path_and_generic_values '>' { $$ = $2; }
-| SHL ty_qualified_path_and_generic_values SHR { push_back('>'); $$ = $2; }
+| SHL ty_qualified_path_and_generic_values '>'   { $$ = $2; }
+| SHL ty_qualified_path_and_generic_values SHR   { push_back('>'); $$ = $2; }
+| SHL ty_qualified_path_and_generic_values GE    { push_back('='); $$ = $2; }
+| SHL ty_qualified_path_and_generic_values SHREQ { push_back('>'); push_back('='); $$ = $2; }
 ;
 
 generic_values
@@ -1223,7 +1236,16 @@ nonblock_expr
 | BREAK                                                         { $$ = mk_node("ExprBreak", 0); }
 | BREAK lifetime                                                { $$ = mk_node("ExprBreak", 1, $2); }
 | nonblock_expr '=' expr                                        { $$ = mk_node("ExprAssign", 2, $1, $3); }
-| nonblock_expr BINOPEQ expr                                    { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| nonblock_expr SHLEQ expr                                      { $$ = mk_node("ExprAssignShl", 2, $1, $3); }
+| nonblock_expr SHREQ expr                                      { $$ = mk_node("ExprAssignShr", 2, $1, $3); }
+| nonblock_expr MINUSEQ expr                                    { $$ = mk_node("ExprAssignSub", 2, $1, $3); }
+| nonblock_expr ANDEQ expr                                      { $$ = mk_node("ExprAssignBitAnd", 2, $1, $3); }
+| nonblock_expr OREQ expr                                       { $$ = mk_node("ExprAssignBitOr", 2, $1, $3); }
+| nonblock_expr PLUSEQ expr                                     { $$ = mk_node("ExprAssignAdd", 2, $1, $3); }
+| nonblock_expr STAREQ expr                                     { $$ = mk_node("ExprAssignMul", 2, $1, $3); }
+| nonblock_expr SLASHEQ expr                                    { $$ = mk_node("ExprAssignDiv", 2, $1, $3); }
+| nonblock_expr CARETEQ expr                                    { $$ = mk_node("ExprAssignBitXor", 2, $1, $3); }
+| nonblock_expr PERCENTEQ expr                                  { $$ = mk_node("ExprAssignRem", 2, $1, $3); }
 | nonblock_expr OROR expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
 | nonblock_expr ANDAND expr                                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
 | nonblock_expr EQEQ expr                                       { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
@@ -1268,7 +1290,16 @@ expr
 | BREAK                                               { $$ = mk_node("ExprBreak", 0); }
 | BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
 | expr '=' expr                                       { $$ = mk_node("ExprAssign", 2, $1, $3); }
-| expr BINOPEQ expr                                   { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| expr SHLEQ expr                                     { $$ = mk_node("ExprAssignShl", 2, $1, $3); }
+| expr SHREQ expr                                     { $$ = mk_node("ExprAssignShr", 2, $1, $3); }
+| expr MINUSEQ expr                                   { $$ = mk_node("ExprAssignSub", 2, $1, $3); }
+| expr ANDEQ expr                                     { $$ = mk_node("ExprAssignBitAnd", 2, $1, $3); }
+| expr OREQ expr                                      { $$ = mk_node("ExprAssignBitOr", 2, $1, $3); }
+| expr PLUSEQ expr                                    { $$ = mk_node("ExprAssignAdd", 2, $1, $3); }
+| expr STAREQ expr                                    { $$ = mk_node("ExprAssignMul", 2, $1, $3); }
+| expr SLASHEQ expr                                   { $$ = mk_node("ExprAssignDiv", 2, $1, $3); }
+| expr CARETEQ expr                                   { $$ = mk_node("ExprAssignBitXor", 2, $1, $3); }
+| expr PERCENTEQ expr                                 { $$ = mk_node("ExprAssignRem", 2, $1, $3); }
 | expr OROR expr                                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
 | expr ANDAND expr                                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
 | expr EQEQ expr                                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
@@ -1314,7 +1345,16 @@ nonparen_expr
 | BREAK                                               { $$ = mk_node("ExprBreak", 0); }
 | BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
 | nonparen_expr '=' nonparen_expr                     { $$ = mk_node("ExprAssign", 2, $1, $3); }
-| nonparen_expr BINOPEQ nonparen_expr                 { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| nonparen_expr SHLEQ nonparen_expr                   { $$ = mk_node("ExprAssignShl", 2, $1, $3); }
+| nonparen_expr SHREQ nonparen_expr                   { $$ = mk_node("ExprAssignShr", 2, $1, $3); }
+| nonparen_expr MINUSEQ nonparen_expr                 { $$ = mk_node("ExprAssignSub", 2, $1, $3); }
+| nonparen_expr ANDEQ nonparen_expr                   { $$ = mk_node("ExprAssignBitAnd", 2, $1, $3); }
+| nonparen_expr OREQ nonparen_expr                    { $$ = mk_node("ExprAssignBitOr", 2, $1, $3); }
+| nonparen_expr PLUSEQ nonparen_expr                  { $$ = mk_node("ExprAssignAdd", 2, $1, $3); }
+| nonparen_expr STAREQ nonparen_expr                  { $$ = mk_node("ExprAssignMul", 2, $1, $3); }
+| nonparen_expr SLASHEQ nonparen_expr                 { $$ = mk_node("ExprAssignDiv", 2, $1, $3); }
+| nonparen_expr CARETEQ nonparen_expr                 { $$ = mk_node("ExprAssignBitXor", 2, $1, $3); }
+| nonparen_expr PERCENTEQ nonparen_expr               { $$ = mk_node("ExprAssignRem", 2, $1, $3); }
 | nonparen_expr OROR nonparen_expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
 | nonparen_expr ANDAND nonparen_expr                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
 | nonparen_expr EQEQ nonparen_expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
@@ -1360,7 +1400,16 @@ expr_nostruct
 | BREAK                                               { $$ = mk_node("ExprBreak", 0); }
 | BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
 | expr_nostruct '=' expr_nostruct                     { $$ = mk_node("ExprAssign", 2, $1, $3); }
-| expr_nostruct BINOPEQ expr_nostruct                 { $$ = mk_node("ExprAssignOp", 2, $1, $3); }
+| expr_nostruct SHLEQ expr_nostruct                   { $$ = mk_node("ExprAssignShl", 2, $1, $3); }
+| expr_nostruct SHREQ expr_nostruct                   { $$ = mk_node("ExprAssignShr", 2, $1, $3); }
+| expr_nostruct MINUSEQ expr_nostruct                 { $$ = mk_node("ExprAssignSub", 2, $1, $3); }
+| expr_nostruct ANDEQ expr_nostruct                   { $$ = mk_node("ExprAssignBitAnd", 2, $1, $3); }
+| expr_nostruct OREQ expr_nostruct                    { $$ = mk_node("ExprAssignBitOr", 2, $1, $3); }
+| expr_nostruct PLUSEQ expr_nostruct                  { $$ = mk_node("ExprAssignAdd", 2, $1, $3); }
+| expr_nostruct STAREQ expr_nostruct                  { $$ = mk_node("ExprAssignMul", 2, $1, $3); }
+| expr_nostruct SLASHEQ expr_nostruct                 { $$ = mk_node("ExprAssignDiv", 2, $1, $3); }
+| expr_nostruct CARETEQ expr_nostruct                 { $$ = mk_node("ExprAssignBitXor", 2, $1, $3); }
+| expr_nostruct PERCENTEQ expr_nostruct               { $$ = mk_node("ExprAssignRem", 2, $1, $3); }
 | expr_nostruct OROR expr_nostruct                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
 | expr_nostruct ANDAND expr_nostruct                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
 | expr_nostruct EQEQ expr_nostruct                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
@@ -1625,7 +1674,16 @@ unpaired_token
 | GE                         { $$ = mk_atom(yytext); }
 | ANDAND                     { $$ = mk_atom(yytext); }
 | OROR                       { $$ = mk_atom(yytext); }
-| BINOPEQ                    { $$ = mk_atom(yytext); }
+| SHLEQ                      { $$ = mk_atom(yytext); }
+| SHREQ                      { $$ = mk_atom(yytext); }
+| MINUSEQ                    { $$ = mk_atom(yytext); }
+| ANDEQ                      { $$ = mk_atom(yytext); }
+| OREQ                       { $$ = mk_atom(yytext); }
+| PLUSEQ                     { $$ = mk_atom(yytext); }
+| STAREQ                     { $$ = mk_atom(yytext); }
+| SLASHEQ                    { $$ = mk_atom(yytext); }
+| CARETEQ                    { $$ = mk_atom(yytext); }
+| PERCENTEQ                  { $$ = mk_atom(yytext); }
 | DOTDOT                     { $$ = mk_atom(yytext); }
 | DOTDOTDOT                  { $$ = mk_atom(yytext); }
 | MOD_SEP                    { $$ = mk_atom(yytext); }

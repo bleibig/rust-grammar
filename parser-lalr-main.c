@@ -6,19 +6,32 @@
 extern int yylex();
 extern int rsparse();
 
-static char pushback = '\0';
+static const int PUSHBACK_LEN = 4;
+
+static char pushback[PUSHBACK_LEN];
+
+// If there is a non-null char at the head of the pushback queue,
+// dequeue it and shift the rest of the queue forwards. Otherwise,
+// return the token from calling yylex.
 int rslex() {
-  if (pushback == '\0') {
+  if (pushback[0] == '\0') {
     return yylex();
   } else {
-    char c = pushback;
-    pushback = '\0';
+    char c = pushback[0];
+    memmove(pushback, pushback + 1, PUSHBACK_LEN - 1);
+    pushback[PUSHBACK_LEN - 1] = '\0';
     return c;
   }
 }
 
+// note: this does nothing if the pushback queue is full
 void push_back(char c) {
-  pushback = c;
+  for (int i = 0; i < PUSHBACK_LEN; ++i) {
+    if (pushback[i] == '\0') {
+      pushback[i] = c;
+      break;
+    }
+  }
 }
 
 extern int rsdebug;
@@ -141,6 +154,7 @@ void print_node(struct node *n, int depth) {
 int main() {
   int ret = 0;
   struct node *tmp;
+  memset(pushback, '\0', PUSHBACK_LEN);
   /* rsdebug = 1; */
   ret = rsparse();
   printf("--- PARSE COMPLETE: ret:%d, n_nodes:%d ---\n", ret, n_nodes);

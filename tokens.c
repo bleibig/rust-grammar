@@ -7,7 +7,6 @@
 
 extern char *yytext;
 
-static char *binop_text(char*);
 static char *desugar_num(char*, char*);
 
 void print_token(int token) {
@@ -47,7 +46,16 @@ void print_token(int token) {
   case GE: printf("Ge"); break;
   case ANDAND: printf("AndAnd"); break;
   case OROR: printf("OrOr"); break;
-  case BINOPEQ: printf("BinOpEq(%s)", binop_text(yytext)); break;
+  case SHLEQ: printf("BinOpEq(Shl)"); break;
+  case SHREQ: printf("BinOpEq(Shr)"); break;
+  case MINUSEQ: printf("BinOpEq(Minus)"); break;
+  case ANDEQ: printf("BinOpEq(And)"); break;
+  case OREQ: printf("BinOpEq(Or)"); break;
+  case PLUSEQ: printf("BinOpEq(Plus)"); break;
+  case STAREQ: printf("BinOpEq(Star)"); break;
+  case SLASHEQ: printf("BinOpEq(Slash)"); break;
+  case CARETEQ: printf("BinOpEq(Caret)"); break;
+  case PERCENTEQ: printf("BinOpEq(Percent)"); break;
   case DOTDOT: printf("DotDot"); break;
   case DOTDOTDOT: printf("DotDotDot"); break;
   case MOD_SEP: printf("ModSep"); break;
@@ -110,34 +118,6 @@ void print_token(int token) {
   default: printf("can't print token %d", token); abort();
   }
   printf("\n");
-}
-
-static char *binop_text(char *tok) {
-    switch (tok[0]) {
-        case '-':
-            return "Minus";
-        case '&':
-            return "And";
-        case '|':
-            return "Or";
-        case '+':
-            return "Plus";
-        case '*':
-            return "Star";
-        case '/':
-            return "Slash";
-        case '^':
-            return "Caret";
-        case '%':
-            return "Percent";
-        case '>':
-            return "Shr";
-        case '<':
-            return "Shl";
-        default:
-            printf("error: unhandled binopeq token '%s'\n", tok);
-            abort();
-    }
 }
 
 static int hex_to_num(char c) {
