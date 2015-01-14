@@ -107,6 +107,8 @@ extern char *yytext;
 // things like proc() a + b to parse as proc() { a + b }.
 %precedence LAMBDA
 
+%precedence SELF
+
 // MUT should be lower precedence than IDENT so that in the pat rule,
 // "& MUT pat" has higher precedence than "binding_mode ident [@ pat]"
 %precedence MUT
@@ -446,8 +448,8 @@ for_in_type_suffix
 ;
 
 maybe_mut
-: MUT    { $$ = mk_atom("MutMutable"); }
-| %empty { $$ = mk_atom("MutImmutable"); }
+: MUT              { $$ = mk_atom("MutMutable"); }
+| %prec MUT %empty { $$ = mk_atom("MutImmutable"); }
 ;
 
 maybe_mut_or_const
@@ -583,17 +585,28 @@ trait_method
 ;
 
 type_method
-: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause ';'
+: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause ';'
 {
   $$ = mk_node("TypeMethod", 6, $1, $2, $4, $5, $6, $7);
 }
-| attrs_and_vis maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self maybe_where_clause ';'
+| attrs_and_vis maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause ';'
 {
   $$ = mk_node("TypeMethod", 7, $1, $2, $4, $6, $7, $8, $9);
 }
 ;
 
 method
+: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("Method", 7, $1, $2, $4, $5, $6, $7, $8);
+}
+| attrs_and_vis maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("Method", 8, $1, $2, $4, $6, $7, $8, $9, $10);
+}
+;
+
+impl_method
 : attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
 {
   $$ = mk_node("Method", 7, $1, $2, $4, $5, $6, $7, $8);
@@ -649,7 +662,7 @@ impl_items
 ;
 
 impl_item
-: method
+: impl_method
 | item_macro
 | trait_type
 ;
@@ -669,6 +682,10 @@ fn_decl_with_self
 : fn_params_with_self ret_ty   { $$ = mk_node("FnDecl", 2, $1, $2); }
 ;
 
+fn_decl_with_self_allow_anon_params
+: fn_anon_params_with_self ret_ty   { $$ = mk_node("FnDecl", 2, $1, $2); }
+;
+
 fn_params
 : '(' maybe_params ')'  { $$ = $2; }
 ;
@@ -679,6 +696,13 @@ fn_anon_params
 ;
 
 fn_params_with_self
+: '(' maybe_mut SELF maybe_ty_ascription maybe_comma_params ')'              { $$ = mk_node("SelfValue", 3, $2, $4, $5); }
+| '(' '&' maybe_mut SELF maybe_ty_ascription maybe_comma_params ')'          { $$ = mk_node("SelfRegion", 3, $3, $5, $6); }
+| '(' '&' lifetime maybe_mut SELF maybe_ty_ascription maybe_comma_params ')' { $$ = mk_node("SelfRegion", 4, $3, $4, $6, $7); }
+| '(' maybe_params ')'                                                       { $$ = mk_node("SelfStatic", 1, $2); }
+;
+
+fn_anon_params_with_self
 : '(' maybe_mut SELF maybe_ty_ascription maybe_comma_anon_params ')'              { $$ = mk_node("SelfValue", 3, $2, $4, $5); }
 | '(' '&' maybe_mut SELF maybe_ty_ascription maybe_comma_anon_params ')'          { $$ = mk_node("SelfRegion", 3, $3, $5, $6); }
 | '(' '&' lifetime maybe_mut SELF maybe_ty_ascription maybe_comma_anon_params ')' { $$ = mk_node("SelfRegion", 4, $3, $4, $6, $7); }
@@ -713,6 +737,13 @@ maybe_unboxed_closure_kind
 : %empty
 | ':'
 | '&' maybe_mut ':'
+;
+
+maybe_comma_params
+: ','            { $$ = mk_none(); }
+| ',' params     { $$ = $2; }
+| ',' params ',' { $$ = $2; }
+| %empty         { $$ = mk_none(); }
 ;
 
 maybe_comma_anon_params
