@@ -389,10 +389,11 @@ pat_vec_elts
 ty
 : ty_prim
 | ty_closure
-| '<' ty_sum AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, $2, $4, $7); }
-| '(' ty_sums ')'                           { $$ = mk_node("TyTup", 1, $2); }
-| '(' ty_sums ',' ')'                       { $$ = mk_node("TyTup", 1, $2); }
-| '(' ')'                                   { $$ = mk_atom("TyNil"); }
+| '<' ty_sum AS trait_ref '>' MOD_SEP ident                                { $$ = mk_node("TyQualifiedPath", 3, $2, $4, $7); }
+| SHL ty_sum AS trait_ref '>' MOD_SEP ident AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, mk_node("TyQualifiedPath", 3, $2, $4, $7), $9, $12); }
+| '(' ty_sums ')'                                                          { $$ = mk_node("TyTup", 1, $2); }
+| '(' ty_sums ',' ')'                                                      { $$ = mk_node("TyTup", 1, $2); }
+| '(' ')'                                                                  { $$ = mk_atom("TyNil"); }
 ;
 
 ty_prim
