@@ -1,14 +1,12 @@
 # Rust Lexer and Parser
 
 This project is a lexer-parser combination capable of parsing Rust
-code, circa 0.10ish. The purpose is to create a testable LL(1) grammar
-specification for rust issue #2234. It contains a lexer specification
-for flex and a grammar specification for
-[LLnextgen](http://os.ghalkes.nl/LLnextgen/), and together they work
-to gether to create a parser for Rust code. There is also a LALR(1)
-parser written for the [GNU
-Bison](https://www.gnu.org/software/bison/) tool, as an alternative
-specification for the grammar.
+code for Rust 1.0 (currently in alpha). The purpose is to create a
+testable LALR grammar specification for rust issue #2234. It contains
+a lexer specification for flex and a grammar specification for [GNU
+Bison](https://www.gnu.org/software/bison/), and together they work
+together to create a parser for Rust code. The parser should be able
+to accept all programs accepted by `rustc -Z parse-only`.
 
 ## Lexer
 
@@ -20,46 +18,62 @@ tokens like '+' return the ordinal number for that character. All
 other tokens return a Token value defined in `rust_tokens.h`. The
 lexer returns 0 on EOF, and -1 if it encounters an error.
 
-### Notes
+## Parser
 
-The lexer has a few notable differences from the real rust lexer:
+The grammar for the parser is specified in `parser-lalr.y`. The
+grammar specification is divided into five parts:
 
-* No unicode support
-* No doc comment support. Doc comments are parsed the same as regular
-  comments.
-* No raw string literals. The syntax for raw strings cannot be parsed
-  by regular expressions.
+1. Items and attributes (top level stuff)
+2. Patterns
+3. Types
+4. Blocks, statements, and expressions
+5. Macros and misc. rules
 
-## LL(1) (LLnextgen) Parser
-
-The grammar for the LL(1) parser is specified in `parser.g`. The
-`%token`s defined at the top must match the list in `rust_tokens.h` in
-order for the lexer and parser to work together. The grammar is
-organized to match the layout in the [Rust Reference
-Manual](http://static.rust-lang.org/doc/master/rust.html). The rules
-are primarily based off of the rustc parser's rules, so the names
-generally correspond with with `parse_*` functions in rustc's
-`parser.rs`. Note that the grammar intentionally omits obsolete
-syntax.
-
-## LALR(1) (bison) Parser
-
-The grammar for the LALR(1) parser is specified in `parser-lalr.y`. In
-addition to being a recognizer for Rust, the parser from this grammar
-also builds an AST in an s-expression format and prints it stdout.
+In addition to being a recognizer for Rust, the parser from this
+grammar also builds an AST in an s-expression format and prints it
+stdout.
 
 ## Building
 
-This comes with a Makefile, so assuming you have both flex and
-LLnextgen installed, you should be able to run `make` to build the
-lexer and parser. A standalone lexer is produced as the `lexer`
-executable, and the parser is `parser`.
+A makefile is provided and building is handled by running
+`make`. Building requires flex 2.5.35 or later, and bison 3.0.2 or
+later to both be installed.
+
+On OS X, the Xcode toolchain provides an older version of bison
+(2.3). This will not work with the grammar in this project, so you
+will have to download and install version 3.0.2.
+
+Building of rlex and rparse do not (yet) support cargo, use make or
+just invoke directly with rustc.
 
 ## Testing
 
-The 'make check' target runs the test script which runs the parsers
-with the files in the test directory. Currently all the test files are
-supposed to successfully parse.
+Two scripts are provided for testing the parser or just the lexer.
+
+* verify-lexer.py
+
+Should be invoked like `./verify-lexer.py ./lexer ./rlex /path/to/rust/source/files`
+
+It will run both lexers on all *.rs files and compare the output of
+./lexer to ./rlex. If the lexing output is different, the file will be
+listed in lexer.bad at the end of the run.
+
+* testparser.py 
+
+Should be invoked like `./testparser.py -p ./parser-lalr -s /path/to/rust/source/files
+
+You can have it test multiple rust parsers with multiple args after
+the -p option.
+
+It will run the parser on all *.rs files in the directory
+specified. Files that fail to parse are signified by the parser
+returning nonzero exit status, and all files that fail to parse will
+be listed in parser-lalr.bad.
+
+Note that both tools are designed around testing the official rust
+sources, but should work with any directories containing valid rust
+code. They are hard-coded to ignore files in the "compile-fail"
+directory.
 
 ## Other tools
 
@@ -70,22 +84,17 @@ supposed to successfully parse.
 * rparse: This tool reads rust code from stdin and uses rustc's parser
   to print the AST to stdout in either s-expression or JSON format.
 
-## Further work
+## Caveats
 
-This parser is far from complete. Here are some major features still
-missing:
+* The s-expression output from parser-lalr is not a complete or
+  accurate representation of the AST that rustc creates when it
+  parses, rather, it's just an approximation, so it's not meant to be
+  diffed with rparse's output.
 
-* Ambiguities. They are noted in the code. Some may be resolved from
-  refactoring or completing the grammar.
+* Unicode is supported poorly, the lexer just happily accepts bytes
+  where the msb is 1 wherever unicode is accepted, which means it can
+  accept invalid UTF-8 sequences.
 
-* Unicode support
-
-* As the language is constantly changing, the grammar and tools can
-  fall out of date. This project strives to work with the current
-  state of rust master.
-
-## Credits
-
-Authored by Brian Leibig and Peter Green. Many parts of the grammar
-are based off of John Clements's [rust-antlr
-grammar](https://github.com/jbclements/rust-antlr).
+* A goal for this project is not to support obsolete syntax.  Given
+  the many syntax changes to rust over the past months, it's possible
+  that support for some obsolete syntax may still be lingering around.

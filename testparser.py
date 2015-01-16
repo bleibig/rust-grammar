@@ -16,9 +16,6 @@ parser.add_argument('-p', '--parser', nargs='+')
 parser.add_argument('-s', '--source-dir', nargs=1, required=True)
 args = parser.parse_args(sys.argv[1:])
 
-# flex dies on multibyte characters
-BLACKLIST = ['libstd/str.rs', 'libstd/strbuf.rs', 'libstd/ascii.rs']
-
 total = 0
 ok = {}
 bad = {}
@@ -31,7 +28,7 @@ print "\n"
 for base, dirs, files in os.walk(args.source_dir[0]):
     for f in filter(lambda p: p.endswith('.rs'), files):
         p = os.path.join(base, f)
-        if any([p.endswith(b) for b in BLACKLIST]):
+        if 'compile-fail' in p:
             continue
         total += 1
         for parser in args.parser:
