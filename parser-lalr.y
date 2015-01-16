@@ -173,6 +173,10 @@ extern char *yytext;
 
 %%
 
+////////////////////////////////////////////////////////////////////////
+// Part 1: Items and attributes
+////////////////////////////////////////////////////////////////////////
+
 crate
 : maybe_shebang inner_attrs maybe_mod_items  { mk_node("crate", 2, $2, $3); }
 | maybe_shebang maybe_mod_items  { mk_node("crate", 1, $2); }
@@ -263,6 +267,15 @@ stmt_item
 | use_item
 ;
 
+item_static
+: STATIC ident ':' ty '=' expr ';'  { $$ = mk_node("ItemStatic", 3, $2, $4, $6); }
+| STATIC MUT ident ':' ty '=' expr ';'  { $$ = mk_node("ItemStatic", 3, $3, $5, $7); }
+;
+
+item_const
+: CONST ident ':' ty '=' expr ';'  { $$ = mk_node("ItemConst", 3, $2, $4, $6); }
+;
+
 item_macro
 : path_expr '!' maybe_ident parens_delimited_token_trees ';'
 | path_expr '!' maybe_ident braces_delimited_token_trees
@@ -314,159 +327,73 @@ maybe_init_expr
 | %empty   { $$ = mk_none(); }
 ;
 
-pats_or
-: pat              { $$ = mk_node("Pats", 1, $1); }
-| pats_or '|' pat  { $$ = ext_node($1, 1, $3); }
+// structs
+item_struct
+: STRUCT ident generic_params maybe_where_clause struct_decl_args
+{
+  $$ = mk_node("ItemStruct", 4, $2, $3, $4, $5);
+}
+| STRUCT ident generic_params struct_tuple_args maybe_where_clause ';'
+{
+  $$ = mk_node("ItemStruct", 4, $2, $3, $4, $5);
+}
+| STRUCT ident generic_params maybe_where_clause ';'
+{
+  $$ = mk_node("ItemStruct", 3, $2, $3, $4);
+}
 ;
 
-pat
-: UNDERSCORE                                      { $$ = mk_atom("PatWild"); }
-| '&' pat                                         { $$ = mk_node("PatRegion", 1, $2); }
-| '&' MUT pat                                     { $$ = mk_node("PatRegion", 1, $3); }
-| ANDAND pat                                      { $$ = mk_node("PatRegion", 1, mk_node("PatRegion", 1, $2)); }
-| '(' ')'                                         { $$ = mk_atom("PatUnit"); }
-| '(' pat_tup ')'                                 { $$ = mk_node("PatTup", 1, $2); }
-| '(' pat_tup ',' ')'                             { $$ = mk_node("PatTup", 1, $2); }
-| '[' pat_vec ']'                                 { $$ = mk_node("PatVec", 1, $2); }
-| lit_or_path
-| lit_or_path DOTDOTDOT lit_or_path               { $$ = mk_node("PatRange", 2, $1, $3); }
-| path_expr '{' pat_struct '}'                    { $$ = mk_node("PatStruct", 2, $1, $3); }
-| path_expr '(' DOTDOT ')'                        { $$ = mk_node("PatEnum", 1, $1); }
-| path_expr '(' pat_tup ')'                       { $$ = mk_node("PatEnum", 2, $1, $3); }
-| path_expr '!' maybe_ident delimited_token_trees { $$ = mk_node("PatMac", 3, $1, $3, $4); }
-| binding_mode ident                              { $$ = mk_node("PatIdent", 2, $1, $2); }
-|              ident '@' pat                      { $$ = mk_node("PatIdent", 3, mk_node("BindByValue", 1, mk_atom("MutImmutable")), $1, $3); }
-| binding_mode ident '@' pat                      { $$ = mk_node("PatIdent", 3, $1, $2, $4); }
-| BOX pat                                         { $$ = mk_node("PatUniq", 1, $2); }
+struct_decl_args
+: '{' struct_decl_fields '}'                  { $$ = $2; }
+| '{' struct_decl_fields ',' '}'              { $$ = $2; }
 ;
 
-binding_mode
-: REF         { $$ = mk_node("BindByRef", 1, mk_atom("MutImmutable")); }
-| REF MUT     { $$ = mk_node("BindByRef", 1, mk_atom("MutMutable")); }
-| MUT         { $$ = mk_node("BindByValue", 1, mk_atom("MutMutable")); }
+struct_tuple_args
+: '(' struct_tuple_fields ')'                 { $$ = $2; }
+| '(' struct_tuple_fields ',' ')'             { $$ = $2; }
 ;
 
-lit_or_path
-: path_expr    { $$ = mk_node("PatLit", 1, $1); }
-| lit          { $$ = mk_node("PatLit", 1, $1); }
-| '-' lit      { $$ = mk_node("PatLit", 1, $2); }
+struct_decl_fields
+: struct_decl_field                           { $$ = mk_node("StructFields", 1, $1); }
+| struct_decl_fields ',' struct_decl_field    { $$ = ext_node($1, 1, $3); }
+| %empty                                      { $$ = mk_none(); }
 ;
 
-pat_field
-:              ident            { $$ = mk_node("PatField", 1, $1); }
-| binding_mode ident            { $$ = mk_node("PatField", 2, $1, $2); }
-|              ident ':' pat    { $$ = mk_node("PatField", 2, $1, $3); }
-| binding_mode ident ':' pat    { $$ = mk_node("PatField", 3, $1, $2, $4); }
+struct_decl_field
+: attrs_and_vis ident ':' ty_sum              { $$ = mk_node("StructField", 3, $1, $2, $4); }
 ;
 
-pat_fields
-: pat_field                  { $$ = mk_node("PatFields", 1, $1); }
-| pat_fields ',' pat_field   { $$ = ext_node($1, 1, $3); }
+struct_tuple_fields
+: struct_tuple_field                          { $$ = mk_node("StructFields", 1, $1); }
+| struct_tuple_fields ',' struct_tuple_field  { $$ = ext_node($1, 1, $3); }
 ;
 
-pat_struct
-: pat_fields                 { $$ = mk_node("PatStruct", 2, $1, mk_atom("false")); }
-| pat_fields ','             { $$ = mk_node("PatStruct", 2, $1, mk_atom("false")); }
-| pat_fields ',' DOTDOT      { $$ = mk_node("PatStruct", 2, $1, mk_atom("true")); }
-| DOTDOT                     { $$ = mk_node("PatStruct", 1, mk_atom("true")); }
+struct_tuple_field
+: maybe_outer_attrs ty_sum                    { $$ = mk_node("StructField", 2, $1, $2); }
 ;
 
-pat_tup
-: pat               { $$ = mk_node("pat_tup", 1, $1); }
-| pat_tup ',' pat   { $$ = ext_node($1, 1, $3); }
+// enums
+item_enum
+: ENUM ident generic_params maybe_where_clause '{' enum_defs '}'     { $$ = mk_node("ItemEnum", 0); }
+| ENUM ident generic_params maybe_where_clause '{' enum_defs ',' '}' { $$ = mk_node("ItemEnum", 0); }
 ;
 
-pat_vec
-: pat_vec_elts                                  { $$ = mk_node("PatVec", 2, $1, mk_none()); }
-| pat_vec_elts                             ','  { $$ = mk_node("PatVec", 2, $1, mk_none()); }
-| pat_vec_elts     DOTDOT                       { $$ = mk_node("PatVec", 2, $1, mk_none()); }
-| pat_vec_elts ',' DOTDOT                       { $$ = mk_node("PatVec", 2, $1, mk_none()); }
-| pat_vec_elts     DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, $1, $4); }
-| pat_vec_elts     DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, $1, $4); }
-| pat_vec_elts ',' DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, $1, $5); }
-| pat_vec_elts ',' DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, $1, $5); }
-|                  DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, mk_none(), $3); }
-|                  DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, mk_none(), $3); }
-|                  DOTDOT                       { $$ = mk_node("PatVec", 2, mk_none(), mk_none()); }
-| %empty                                        { $$ = mk_node("PatVec", 2, mk_none(), mk_none()); }
+enum_defs
+: enum_def
+| enum_defs ',' enum_def
+| %empty { $$ = mk_none(); }
 ;
 
-pat_vec_elts
-: pat                    { $$ = mk_node("PatVecElts", 1, $1); }
-| pat_vec_elts ',' pat   { $$ = ext_node($1, 1, $3); }
+enum_def
+: attrs_and_vis ident enum_args
 ;
 
-ty
-: ty_prim
-| ty_closure
-| '<' ty_sum AS trait_ref '>' MOD_SEP ident                                { $$ = mk_node("TyQualifiedPath", 3, $2, $4, $7); }
-| SHL ty_sum AS trait_ref '>' MOD_SEP ident AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, mk_node("TyQualifiedPath", 3, $2, $4, $7), $9, $12); }
-| '(' ty_sums ')'                                                          { $$ = mk_node("TyTup", 1, $2); }
-| '(' ty_sums ',' ')'                                                      { $$ = mk_node("TyTup", 1, $2); }
-| '(' ')'                                                                  { $$ = mk_atom("TyNil"); }
-;
-
-ty_prim
-: %prec IDENT path_generic_args_without_colons         { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
-| %prec IDENT MOD_SEP path_generic_args_without_colons { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
-| BOX ty                                   { $$ = mk_node("TyBox", 1, $2); }
-| '*' maybe_mut_or_const ty                { $$ = mk_node("TyPtr", 2, $2, $3); }
-| '&' maybe_mut ty                         { $$ = mk_node("TyRptr", 2, $2, $3); }
-| ANDAND maybe_mut ty                      { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, $2, $3)); }
-| '&' lifetime maybe_mut ty                { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
-| ANDAND lifetime maybe_mut ty             { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 3, $2, $3, $4)); }
-| '[' ty ']'                               { $$ = mk_node("TyVec", 1, $2); }
-| '[' ty ',' DOTDOT expr ']'               { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
-| '[' ty ';' expr ']'                      { $$ = mk_node("TyFixedLengthVec", 2, $2, $4); }
-| TYPEOF '(' expr ')'                      { $$ = mk_node("TyTypeof", 1, $3); }
-| UNDERSCORE                               { $$ = mk_atom("TyInfer"); }
-| ty_bare_fn
-| ty_proc
-| for_in_type
-;
-
-ty_bare_fn
-:                         FN ty_fn_decl { $$ = $2; }
-| UNSAFE                  FN ty_fn_decl { $$ = $3; }
-|        EXTERN maybe_abi FN ty_fn_decl { $$ = $4; }
-| UNSAFE EXTERN maybe_abi FN ty_fn_decl { $$ = $5; }
-;
-
-ty_fn_decl
-: generic_params fn_anon_params ret_ty
-;
-
-ty_closure
-: UNSAFE '|' anon_params '|' maybe_bounds ret_ty { $$ = mk_node("TyClosure", 3, $3, $5, $6); }
-|        '|' anon_params '|' maybe_bounds ret_ty { $$ = mk_node("TyClosure", 3, $2, $4, $5); }
-| UNSAFE OROR maybe_bounds ret_ty                { $$ = mk_node("TyClosure", 2, $3, $4); }
-|        OROR maybe_bounds ret_ty                { $$ = mk_node("TyClosure", 2, $2, $3); }
-;
-
-ty_proc
-: PROC generic_params fn_params maybe_bounds ret_ty { $$ = mk_node("TyProc", 4, $2, $3, $4, $5); }
-;
-
-for_in_type
-: FOR '<' maybe_lifetimes '>' for_in_type_suffix { $$ = mk_node("ForInType", 2, $3, $5); }
-;
-
-for_in_type_suffix
-: ty_proc
-| ty_bare_fn
-| trait_ref
-| ty_closure
-;
-
-maybe_mut
-: MUT              { $$ = mk_atom("MutMutable"); }
-| %prec MUT %empty { $$ = mk_atom("MutImmutable"); }
-;
-
-maybe_mut_or_const
-: MUT    { $$ = mk_atom("MutMutable"); }
-| CONST  { $$ = mk_atom("MutImmutable"); }
-| %empty { $$ = mk_atom("MutImmutable"); }
+enum_args
+: '{' struct_decl_fields '}'
+| '{' struct_decl_fields ',' '}'
+| '(' maybe_ty_sums ')'
+| '=' expr
+| %empty { $$ = mk_none(); }
 ;
 
 item_mod
@@ -634,7 +561,7 @@ impl_method
 // impl (<...>)? TRAIT for TY { ... }
 //
 // Unfortunately since TY can begin with '<' itself -- as part of a
-// closure type -- there's an s/r conflict when we see '<' after IMPL:
+// TyQualifiedPath type -- there's an s/r conflict when we see '<' after IMPL:
 // should we reduce one of the early rules of TY (such as maybe_once)
 // or shall we continue shifting into the generic_params list for the
 // impl?
@@ -682,6 +609,17 @@ item_fn
 : FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
 {
   $$ = mk_node("ItemFn", 5, $2, $3, $4, $5, $6);
+}
+;
+
+item_unsafe_fn
+: UNSAFE FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("ItemUnsafeFn", 5, $3, $4, $5, $6, $7);
+}
+| UNSAFE EXTERN maybe_abi FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("ItemUnsafeFn", 6, $3, $5, $6, $7, $8, $9);
 }
 ;
 
@@ -775,6 +713,8 @@ anon_params
 | anon_params ',' anon_param { $$ = ext_node($1, 1, $3); }
 ;
 
+// anon means it's allowed to be anonymous (type-only), but it can
+// still have a name
 anon_param
 : plain_ident_or_underscore ':' ty   { $$ = mk_node("Arg", 2, $1, $3); }
 | ty
@@ -839,17 +779,6 @@ ty_params
 | ty_params ',' ty_param
 ;
 
-item_unsafe_fn
-: UNSAFE FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
-{
-  $$ = mk_node("ItemUnsafeFn", 5, $3, $4, $5, $6, $7);
-}
-| UNSAFE EXTERN maybe_abi FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
-{
-  $$ = mk_node("ItemUnsafeFn", 6, $3, $5, $6, $7, $8, $9);
-}
-;
-
 // A path with no type parameters; e.g. `foo::bar::Baz`
 //
 // These show up in 'use' view-items, because these are processed
@@ -888,17 +817,6 @@ path_generic_args_without_colons
   path_generic_args_without_colons MOD_SEP ident '(' maybe_ty_sums ')' ret_ty { $$ = ext_node($1, 2, $3, $5); }
 ;
 
-// A path with a lifetime and type parameters with double colons before
-// the type parameters; e.g. `foo::bar::<'a>::Baz::<T>`
-//
-// These show up in expr context, in order to disambiguate from "less-than"
-// expressions.
-path_generic_args_with_colons
-: ident  { $$ = mk_node("components", 1, $1); }
-| path_generic_args_with_colons MOD_SEP ident { $$ = ext_node($1, 1, $3); }
-| path_generic_args_with_colons MOD_SEP generic_args { $$ = ext_node($1, 1, $3); }
-;
-
 generic_args
 : '<' generic_values '>'   { $$ = $2; }
 | '<' generic_values SHR   { push_back('>'); $$ = $2; }
@@ -932,6 +850,169 @@ maybe_bindings
 | %empty       { $$ = mk_none(); }
 ;
 
+////////////////////////////////////////////////////////////////////////
+// Part 2: Patterns
+////////////////////////////////////////////////////////////////////////
+
+pat
+: UNDERSCORE                                      { $$ = mk_atom("PatWild"); }
+| '&' pat                                         { $$ = mk_node("PatRegion", 1, $2); }
+| '&' MUT pat                                     { $$ = mk_node("PatRegion", 1, $3); }
+| ANDAND pat                                      { $$ = mk_node("PatRegion", 1, mk_node("PatRegion", 1, $2)); }
+| '(' ')'                                         { $$ = mk_atom("PatUnit"); }
+| '(' pat_tup ')'                                 { $$ = mk_node("PatTup", 1, $2); }
+| '(' pat_tup ',' ')'                             { $$ = mk_node("PatTup", 1, $2); }
+| '[' pat_vec ']'                                 { $$ = mk_node("PatVec", 1, $2); }
+| lit_or_path
+| lit_or_path DOTDOTDOT lit_or_path               { $$ = mk_node("PatRange", 2, $1, $3); }
+| path_expr '{' pat_struct '}'                    { $$ = mk_node("PatStruct", 2, $1, $3); }
+| path_expr '(' DOTDOT ')'                        { $$ = mk_node("PatEnum", 1, $1); }
+| path_expr '(' pat_tup ')'                       { $$ = mk_node("PatEnum", 2, $1, $3); }
+| path_expr '!' maybe_ident delimited_token_trees { $$ = mk_node("PatMac", 3, $1, $3, $4); }
+| binding_mode ident                              { $$ = mk_node("PatIdent", 2, $1, $2); }
+|              ident '@' pat                      { $$ = mk_node("PatIdent", 3, mk_node("BindByValue", 1, mk_atom("MutImmutable")), $1, $3); }
+| binding_mode ident '@' pat                      { $$ = mk_node("PatIdent", 3, $1, $2, $4); }
+| BOX pat                                         { $$ = mk_node("PatUniq", 1, $2); }
+;
+
+pats_or
+: pat              { $$ = mk_node("Pats", 1, $1); }
+| pats_or '|' pat  { $$ = ext_node($1, 1, $3); }
+;
+
+binding_mode
+: REF         { $$ = mk_node("BindByRef", 1, mk_atom("MutImmutable")); }
+| REF MUT     { $$ = mk_node("BindByRef", 1, mk_atom("MutMutable")); }
+| MUT         { $$ = mk_node("BindByValue", 1, mk_atom("MutMutable")); }
+;
+
+lit_or_path
+: path_expr    { $$ = mk_node("PatLit", 1, $1); }
+| lit          { $$ = mk_node("PatLit", 1, $1); }
+| '-' lit      { $$ = mk_node("PatLit", 1, $2); }
+;
+
+pat_field
+:              ident            { $$ = mk_node("PatField", 1, $1); }
+| binding_mode ident            { $$ = mk_node("PatField", 2, $1, $2); }
+|              ident ':' pat    { $$ = mk_node("PatField", 2, $1, $3); }
+| binding_mode ident ':' pat    { $$ = mk_node("PatField", 3, $1, $2, $4); }
+;
+
+pat_fields
+: pat_field                  { $$ = mk_node("PatFields", 1, $1); }
+| pat_fields ',' pat_field   { $$ = ext_node($1, 1, $3); }
+;
+
+pat_struct
+: pat_fields                 { $$ = mk_node("PatStruct", 2, $1, mk_atom("false")); }
+| pat_fields ','             { $$ = mk_node("PatStruct", 2, $1, mk_atom("false")); }
+| pat_fields ',' DOTDOT      { $$ = mk_node("PatStruct", 2, $1, mk_atom("true")); }
+| DOTDOT                     { $$ = mk_node("PatStruct", 1, mk_atom("true")); }
+;
+
+pat_tup
+: pat               { $$ = mk_node("pat_tup", 1, $1); }
+| pat_tup ',' pat   { $$ = ext_node($1, 1, $3); }
+;
+
+pat_vec
+: pat_vec_elts                                  { $$ = mk_node("PatVec", 2, $1, mk_none()); }
+| pat_vec_elts                             ','  { $$ = mk_node("PatVec", 2, $1, mk_none()); }
+| pat_vec_elts     DOTDOT                       { $$ = mk_node("PatVec", 2, $1, mk_none()); }
+| pat_vec_elts ',' DOTDOT                       { $$ = mk_node("PatVec", 2, $1, mk_none()); }
+| pat_vec_elts     DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, $1, $4); }
+| pat_vec_elts     DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, $1, $4); }
+| pat_vec_elts ',' DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, $1, $5); }
+| pat_vec_elts ',' DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, $1, $5); }
+|                  DOTDOT ',' pat_vec_elts      { $$ = mk_node("PatVec", 2, mk_none(), $3); }
+|                  DOTDOT ',' pat_vec_elts ','  { $$ = mk_node("PatVec", 2, mk_none(), $3); }
+|                  DOTDOT                       { $$ = mk_node("PatVec", 2, mk_none(), mk_none()); }
+| %empty                                        { $$ = mk_node("PatVec", 2, mk_none(), mk_none()); }
+;
+
+pat_vec_elts
+: pat                    { $$ = mk_node("PatVecElts", 1, $1); }
+| pat_vec_elts ',' pat   { $$ = ext_node($1, 1, $3); }
+;
+
+////////////////////////////////////////////////////////////////////////
+// Part 3: Types
+////////////////////////////////////////////////////////////////////////
+
+ty
+: ty_prim
+| ty_closure
+| '<' ty_sum AS trait_ref '>' MOD_SEP ident                                { $$ = mk_node("TyQualifiedPath", 3, $2, $4, $7); }
+| SHL ty_sum AS trait_ref '>' MOD_SEP ident AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, mk_node("TyQualifiedPath", 3, $2, $4, $7), $9, $12); }
+| '(' ty_sums ')'                                                          { $$ = mk_node("TyTup", 1, $2); }
+| '(' ty_sums ',' ')'                                                      { $$ = mk_node("TyTup", 1, $2); }
+| '(' ')'                                                                  { $$ = mk_atom("TyNil"); }
+;
+
+ty_prim
+: %prec IDENT path_generic_args_without_colons         { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
+| %prec IDENT MOD_SEP path_generic_args_without_colons { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
+| BOX ty                                               { $$ = mk_node("TyBox", 1, $2); }
+| '*' maybe_mut_or_const ty                            { $$ = mk_node("TyPtr", 2, $2, $3); }
+| '&' maybe_mut ty                                     { $$ = mk_node("TyRptr", 2, $2, $3); }
+| ANDAND maybe_mut ty                                  { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, $2, $3)); }
+| '&' lifetime maybe_mut ty                            { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
+| ANDAND lifetime maybe_mut ty                         { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 3, $2, $3, $4)); }
+| '[' ty ']'                                           { $$ = mk_node("TyVec", 1, $2); }
+| '[' ty ',' DOTDOT expr ']'                           { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
+| '[' ty ';' expr ']'                                  { $$ = mk_node("TyFixedLengthVec", 2, $2, $4); }
+| TYPEOF '(' expr ')'                                  { $$ = mk_node("TyTypeof", 1, $3); }
+| UNDERSCORE                                           { $$ = mk_atom("TyInfer"); }
+| ty_bare_fn
+| ty_proc
+| for_in_type
+;
+
+ty_bare_fn
+:                         FN ty_fn_decl { $$ = $2; }
+| UNSAFE                  FN ty_fn_decl { $$ = $3; }
+|        EXTERN maybe_abi FN ty_fn_decl { $$ = $4; }
+| UNSAFE EXTERN maybe_abi FN ty_fn_decl { $$ = $5; }
+;
+
+ty_fn_decl
+: generic_params fn_anon_params ret_ty
+;
+
+ty_closure
+: UNSAFE '|' anon_params '|' maybe_bounds ret_ty { $$ = mk_node("TyClosure", 3, $3, $5, $6); }
+|        '|' anon_params '|' maybe_bounds ret_ty { $$ = mk_node("TyClosure", 3, $2, $4, $5); }
+| UNSAFE OROR maybe_bounds ret_ty                { $$ = mk_node("TyClosure", 2, $3, $4); }
+|        OROR maybe_bounds ret_ty                { $$ = mk_node("TyClosure", 2, $2, $3); }
+;
+
+ty_proc
+: PROC generic_params fn_params maybe_bounds ret_ty { $$ = mk_node("TyProc", 4, $2, $3, $4, $5); }
+;
+
+for_in_type
+: FOR '<' maybe_lifetimes '>' for_in_type_suffix { $$ = mk_node("ForInType", 2, $3, $5); }
+;
+
+for_in_type_suffix
+: ty_proc
+| ty_bare_fn
+| trait_ref
+| ty_closure
+;
+
+maybe_mut
+: MUT              { $$ = mk_atom("MutMutable"); }
+| %prec MUT %empty { $$ = mk_atom("MutImmutable"); }
+;
+
+maybe_mut_or_const
+: MUT    { $$ = mk_atom("MutMutable"); }
+| CONST  { $$ = mk_atom("MutImmutable"); }
+| %empty { $$ = mk_atom("MutImmutable"); }
+;
+
 ty_qualified_path_and_generic_values
 : ty_qualified_path maybe_bindings
 {
@@ -943,7 +1024,7 @@ ty_qualified_path_and_generic_values
 ;
 
 ty_qualified_path
-: ty_sum AS trait_ref '>' MOD_SEP ident { $$ = mk_node("TyQualifiedPath", 3, $1, $3, $6); }
+: ty_sum AS trait_ref '>' MOD_SEP ident                     { $$ = mk_node("TyQualifiedPath", 3, $1, $3, $6); }
 | ty_sum AS trait_ref '>' MOD_SEP ident '+' ty_param_bounds { $$ = mk_node("TyQualifiedPath", 3, $1, $3, $6); }
 ;
 
@@ -1061,78 +1142,9 @@ trait_ref
 | %prec IDENT MOD_SEP path_generic_args_without_colons { $$ = $2; }
 ;
 
-// structs
-item_struct
-: STRUCT ident generic_params maybe_where_clause struct_decl_args
-{
-  $$ = mk_node("ItemStruct", 4, $2, $3, $4, $5);
-}
-| STRUCT ident generic_params struct_tuple_args maybe_where_clause ';'
-{
-  $$ = mk_node("ItemStruct", 4, $2, $3, $4, $5);
-}
-| STRUCT ident generic_params maybe_where_clause ';'
-{
-  $$ = mk_node("ItemStruct", 3, $2, $3, $4);
-}
-;
-
-struct_decl_args
-: '{' struct_decl_fields '}'                  { $$ = $2; }
-| '{' struct_decl_fields ',' '}'              { $$ = $2; }
-;
-
-struct_tuple_args
-: '(' struct_tuple_fields ')'                 { $$ = $2; }
-| '(' struct_tuple_fields ',' ')'             { $$ = $2; }
-;
-
-struct_decl_fields
-: struct_decl_field                           { $$ = mk_node("StructFields", 1, $1); }
-| struct_decl_fields ',' struct_decl_field    { $$ = ext_node($1, 1, $3); }
-| %empty                                      { $$ = mk_none(); }
-;
-
-struct_decl_field
-: attrs_and_vis ident ':' ty_sum              { $$ = mk_node("StructField", 3, $1, $2, $4); }
-;
-
-struct_tuple_fields
-: struct_tuple_field                          { $$ = mk_node("StructFields", 1, $1); }
-| struct_tuple_fields ',' struct_tuple_field  { $$ = ext_node($1, 1, $3); }
-;
-
-struct_tuple_field
-: maybe_outer_attrs ty_sum                    { $$ = mk_node("StructField", 2, $1, $2); }
-;
-
-// enums
-item_enum
-: ENUM ident generic_params maybe_where_clause '{' enum_defs '}'     { $$ = mk_node("ItemEnum", 0); }
-| ENUM ident generic_params maybe_where_clause '{' enum_defs ',' '}' { $$ = mk_node("ItemEnum", 0); }
-;
-
-enum_defs
-: enum_def
-| enum_defs ',' enum_def
-| %empty { $$ = mk_none(); }
-;
-
-enum_def
-: attrs_and_vis ident enum_args
-;
-
-enum_args
-: '{' struct_decl_fields '}'
-| '{' struct_decl_fields ',' '}'
-| '(' maybe_ty_sums ')'
-| '=' expr
-| %empty { $$ = mk_none(); }
-;
-
-///////////////////////////////////////////////////////////////////////
-//////////// dynamic part: statements, expressions, values ////////////
-///////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+// Part 4: Blocks, statements, and expressions
+////////////////////////////////////////////////////////////////////////
 
 inner_attrs_and_block
 : '{' maybe_inner_attrs maybe_stmts '}'        { $$ = $3; }
@@ -1217,6 +1229,17 @@ path_expr
 : path_generic_args_with_colons
 | MOD_SEP path_generic_args_with_colons  { $$ = $2; }
 | SELF MOD_SEP path_generic_args_with_colons { $$ = mk_node("SelfPath", 1, $3); }
+;
+
+// A path with a lifetime and type parameters with double colons before
+// the type parameters; e.g. `foo::bar::<'a>::Baz::<T>`
+//
+// These show up in expr context, in order to disambiguate from "less-than"
+// expressions.
+path_generic_args_with_colons
+: ident  { $$ = mk_node("components", 1, $1); }
+| path_generic_args_with_colons MOD_SEP ident { $$ = ext_node($1, 1, $3); }
+| path_generic_args_with_colons MOD_SEP generic_args { $$ = ext_node($1, 1, $3); }
 ;
 
 macro_expr
@@ -1621,8 +1644,8 @@ block_expr
 | expr_while_let
 | expr_loop
 | expr_for
-| UNSAFE block                               { $$ = mk_node("UnsafeBlock", 1, $2); }
-| path_expr '!' maybe_ident braces_delimited_token_trees
+| UNSAFE block                                           { $$ = mk_node("UnsafeBlock", 1, $2); }
+| path_expr '!' maybe_ident braces_delimited_token_trees { $$ = mk_node("Macro", 3, $1, $3, $4); }
 ;
 
 expr_match
@@ -1698,14 +1721,9 @@ let
 : LET pat maybe_ty_ascription maybe_init_expr ';' { $$ = mk_node("DeclLocal", 3, $2, $3, $4); }
 ;
 
-item_static
-: STATIC ident ':' ty '=' expr ';'  { $$ = mk_node("ItemStatic", 3, $2, $4, $6); }
-| STATIC MUT ident ':' ty '=' expr ';'  { $$ = mk_node("ItemStatic", 3, $3, $5, $7); }
-;
-
-item_const
-: CONST ident ':' ty '=' expr ';'  { $$ = mk_node("ItemConst", 3, $2, $4, $6); }
-;
+////////////////////////////////////////////////////////////////////////
+// Part 5: Macros and misc. rules
+////////////////////////////////////////////////////////////////////////
 
 lit
 : LIT_BYTE                   { $$ = mk_node("LitByte", 1, mk_atom(yytext)); }
