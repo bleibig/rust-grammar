@@ -1,6 +1,0 @@
-#!/bin/sh
-
-# Wrapper for parser-ll which returns exit status equal to the number
-# of lines in the output (no lines = successful parse = exit status 0)
-
-exit $($(dirname $0)/parser-ll < /dev/stdin 2>&1 | wc -l)
