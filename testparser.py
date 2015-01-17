@@ -28,7 +28,10 @@ print "\n"
 for base, dirs, files in os.walk(args.source_dir[0]):
     for f in filter(lambda p: p.endswith('.rs'), files):
         p = os.path.join(base, f)
-        if 'compile-fail' in p:
+        compile_fail = 'compile-fail' in p
+        ignore = any('ignore-test' in line or 'ignore-lexer-test' in line
+                     for line in open(p).readlines())
+        if compile_fail or ignore:
             continue
         total += 1
         for parser in args.parser:

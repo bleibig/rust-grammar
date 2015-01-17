@@ -30,8 +30,12 @@ def compare(p):
 for base, dirs, files in os.walk(sys.argv[3]):
     for f in filter(lambda p: p.endswith('.rs'), files):
         p = os.path.join(base, f)
-        # compile-fail programs should be ignored
-        if "compile-fail" in p:
+        # compile-fail programs and should be ignored, as well as
+        # files that explicitly say they should be ignored.
+        compile_fail = 'compile-fail' in p
+        ignore = any('ignore-test' in line or 'ignore-lexer-test' in line
+                     for line in open(p).readlines())
+        if compile_fail or ignore:
             print("skipping {}".format(p))
             continue
         print("comparing {}".format(p))
