@@ -15,8 +15,8 @@ based off of how the rustc lexer works (defined in
 src/libsyntax/parse/lexer.rs). It creates a lexer function that reads
 from stdin and returns an int when it parses a token. Single-character
 tokens like '+' return the ordinal number for that character. All
-other tokens return a Token value defined in `rust_tokens.h`. The
-lexer returns 0 on EOF, and -1 if it encounters an error.
+other tokens return a Token value defined in `tokens.h`. The lexer
+returns 0 on EOF, and -1 if it encounters an error.
 
 ## Parser
 
@@ -29,9 +29,9 @@ grammar specification is divided into five parts:
 4. Blocks, statements, and expressions
 5. Macros and misc. rules
 
-In addition to being a recognizer for Rust, the parser from this
-grammar also builds an AST in an s-expression format and prints it
-stdout.
+Like the standalone lexer, it reads from stdin and outputs to
+stdout. In addition to being a recognizer for Rust, the parser from
+this grammar also builds and prints an AST in an s-expression format.
 
 ## Building
 
@@ -83,6 +83,22 @@ directory.
 
 * rparse: This tool reads rust code from stdin and uses rustc's parser
   to print the AST to stdout in either s-expression or JSON format.
+
+## Other files
+
+Brief rundown of the other files in this project:
+
+* `lexer_main.c`: Contains the main function for the standalone lexer
+
+* `parser-lalr-main.c`: Contains the main function and code for
+
+* creating and managing S-expressions, used by the grammar file.
+
+* `tokens.c`: Contains the `print_token` function used by
+  `lexer_main.c` to generate its output.
+
+* `tokens.h`: Defines a big enum for all the rust tokens wider than a
+  single character.
 
 ## Caveats
 
