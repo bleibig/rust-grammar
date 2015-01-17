@@ -264,6 +264,7 @@ stmt_item
 | item_type
 | block_item
 | use_item
+| extern_fn_item
 ;
 
 item_static
@@ -283,10 +284,14 @@ item_macro
 
 view_item
 : use_item
+| extern_fn_item
 | EXTERN CRATE ident ';'                      { $$ = mk_node("ViewItemExternCrate", 1, $3); }
 | EXTERN CRATE ident '=' str ';'              { $$ = mk_node("ViewItemExternCrate", 2, $3, $5); }
 | EXTERN CRATE str AS ident ';'               { $$ = mk_node("ViewItemExternCrate", 2, $3, $5); }
-| EXTERN maybe_abi item_fn                    { $$ = mk_node("ViewItemExternFn", 2, $2, $3); }
+;
+
+extern_fn_item
+: EXTERN maybe_abi item_fn                    { $$ = mk_node("ViewItemExternFn", 2, $2, $3); }
 ;
 
 use_item
@@ -1189,7 +1194,7 @@ stmt
 |             PUB stmt_item { $$ = $2; }
 | outer_attrs     stmt_item { $$ = $2; }
 | outer_attrs PUB stmt_item { $$ = $3; }
-| block_expr
+| full_block_expr
 | block
 | nonblock_expr ';'
 | ';'                   { $$ = mk_none(); }
@@ -1634,6 +1639,12 @@ block_expr
 | path_expr '!' maybe_ident braces_delimited_token_trees { $$ = mk_node("Macro", 3, $1, $3, $4); }
 ;
 
+full_block_expr
+: block_expr
+| full_block_expr '.' path_generic_args_with_colons { $$ = mk_node("ExprField", 2, $1, $3); }
+| full_block_expr '.' LIT_INTEGER                   { $$ = mk_node("ExprTupleIndex", 1, $1); }
+;
+
 expr_match
 : MATCH expr_nostruct '{' '}'                                     { $$ = mk_node("ExprMatch", 1, $2); }
 | MATCH expr_nostruct '{' match_clauses                       '}' { $$ = mk_node("ExprMatch", 2, $2, $4); }
@@ -1653,8 +1664,8 @@ match_clause
 ;
 
 nonblock_match_clause
-: maybe_outer_attrs pats_or maybe_guard FAT_ARROW nonblock_expr { $$ = mk_node("Arm", 4, $1, $2, $3, $5); }
-| maybe_outer_attrs pats_or maybe_guard FAT_ARROW block_expr    { $$ = mk_node("Arm", 4, $1, $2, $3, $5); }
+: maybe_outer_attrs pats_or maybe_guard FAT_ARROW nonblock_expr   { $$ = mk_node("Arm", 4, $1, $2, $3, $5); }
+| maybe_outer_attrs pats_or maybe_guard FAT_ARROW full_block_expr { $$ = mk_node("Arm", 4, $1, $2, $3, $5); }
 ;
 
 block_match_clause
