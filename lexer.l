@@ -97,7 +97,6 @@ match    { return MATCH; }
 mod      { return MOD; }
 move     { return MOVE; }
 mut      { return MUT; }
-once     { return ONCE; }
 priv     { return PRIV; }
 proc     { return PROC; }
 pub      { return PUB; }

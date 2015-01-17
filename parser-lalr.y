@@ -69,7 +69,6 @@ extern char *yytext;
 %token MOD
 %token MOVE
 %token MUT
-%token ONCE
 %token PRIV
 %token PUB
 %token REF
@@ -1803,7 +1802,6 @@ unpaired_token
 | MOD                        { $$ = mk_atom(yytext); }
 | MOVE                       { $$ = mk_atom(yytext); }
 | MUT                        { $$ = mk_atom(yytext); }
-| ONCE                       { $$ = mk_atom(yytext); }
 | PRIV                       { $$ = mk_atom(yytext); }
 | PUB                        { $$ = mk_atom(yytext); }
 | REF                        { $$ = mk_atom(yytext); }

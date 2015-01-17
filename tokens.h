@@ -55,7 +55,6 @@ enum Token {
   MOD,
   MOVE,
   MUT,
-  ONCE,
   PRIV,
   PUB,
   REF,
