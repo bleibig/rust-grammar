@@ -14,7 +14,9 @@ static int saw_non_hash;
 
 %x str
 %x rawstr
-%x rawstr_esc
+%x rawstr_esc_begin
+%x rawstr_esc_body
+%x rawstr_esc_end
 %x byte
 %x bytestr
 %x rawbytestr
@@ -256,46 +258,46 @@ r\x22           { BEGIN(rawstr); yymore(); }
 <rawstr><<EOF>> { return -1; }
 
 r/#             {
-    BEGIN(rawstr_esc);
+    BEGIN(rawstr_esc_begin);
     yymore();
     num_hashes = 0;
     saw_non_hash = 0;
     end_hashes = 0;
 }
 
-<rawstr_esc># {
-    if (!saw_non_hash) {
-        num_hashes++;
-    } else if (end_hashes != 0) {
-        end_hashes++;
-        if (end_hashes == num_hashes) {
-            BEGIN(INITIAL);
-            return LIT_STR_RAW;
-        }
-    }
+<rawstr_esc_begin># {
+    num_hashes++;
     yymore();
 }
-
-<rawstr_esc>\x22# {
-    end_hashes = 1;
-    if (end_hashes == num_hashes) {
-        BEGIN(INITIAL);
-        return LIT_STR_RAW;
-    }
+<rawstr_esc_begin>\x22 {
+    BEGIN(rawstr_esc_body);
     yymore();
 }
+<rawstr_esc_begin>(.|\n) { return -1; }
 
-<rawstr_esc>(.|\n) {
-    if (!saw_non_hash) {
-        saw_non_hash = 1;
-    }
-    if (end_hashes != 0) {
-        end_hashes = 0;
-    }
-    yymore();
-}
+<rawstr_esc_body>\x22/# {
+  BEGIN(rawstr_esc_end);
+  yymore();
+ }
+<rawstr_esc_body>(.|\n) {
+  yymore();
+ }
 
-<rawstr_esc><<EOF>> { return -1; }
+<rawstr_esc_end># {
+  end_hashes++;
+  if (end_hashes == num_hashes) {
+    BEGIN(INITIAL);
+    return LIT_STR_RAW;
+  }
+  yymore();
+ }
+<rawstr_esc_end>[^#] {
+  end_hashes = 0;
+  BEGIN(rawstr_esc_body);
+  yymore();
+ }
+
+<rawstr_esc_begin,rawstr_esc_body,rawstr_esc_end><<EOF>> { return -1; }
 
 \x22                     { BEGIN(str); yymore(); }
 <str>\x22                { BEGIN(suffix); return LIT_STR; }
