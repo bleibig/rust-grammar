@@ -147,6 +147,11 @@ extern char *yytext;
 %precedence BOX
 %precedence BOXPLACE
 %nonassoc DOTDOT
+
+// RETURN needs to be lower-precedence than tokens that start
+// prefix_exprs
+%precedence RETURN
+
 %left '=' SHLEQ SHREQ MINUSEQ ANDEQ OREQ PLUSEQ STAREQ SLASHEQ CARETEQ PERCENTEQ
 %left OROR
 %left ANDAND
@@ -160,12 +165,6 @@ extern char *yytext;
 %precedence AS
 %left '*' '/' '%'
 %precedence '!'
-
-// RETURN needs to be lower-precedence than all the block-expr
-// starting keywords, so that juxtapositioning them in a stmts
-// like 'return if foo { 10 } else { 22 }' shifts 'if' rather
-// than reducing a no-argument return.
-%precedence RETURN
 
 %precedence '{' '[' '(' '.'
 
@@ -369,7 +368,7 @@ struct_tuple_fields
 ;
 
 struct_tuple_field
-: maybe_outer_attrs ty_sum                    { $$ = mk_node("StructField", 2, $1, $2); }
+: attrs_and_vis ty_sum                    { $$ = mk_node("StructField", 2, $1, $2); }
 ;
 
 // enums
@@ -441,14 +440,10 @@ fn_decl_allow_variadic
 ;
 
 fn_params_allow_variadic
-: '(' param fn_params_allow_variadic_tail ')'
-| '(' ')'
-;
-
-fn_params_allow_variadic_tail
-: ',' DOTDOTDOT
-| ',' param fn_params_allow_variadic_tail
-| %empty
+: '(' ')'
+| '(' params ')'
+| '(' params ',' ')'
+| '(' params ',' DOTDOTDOT ')'
 ;
 
 visibility
@@ -477,20 +472,10 @@ for_sized
 ;
 
 item_trait
-: maybe_unsafe TRAIT ident generic_params for_sized maybe_where_clause maybe_supertraits '{' maybe_trait_items '}'
+: maybe_unsafe TRAIT ident generic_params for_sized maybe_ty_param_bounds maybe_where_clause '{' maybe_trait_items '}'
 {
   $$ = mk_node("ItemTrait", 7, $1, $3, $4, $5, $6, $7, $9);
 }
-;
-
-maybe_supertraits
-: ':' supertraits   { $$ = $2; }
-| %empty            { $$ = mk_none(); }
-;
-
-supertraits
-: trait_ref                   { $$ = mk_node("SuperTraits", 1, $1); }
-| supertraits '+' trait_ref   { $$ = ext_node($1, 1, $3); }
 ;
 
 maybe_trait_items
@@ -509,7 +494,7 @@ trait_item
 ;
 
 trait_type
-: TYPE ty_param ';' { $$ = mk_node("TypeTraitItem", 1, $2); }
+: maybe_outer_attrs TYPE ty_param ';' { $$ = mk_node("TypeTraitItem", 2, $1, $3); }
 ;
 
 maybe_unsafe
@@ -951,19 +936,20 @@ ty
 ;
 
 ty_prim
-: %prec IDENT path_generic_args_without_colons         { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
-| %prec IDENT MOD_SEP path_generic_args_without_colons { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
-| BOX ty                                               { $$ = mk_node("TyBox", 1, $2); }
-| '*' maybe_mut_or_const ty                            { $$ = mk_node("TyPtr", 2, $2, $3); }
-| '&' maybe_mut ty                                     { $$ = mk_node("TyRptr", 2, $2, $3); }
-| ANDAND maybe_mut ty                                  { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, $2, $3)); }
-| '&' lifetime maybe_mut ty                            { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
-| ANDAND lifetime maybe_mut ty                         { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 3, $2, $3, $4)); }
-| '[' ty ']'                                           { $$ = mk_node("TyVec", 1, $2); }
-| '[' ty ',' DOTDOT expr ']'                           { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
-| '[' ty ';' expr ']'                                  { $$ = mk_node("TyFixedLengthVec", 2, $2, $4); }
-| TYPEOF '(' expr ')'                                  { $$ = mk_node("TyTypeof", 1, $3); }
-| UNDERSCORE                                           { $$ = mk_atom("TyInfer"); }
+: %prec IDENT path_generic_args_without_colons              { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
+| %prec IDENT MOD_SEP path_generic_args_without_colons      { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
+| %prec IDENT SELF MOD_SEP path_generic_args_without_colons { $$ = mk_node("TyPath", 2, mk_node("self", 1, mk_atom("true")), $3); }
+| BOX ty                                                    { $$ = mk_node("TyBox", 1, $2); }
+| '*' maybe_mut_or_const ty                                 { $$ = mk_node("TyPtr", 2, $2, $3); }
+| '&' maybe_mut ty                                          { $$ = mk_node("TyRptr", 2, $2, $3); }
+| ANDAND maybe_mut ty                                       { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, $2, $3)); }
+| '&' lifetime maybe_mut ty                                 { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
+| ANDAND lifetime maybe_mut ty                              { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 3, $2, $3, $4)); }
+| '[' ty ']'                                                { $$ = mk_node("TyVec", 1, $2); }
+| '[' ty ',' DOTDOT expr ']'                                { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
+| '[' ty ';' expr ']'                                       { $$ = mk_node("TyFixedLengthVec", 2, $2, $4); }
+| TYPEOF '(' expr ')'                                       { $$ = mk_node("TyTypeof", 1, $3); }
+| UNDERSCORE                                                { $$ = mk_atom("TyInfer"); }
 | ty_bare_fn
 | ty_proc
 | for_in_type
@@ -1837,6 +1823,7 @@ unpaired_token
 | ':'                        { $$ = mk_atom(yytext); }
 | '$'                        { $$ = mk_atom(yytext); }
 | '='                        { $$ = mk_atom(yytext); }
+| '?'                        { $$ = mk_atom(yytext); }
 | '!'                        { $$ = mk_atom(yytext); }
 | '<'                        { $$ = mk_atom(yytext); }
 | '>'                        { $$ = mk_atom(yytext); }
