@@ -705,7 +705,7 @@ anon_params
 // anon means it's allowed to be anonymous (type-only), but it can
 // still have a name
 anon_param
-: plain_ident_or_underscore ':' ty   { $$ = mk_node("Arg", 2, $1, $3); }
+: named_arg ':' ty   { $$ = mk_node("Arg", 2, $1, $3); }
 | ty
 ;
 
@@ -715,10 +715,14 @@ anon_params_allow_variadic_tail
 | %empty                                         { $$ = mk_none(); }
 ;
 
-plain_ident_or_underscore
+named_arg
 : ident
-| binding_mode ident { $$ = $2; }
-| UNDERSCORE         { $$ = mk_atom("PatWild"); }
+| UNDERSCORE        { $$ = mk_atom("PatWild"); }
+| '&' ident         { $$ = $2; }
+| '&' UNDERSCORE    { $$ = mk_atom("PatWild"); }
+| ANDAND ident      { $$ = $2; }
+| ANDAND UNDERSCORE { $$ = mk_atom("PatWild"); }
+| MUT ident         { $$ = $2; }
 ;
 
 ret_ty
@@ -945,8 +949,10 @@ ty_prim
 | %prec IDENT SELF MOD_SEP path_generic_args_without_colons { $$ = mk_node("TyPath", 2, mk_node("self", 1, mk_atom("true")), $3); }
 | BOX ty                                                    { $$ = mk_node("TyBox", 1, $2); }
 | '*' maybe_mut_or_const ty                                 { $$ = mk_node("TyPtr", 2, $2, $3); }
-| '&' maybe_mut ty                                          { $$ = mk_node("TyRptr", 2, $2, $3); }
-| ANDAND maybe_mut ty                                       { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, $2, $3)); }
+| '&' ty                                                    { $$ = mk_node("TyRptr", 2, mk_atom("MutImmutable"), $2); }
+| '&' MUT ty                                                { $$ = mk_node("TyRptr", 2, mk_atom("MutMutable"), $3); }
+| ANDAND ty                                                 { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, mk_atom("MutImmutable"), $2)); }
+| ANDAND MUT ty                                             { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, mk_atom("MutMutable"), $3)); }
 | '&' lifetime maybe_mut ty                                 { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
 | ANDAND lifetime maybe_mut ty                              { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 3, $2, $3, $4)); }
 | '[' ty ']'                                                { $$ = mk_node("TyVec", 1, $2); }
