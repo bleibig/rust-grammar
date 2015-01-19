@@ -382,31 +382,31 @@ item_enum
 ;
 
 enum_defs
-: enum_def
-| enum_defs ',' enum_def
-| %empty { $$ = mk_none(); }
+: enum_def               { $$ = mk_node("EnumDefs", 1, $1); }
+| enum_defs ',' enum_def { $$ = ext_node($1, 1, $3); }
+| %empty                 { $$ = mk_none(); }
 ;
 
 enum_def
-: attrs_and_vis ident enum_args
+: attrs_and_vis ident enum_args { $$ = mk_node("EnumDef", 3, $1, $2, $3); }
 ;
 
 enum_args
-: '{' struct_decl_fields '}'
-| '{' struct_decl_fields ',' '}'
-| '(' maybe_ty_sums ')'
-| '=' expr
-| %empty { $$ = mk_none(); }
+: '{' struct_decl_fields '}'     { $$ = mk_node("EnumArgs", 1, $2); }
+| '{' struct_decl_fields ',' '}' { $$ = mk_node("EnumArgs", 1, $2); }
+| '(' maybe_ty_sums ')'          { $$ = mk_node("EnumArgs", 1, $2); }
+| '=' expr                       { $$ = mk_node("EnumArgs", 1, $2); }
+| %empty                         { $$ = mk_none(); }
 ;
 
 item_mod
-: MOD ident ';'                                       { $$ = mk_node("ItemMod", 1, $2); }
-| MOD ident '{' maybe_mod_items '}' { $$ = mk_node("ItemMod", 2, $2, $4); }
+: MOD ident ';'                                 { $$ = mk_node("ItemMod", 1, $2); }
+| MOD ident '{' maybe_mod_items '}'             { $$ = mk_node("ItemMod", 2, $2, $4); }
 | MOD ident '{' inner_attrs maybe_mod_items '}' { $$ = mk_node("ItemMod", 3, $2, $4, $5); }
 ;
 
 item_foreign_mod
-: EXTERN maybe_abi '{' maybe_foreign_items '}' { $$ = mk_node("ItemForeignMod", 1, $4); }
+: EXTERN maybe_abi '{' maybe_foreign_items '}'             { $$ = mk_node("ItemForeignMod", 1, $4); }
 | EXTERN maybe_abi '{' inner_attrs maybe_foreign_items '}' { $$ = mk_node("ItemForeignMod", 2, $4, $5); }
 ;
 
@@ -421,33 +421,33 @@ maybe_foreign_items
 ;
 
 foreign_items
-: foreign_item
-| foreign_items foreign_item
+: foreign_item               { $$ = mk_node("ForeignItems", 1, $1); }
+| foreign_items foreign_item { $$ = ext_node($1, 1, $2); }
 ;
 
 foreign_item
-: attrs_and_vis STATIC item_foreign_static
-| attrs_and_vis item_foreign_fn
-| attrs_and_vis UNSAFE item_foreign_fn
+: attrs_and_vis STATIC item_foreign_static { $$ = mk_node("ForeignItem", 2, $1, $3); }
+| attrs_and_vis item_foreign_fn            { $$ = mk_node("ForeignItem", 2, $1, $2); }
+| attrs_and_vis UNSAFE item_foreign_fn     { $$ = mk_node("ForeignItem", 2, $1, $3); }
 ;
 
 item_foreign_static
-: maybe_mut ident ':' ty ';'
+: maybe_mut ident ':' ty ';'               { $$ = mk_node("StaticItem", 3, $1, $2, $4); }
 ;
 
 item_foreign_fn
-: FN ident generic_params fn_decl_allow_variadic maybe_where_clause ';'
+: FN ident generic_params fn_decl_allow_variadic maybe_where_clause ';' { $$ = mk_node("ForeignFn", 4, $2, $3, $4, $5); }
 ;
 
 fn_decl_allow_variadic
-: fn_params_allow_variadic ret_ty
+: fn_params_allow_variadic ret_ty { $$ = mk_node("FnDecl", 2, $1, $2); }
 ;
 
 fn_params_allow_variadic
-: '(' ')'
-| '(' params ')'
-| '(' params ',' ')'
-| '(' params ',' DOTDOTDOT ')'
+: '(' ')'                      { $$ = mk_none(); }
+| '(' params ')'               { $$ = $2; }
+| '(' params ',' ')'           { $$ = $2; }
+| '(' params ',' DOTDOTDOT ')' { $$ = $2; }
 ;
 
 visibility
@@ -663,12 +663,12 @@ param
 ;
 
 inferrable_params
-: inferrable_param
-| inferrable_params ',' inferrable_param
+: inferrable_param                       { $$ = mk_node("InferrableParams", 1, $1); }
+| inferrable_params ',' inferrable_param { $$ = ext_node($1, 1, $3); }
 ;
 
 inferrable_param
-: pat maybe_ty_ascription
+: pat maybe_ty_ascription { $$ = mk_node("InferrableParam", 2, $1, $2); }
 ;
 
 maybe_unboxed_closure_kind
@@ -718,7 +718,7 @@ anon_params_allow_variadic_tail
 plain_ident_or_underscore
 : ident
 | binding_mode ident { $$ = $2; }
-| UNDERSCORE { $$ = mk_atom("PatWild"); }
+| UNDERSCORE         { $$ = mk_atom("PatWild"); }
 ;
 
 ret_ty
@@ -764,8 +764,8 @@ where_predicate
 ;
 
 ty_params
-: ty_param
-| ty_params ',' ty_param
+: ty_param               { $$ = mk_node("TyParams", 1, $1); }
+| ty_params ',' ty_param { $$ = ext_node($1, 1, $3); }
 ;
 
 // A path with no type parameters; e.g. `foo::bar::Baz`
@@ -967,7 +967,7 @@ ty_bare_fn
 ;
 
 ty_fn_decl
-: generic_params fn_anon_params ret_ty
+: generic_params fn_anon_params ret_ty { $$ = mk_node("TyFnDecl", 3, $1, $2, $3); }
 ;
 
 ty_closure
@@ -1113,8 +1113,8 @@ maybe_lifetimes
 ;
 
 lifetimes
-: lifetime_and_bounds
-| lifetimes ',' lifetime_and_bounds
+: lifetime_and_bounds               { $$ = mk_node("Lifetimes", 1, $1); }
+| lifetimes ',' lifetime_and_bounds { $$ = ext_node($1, 1, $3); }
 ;
 
 lifetime_and_bounds
@@ -1137,7 +1137,7 @@ trait_ref
 ////////////////////////////////////////////////////////////////////////
 
 inner_attrs_and_block
-: '{' maybe_inner_attrs maybe_stmts '}'        { $$ = $3; }
+: '{' maybe_inner_attrs maybe_stmts '}'        { $$ = mk_node("ExprBlock", 2, $2, $3); }
 ;
 
 block
@@ -1217,7 +1217,7 @@ exprs
 
 path_expr
 : path_generic_args_with_colons
-| MOD_SEP path_generic_args_with_colons  { $$ = $2; }
+| MOD_SEP path_generic_args_with_colons      { $$ = $2; }
 | SELF MOD_SEP path_generic_args_with_colons { $$ = mk_node("SelfPath", 1, $3); }
 ;
 
@@ -1227,14 +1227,15 @@ path_expr
 // These show up in expr context, in order to disambiguate from "less-than"
 // expressions.
 path_generic_args_with_colons
-: ident  { $$ = mk_node("components", 1, $1); }
-| path_generic_args_with_colons MOD_SEP ident { $$ = ext_node($1, 1, $3); }
+: ident                                              { $$ = mk_node("components", 1, $1); }
+| path_generic_args_with_colons MOD_SEP ident        { $$ = ext_node($1, 1, $3); }
 | path_generic_args_with_colons MOD_SEP generic_args { $$ = ext_node($1, 1, $3); }
 ;
 
+// the braces-delimited macro is a block_expr so it doesn't appear here
 macro_expr
-: path_expr '!' maybe_ident parens_delimited_token_trees
-| path_expr '!' maybe_ident brackets_delimited_token_trees
+: path_expr '!' maybe_ident parens_delimited_token_trees   { $$ = mk_node("MacroExpr", 3, $1, $3, $4); }
+| path_expr '!' maybe_ident brackets_delimited_token_trees { $$ = mk_node("MacroExpr", 3, $1, $3, $4); }
 ;
 
 nonblock_expr
