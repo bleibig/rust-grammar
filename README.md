@@ -30,8 +30,9 @@ grammar specification is divided into five parts:
 5. Macros and misc. rules
 
 Like the standalone lexer, it reads from stdin and outputs to
-stdout. In addition to being a recognizer for Rust, the parser from
-this grammar also builds and prints an AST in an s-expression format.
+stdout. In addition to being a recognizer for Rust, if "-v" is passed
+in as a command line argument, the parser from this grammar also
+builds and prints an AST in an s-expression format.
 
 ## Building
 
@@ -41,7 +42,7 @@ later to both be installed.
 
 On OS X, the Xcode toolchain provides an older version of bison
 (2.3). This will not work with the grammar in this project, so you
-will have to download and install version 3.0.2.
+will have to download and install version 3.0.2 or later.
 
 Building of rlex and rparse do not (yet) support cargo, use make or
 just invoke directly with rustc.
