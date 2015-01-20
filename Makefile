@@ -1,5 +1,5 @@
 CC=cc
-LDFLAGS=-lfl
+LDFLAGS=-lfl -lm
 ifeq ($(shell uname),Darwin)
 	LDFLAGS=-ll
 endif
@@ -13,7 +13,7 @@ lexer_main.o: lexer_main.c
 	$(CC) -c -o $@ $<
 
 tokens.o: tokens.c
-	$(CC) -c -o $@ $<
+	$(CC) -std=c99 -c -o $@ $<
 
 lex.yy.c: lexer.l
 	flex $<
@@ -28,7 +28,7 @@ parser-lalr.o: parser-lalr.tab.c
 	$(CC) -c -o $@ $<
 
 parser-lalr-main.o: parser-lalr-main.c
-	$(CC) -c -o $@ $<
+	$(CC) -std=c99 -c -o $@ $<
 
 parser-lalr: parser-lalr.o parser-lalr-main.o lexer-lalr.o
 	$(CC) -o $@ $^ $(LDFLAGS)

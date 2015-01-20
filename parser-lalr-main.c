@@ -6,7 +6,7 @@
 extern int yylex();
 extern int rsparse();
 
-static const int PUSHBACK_LEN = 4;
+#define PUSHBACK_LEN 4
 
 static char pushback[PUSHBACK_LEN];
 static int verbose;
