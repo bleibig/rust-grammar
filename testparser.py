@@ -40,8 +40,8 @@ for base, dirs, files in os.walk(args.source_dir[0]):
             else:
                 bad[parser].append(p)
         parser_stats = ', '.join(['{}: {}'.format(parser, ok[parser]) for parser in args.parser])
-        sys.stdout.write("\033[2K\r total: %d, %s, scanned %-60s" %
-                         (total, parser_stats, p))
+        sys.stdout.write("\033[K\r total: {}, {}, scanned {}"
+                         .format(total, os.path.relpath(parser_stats), os.path.relpath(p)))
 
 devnull.close()
 

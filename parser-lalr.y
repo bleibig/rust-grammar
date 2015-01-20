@@ -886,8 +886,10 @@ lit_or_path
 ;
 
 pat_field
-:              ident            { $$ = mk_node("PatField", 1, $1); }
-| binding_mode ident            { $$ = mk_node("PatField", 2, $1, $2); }
+:                  ident        { $$ = mk_node("PatField", 1, $1); }
+|     binding_mode ident        { $$ = mk_node("PatField", 2, $1, $2); }
+| BOX              ident        { $$ = mk_node("PatField", 2, mk_atom("box"), $2); }
+| BOX binding_mode ident        { $$ = mk_node("PatField", 3, mk_atom("box"), $2, $3); }
 |              ident ':' pat    { $$ = mk_node("PatField", 2, $1, $3); }
 | binding_mode ident ':' pat    { $$ = mk_node("PatField", 3, $1, $2, $4); }
 ;
