@@ -114,6 +114,9 @@ struct node *ext_node(struct node *nd, int n, ...) {
   if (nd->prev) {
     nd->prev->next = nd->next;
   }
+  if (nodes == nd) {
+    nodes = nd->next;
+  }
   nd = realloc(nd, sz);
   nd->prev = NULL;
   nd->next = nodes;
