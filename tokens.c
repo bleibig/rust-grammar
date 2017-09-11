@@ -59,6 +59,7 @@ void print_token(int token) {
   case DOTDOT: printf("DotDot"); break;
   case DOTDOTDOT: printf("DotDotDot"); break;
   case MOD_SEP: printf("ModSep"); break;
+  case LARROW: printf("LArrow"); break;
   case RARROW: printf("RArrow"); break;
   case FAT_ARROW: printf("FatArrow"); break;
   case LIT_BYTE: printf("Byte(%s)", yytext); break;
@@ -67,8 +68,6 @@ void print_token(int token) {
   case LIT_FLOAT: printf("Float(%s)", yytext); break;
   case LIT_STR: printf("Str(%s)", yytext); break;
   case LIT_STR_RAW: printf("StrRaw(%s)", yytext); break;
-  case LIT_BINARY: printf("Binary(%s)", yytext); break;
-  case LIT_BINARY_RAW: printf("BinaryRaw(%s)", yytext); break;
   case IDENT: printf("Ident(%s)", yytext); break;
   case UNDERSCORE: printf("Underscore"); break;
   case LIFETIME: printf("Lifetime(%s)", yytext); break;

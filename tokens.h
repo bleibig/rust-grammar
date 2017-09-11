@@ -1,3 +1,13 @@
+// Copyright 2015 The Rust Project Developers. See the COPYRIGHT
+// file at the top-level directory of this distribution and at
+// http://rust-lang.org/COPYRIGHT.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
 enum Token {
   SHL = 257, // Parser generators reserve 0-256 for char literals
   SHR,
@@ -20,6 +30,7 @@ enum Token {
   DOTDOT,
   DOTDOTDOT,
   MOD_SEP,
+  LARROW,
   RARROW,
   FAT_ARROW,
   LIT_BYTE,
@@ -28,8 +39,8 @@ enum Token {
   LIT_FLOAT,
   LIT_STR,
   LIT_STR_RAW,
-  LIT_BINARY,
-  LIT_BINARY_RAW,
+  LIT_BYTE_STR,
+  LIT_BYTE_STR_RAW,
   IDENT,
   UNDERSCORE,
   LIFETIME,
@@ -79,5 +90,3 @@ enum Token {
   SHEBANG_LINE,
   STATIC_LIFETIME
 };
-
-void print_token(int token);

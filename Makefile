@@ -4,7 +4,10 @@ ifeq ($(shell uname),Darwin)
 	LDFLAGS=-ll
 endif
 
-all: lexer parser-lalr rlex rparse
+FLEX ?= flex
+BISON ?= bison
+
+all: lexer parser-lalr
 
 lexer: lexer_main.o lexer.o tokens.o
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -16,7 +19,7 @@ tokens.o: tokens.c
 	$(CC) -std=c99 -c -o $@ $<
 
 lex.yy.c: lexer.l
-	flex $<
+	$(FLEX) $<
 
 lexer.o: lex.yy.c tokens.h
 	$(CC) -include tokens.h -c -o $@ $<
@@ -34,7 +37,7 @@ parser-lalr: parser-lalr.o parser-lalr-main.o lexer-lalr.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 parser-lalr.tab.c parser-lalr.tab.h: parser-lalr.y
-	bison $< -d -p rs -v --report=all --warnings=error=all
+	$(BISON) $< -d -p rs -v --report=all --warnings=error=all
 
 rlex: rlex.rs
 	rustc $<

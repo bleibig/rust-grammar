@@ -3,6 +3,7 @@
 
 extern int yylex();
 extern int yyget_lineno();
+extern void print_token(int);
 
 int main(void) {
   while (1) {

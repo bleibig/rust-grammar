@@ -1,4 +1,13 @@
 %{
+// Copyright 2015 The Rust Project Developers. See the COPYRIGHT
+// file at the top-level directory of this distribution and at
+// http://rust-lang.org/COPYRIGHT.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
 
 #include <stdio.h>
 #include <ctype.h>
@@ -117,7 +126,7 @@ while    { return WHILE; }
 {ident}  { return IDENT; }
 
 0x[0-9a-fA-F_]+                                    { BEGIN(suffix); return LIT_INTEGER; }
-0o[0-8_]+                                          { BEGIN(suffix); return LIT_INTEGER; }
+0o[0-7_]+                                          { BEGIN(suffix); return LIT_INTEGER; }
 0b[01_]+                                           { BEGIN(suffix); return LIT_INTEGER; }
 [0-9][0-9_]*                                       { BEGIN(suffix); return LIT_INTEGER; }
 [0-9][0-9_]*\.(\.|[a-zA-Z])    { yyless(yyleng - 2); BEGIN(suffix); return LIT_INTEGER; }
@@ -191,7 +200,7 @@ while    { return WHILE; }
 <ltorchar><<EOF>>                     { BEGIN(INITIAL); return -1; }
 
 b\x22              { BEGIN(bytestr); yymore(); }
-<bytestr>\x22      { BEGIN(suffix); return LIT_BINARY; }
+<bytestr>\x22      { BEGIN(suffix); return LIT_BYTE_STR; }
 
 <bytestr><<EOF>>                { return -1; }
 <bytestr>\\[n\nrt\\\x27\x220]   { yymore(); }
@@ -201,7 +210,7 @@ b\x22              { BEGIN(bytestr); yymore(); }
 <bytestr>(.|\n)                 { yymore(); }
 
 br\x22                      { BEGIN(rawbytestr_nohash); yymore(); }
-<rawbytestr_nohash>\x22     { BEGIN(suffix); return LIT_BINARY_RAW; }
+<rawbytestr_nohash>\x22     { BEGIN(suffix); return LIT_BYTE_STR_RAW; }
 <rawbytestr_nohash>(.|\n)   { yymore(); }
 <rawbytestr_nohash><<EOF>>  { return -1; }
 
@@ -219,7 +228,7 @@ br/# {
         end_hashes++;
         if (end_hashes == num_hashes) {
             BEGIN(INITIAL);
-            return LIT_BINARY_RAW;
+            return LIT_BYTE_STR_RAW;
         }
     }
     yymore();
@@ -228,7 +237,7 @@ br/# {
     end_hashes = 1;
     if (end_hashes == num_hashes) {
         BEGIN(INITIAL);
-        return LIT_BINARY_RAW;
+        return LIT_BYTE_STR_RAW;
     }
     yymore();
 }
@@ -302,12 +311,13 @@ r/#             {
 <str>\x22                { BEGIN(suffix); return LIT_STR; }
 
 <str><<EOF>>                { return -1; }
-<str>\\[n\nrt\\\x27\x220]   { yymore(); }
+<str>\\[n\nr\rt\\\x27\x220] { yymore(); }
 <str>\\x[0-9a-fA-F]{2}      { yymore(); }
 <str>\\u\{[0-9a-fA-F]?{6}\} { yymore(); }
 <str>\\[^n\nrt\\\x27\x220]  { return -1; }
 <str>(.|\n)                 { yymore(); }
 
+\<-  { return LARROW; }
 -\>  { return RARROW; }
 -    { return '-'; }
 -=   { return MINUSEQ; }
@@ -331,4 +341,3 @@ r/#             {
 <<EOF>> { return 0; }
 
 %%
-
