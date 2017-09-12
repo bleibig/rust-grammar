@@ -1127,6 +1127,7 @@ boundseq
 polybound
 : FOR '<' maybe_lifetimes '>' bound { $$ = mk_node("PolyBound", 2, $3, $5); }
 | bound
+| '?' FOR '<' maybe_lifetimes '>' bound { $$ = mk_node("PolyBound", 2, $4, $6); }
 | '?' bound { $$ = $2; }
 ;
 
