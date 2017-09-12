@@ -863,6 +863,8 @@ path_no_types_allowed
 | MOD_SEP ident                       { $$ = mk_node("ViewPath", 1, $2); }
 | SELF                                { $$ = mk_node("ViewPath", 1, mk_atom("Self")); }
 | MOD_SEP SELF                        { $$ = mk_node("ViewPath", 1, mk_atom("Self")); }
+| SUPER                               { $$ = mk_node("ViewPath", 1, mk_atom("Super")); }
+| MOD_SEP SUPER                       { $$ = mk_node("ViewPath", 1, mk_atom("Super")); }
 | path_no_types_allowed MOD_SEP ident { $$ = ext_node($1, 1, $3); }
 ;
 
