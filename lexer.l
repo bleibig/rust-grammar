@@ -85,16 +85,23 @@ ident [a-zA-Z\x80-\xff_][a-zA-Z0-9\x80-\xff_]*
 <blockcomment>(.|\n)   { }
 
 _        { return UNDERSCORE; }
+abstract { return ABSTRACT; }
+alignof  { return ALIGNOF; }
 as       { return AS; }
+become   { return BECOME; }
 box      { return BOX; }
 break    { return BREAK; }
+catch    { return CATCH; }
 const    { return CONST; }
 continue { return CONTINUE; }
 crate    { return CRATE; }
+default  { return DEFAULT; }
+do       { return DO; }
 else     { return ELSE; }
 enum     { return ENUM; }
 extern   { return EXTERN; }
 false    { return FALSE; }
+final    { return FINAL; }
 fn       { return FN; }
 for      { return FOR; }
 if       { return IF; }
@@ -102,27 +109,36 @@ impl     { return IMPL; }
 in       { return IN; }
 let      { return LET; }
 loop     { return LOOP; }
+macro    { return MACRO; }
 match    { return MATCH; }
 mod      { return MOD; }
 move     { return MOVE; }
 mut      { return MUT; }
+offsetof { return OFFSETOF; }
+override { return OVERRIDE; }
 priv     { return PRIV; }
 proc     { return PROC; }
+pure     { return PURE; }
 pub      { return PUB; }
 ref      { return REF; }
 return   { return RETURN; }
 self     { return SELF; }
+sizeof   { return SIZEOF; }
 static   { return STATIC; }
 struct   { return STRUCT; }
+super    { return SUPER; }
 trait    { return TRAIT; }
 true     { return TRUE; }
 type     { return TYPE; }
 typeof   { return TYPEOF; }
 union    { return UNION; }
 unsafe   { return UNSAFE; }
+unsized  { return UNSIZED; }
 use      { return USE; }
+virtual  { return VIRTUAL; }
 where    { return WHERE; }
 while    { return WHILE; }
+yield    { return YIELD; }
 
 {ident}  { return IDENT; }
 

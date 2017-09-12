@@ -62,13 +62,19 @@ extern char *yytext;
 // keywords
 %token SELF
 %token STATIC
+%token ABSTRACT
+%token ALIGNOF
 %token AS
+%token BECOME
 %token BREAK
+%token CATCH
 %token CRATE
+%token DO
 %token ELSE
 %token ENUM
 %token EXTERN
 %token FALSE
+%token FINAL
 %token FN
 %token FOR
 %token IF
@@ -76,20 +82,29 @@ extern char *yytext;
 %token IN
 %token LET
 %token LOOP
+%token MACRO
 %token MATCH
 %token MOD
 %token MOVE
 %token MUT
+%token OFFSETOF
+%token OVERRIDE
 %token PRIV
 %token PUB
+%token PURE
 %token REF
 %token RETURN
+%token SIZEOF
 %token STRUCT
+%token SUPER
 %token UNION
+%token UNSIZED
 %token TRUE
 %token TRAIT
 %token TYPE
 %token UNSAFE
+%token VIRTUAL
+%token YIELD
 %token DEFAULT
 %token USE
 %token WHILE
@@ -142,6 +157,10 @@ extern char *yytext;
 // 'foo:bar . <' is shifted (in a trait reference occurring in a
 // bounds list), parsing as foo:(bar<baz>) rather than (foo:bar)<baz>.
 %precedence IDENT
+ // Put the weak keywords that can be used as idents here as well
+%precedence CATCH
+%precedence DEFAULT
+%precedence UNION
 
 // A couple fake-precedence symbols to use in rules associated with +
 // and < in trailing type contexts. These come up when you have a type
@@ -1804,6 +1823,10 @@ maybe_ident
 
 ident
 : IDENT                      { $$ = mk_node("ident", 1, mk_atom(yytext)); }
+// Weak keywords that can be used as identifiers
+| CATCH                      { $$ = mk_node("ident", 1, mk_atom(yytext)); }
+| DEFAULT                    { $$ = mk_node("ident", 1, mk_atom(yytext)); }
+| UNION                      { $$ = mk_node("ident", 1, mk_atom(yytext)); }
 ;
 
 unpaired_token
