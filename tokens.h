@@ -71,6 +71,7 @@ enum Token {
   REF,
   RETURN,
   STRUCT,
+  UNION,
   TRUE,
   TRAIT,
   TYPE,

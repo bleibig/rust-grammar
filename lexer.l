@@ -118,6 +118,7 @@ trait    { return TRAIT; }
 true     { return TRUE; }
 type     { return TYPE; }
 typeof   { return TYPEOF; }
+union    { return UNION; }
 unsafe   { return UNSAFE; }
 use      { return USE; }
 where    { return WHERE; }

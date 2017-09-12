@@ -96,6 +96,7 @@ void print_token(int token) {
   case REF: printf("Ident(ref)"); break;
   case RETURN: printf("Ident(return)"); break;
   case STRUCT: printf("Ident(struct)"); break;
+  case UNION: printf("Ident(union)"); break;
   case TRUE: printf("Ident(true)"); break;
   case TRAIT: printf("Ident(trait)"); break;
   case TYPE: printf("Ident(type)"); break;

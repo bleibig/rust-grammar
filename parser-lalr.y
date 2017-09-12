@@ -85,6 +85,7 @@ extern char *yytext;
 %token REF
 %token RETURN
 %token STRUCT
+%token UNION
 %token TRUE
 %token TRAIT
 %token TYPE
@@ -334,6 +335,7 @@ block_item
 | item_foreign_mod          { $$ = mk_node("ItemForeignMod", 1, $1); }
 | item_struct
 | item_enum
+| item_union
 | item_trait
 | item_impl
 ;
@@ -416,6 +418,11 @@ enum_args
 | '=' expr                       { $$ = mk_node("EnumArgs", 1, $2); }
 | %empty                         { $$ = mk_none(); }
 ;
+
+// unions
+item_union
+: UNION ident generic_params maybe_where_clause '{' struct_decl_fields '}'     { $$ = mk_node("ItemUnion", 0); }
+| UNION ident generic_params maybe_where_clause '{' struct_decl_fields ',' '}' { $$ = mk_node("ItemUnion", 0); }
 
 item_mod
 : MOD ident ';'                                 { $$ = mk_node("ItemMod", 1, $2); }
