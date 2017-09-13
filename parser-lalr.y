@@ -182,7 +182,6 @@ extern char *yytext;
 
 // Binops & unops, and their precedences
 %precedence BOX
-%precedence BOXPLACE
 %nonassoc DOTDOT
 
 // RETURN needs to be lower-precedence than tokens that start
@@ -1294,11 +1293,6 @@ maybe_stmts
 // block, nonblock-prefix, and nonblock-nonprefix.
 //
 // In non-stmts contexts, expr can relax this trichotomy.
-//
-// There is also one other expr subtype: nonparen_expr disallows exprs
-// surrounded by parens (including tuple expressions), this is
-// necessary for BOX (place) expressions, so a parens expr following
-// the BOX is always parsed as the place.
 
 stmts
 : stmt           { $$ = mk_node("stmts", 1, $1); }
@@ -1413,8 +1407,7 @@ nonblock_expr
 |               DOTDOT                                          { $$ = mk_node("ExprRange", 2, mk_none(), mk_none()); }
 | nonblock_expr AS ty                                           { $$ = mk_node("ExprCast", 2, $1, $3); }
 | nonblock_expr ':' ty                                          { $$ = mk_node("ExprTypeAscr", 2, $1, $3); }
-| BOX nonparen_expr                                             { $$ = mk_node("ExprBox", 1, $2); }
-| %prec BOXPLACE BOX '(' maybe_expr ')' nonblock_expr           { $$ = mk_node("ExprBox", 2, $3, $5); }
+| BOX expr                                                      { $$ = mk_node("ExprBox", 1, $2); }
 | expr_qualified_path
 | nonblock_prefix_expr
 ;
@@ -1474,69 +1467,7 @@ expr
 |      DOTDOT                                         { $$ = mk_node("ExprRange", 2, mk_none(), mk_none()); }
 | expr AS ty                                          { $$ = mk_node("ExprCast", 2, $1, $3); }
 | expr ':' ty                                         { $$ = mk_node("ExprTypeAscr", 2, $1, $3); }
-| BOX nonparen_expr                                   { $$ = mk_node("ExprBox", 1, $2); }
-| %prec BOXPLACE BOX '(' maybe_expr ')' expr          { $$ = mk_node("ExprBox", 2, $3, $5); }
-| expr_qualified_path
-| block_expr
-| block
-| nonblock_prefix_expr
-;
-
-nonparen_expr
-: lit                                                 { $$ = mk_node("ExprLit", 1, $1); }
-| %prec IDENT
-  path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
-| SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
-| macro_expr                                          { $$ = mk_node("ExprMac", 1, $1); }
-| path_expr '{' struct_expr_fields '}'                { $$ = mk_node("ExprStruct", 2, $1, $3); }
-| nonparen_expr '.' path_generic_args_with_colons     { $$ = mk_node("ExprField", 2, $1, $3); }
-| nonparen_expr '.' LIT_INTEGER                       { $$ = mk_node("ExprTupleIndex", 1, $1); }
-| nonparen_expr '[' maybe_expr ']'                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
-| nonparen_expr '(' maybe_exprs ')'                   { $$ = mk_node("ExprCall", 2, $1, $3); }
-| '[' vec_expr ']'                                    { $$ = mk_node("ExprVec", 1, $2); }
-| CONTINUE                                            { $$ = mk_node("ExprAgain", 0); }
-| CONTINUE ident                                      { $$ = mk_node("ExprAgain", 1, $2); }
-| RETURN                                              { $$ = mk_node("ExprRet", 0); }
-| RETURN expr                                         { $$ = mk_node("ExprRet", 1, $2); }
-| BREAK                                               { $$ = mk_node("ExprBreak", 0); }
-| BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
-| nonparen_expr LARROW nonparen_expr                  { $$ = mk_node("ExprInPlace", 2, $1, $3); }
-| nonparen_expr '=' nonparen_expr                     { $$ = mk_node("ExprAssign", 2, $1, $3); }
-| nonparen_expr SHLEQ nonparen_expr                   { $$ = mk_node("ExprAssignShl", 2, $1, $3); }
-| nonparen_expr SHREQ nonparen_expr                   { $$ = mk_node("ExprAssignShr", 2, $1, $3); }
-| nonparen_expr MINUSEQ nonparen_expr                 { $$ = mk_node("ExprAssignSub", 2, $1, $3); }
-| nonparen_expr ANDEQ nonparen_expr                   { $$ = mk_node("ExprAssignBitAnd", 2, $1, $3); }
-| nonparen_expr OREQ nonparen_expr                    { $$ = mk_node("ExprAssignBitOr", 2, $1, $3); }
-| nonparen_expr PLUSEQ nonparen_expr                  { $$ = mk_node("ExprAssignAdd", 2, $1, $3); }
-| nonparen_expr STAREQ nonparen_expr                  { $$ = mk_node("ExprAssignMul", 2, $1, $3); }
-| nonparen_expr SLASHEQ nonparen_expr                 { $$ = mk_node("ExprAssignDiv", 2, $1, $3); }
-| nonparen_expr CARETEQ nonparen_expr                 { $$ = mk_node("ExprAssignBitXor", 2, $1, $3); }
-| nonparen_expr PERCENTEQ nonparen_expr               { $$ = mk_node("ExprAssignRem", 2, $1, $3); }
-| nonparen_expr OROR nonparen_expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiOr"), $1, $3); }
-| nonparen_expr ANDAND nonparen_expr                  { $$ = mk_node("ExprBinary", 3, mk_atom("BiAnd"), $1, $3); }
-| nonparen_expr EQEQ nonparen_expr                    { $$ = mk_node("ExprBinary", 3, mk_atom("BiEq"), $1, $3); }
-| nonparen_expr NE nonparen_expr                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiNe"), $1, $3); }
-| nonparen_expr '<' nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiLt"), $1, $3); }
-| nonparen_expr '>' nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiGt"), $1, $3); }
-| nonparen_expr LE nonparen_expr                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiLe"), $1, $3); }
-| nonparen_expr GE nonparen_expr                      { $$ = mk_node("ExprBinary", 3, mk_atom("BiGe"), $1, $3); }
-| nonparen_expr '|' nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitOr"), $1, $3); }
-| nonparen_expr '^' nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitXor"), $1, $3); }
-| nonparen_expr '&' nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiBitAnd"), $1, $3); }
-| nonparen_expr SHL nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiShl"), $1, $3); }
-| nonparen_expr SHR nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiShr"), $1, $3); }
-| nonparen_expr '+' nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiAdd"), $1, $3); }
-| nonparen_expr '-' nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiSub"), $1, $3); }
-| nonparen_expr '*' nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiMul"), $1, $3); }
-| nonparen_expr '/' nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiDiv"), $1, $3); }
-| nonparen_expr '%' nonparen_expr                     { $$ = mk_node("ExprBinary", 3, mk_atom("BiRem"), $1, $3); }
-| nonparen_expr DOTDOT                                { $$ = mk_node("ExprRange", 2, $1, mk_none()); }
-| nonparen_expr DOTDOT nonparen_expr                  { $$ = mk_node("ExprRange", 2, $1, $3); }
-|               DOTDOT nonparen_expr                  { $$ = mk_node("ExprRange", 2, mk_none(), $2); }
-|               DOTDOT                                { $$ = mk_node("ExprRange", 2, mk_none(), mk_none()); }
-| nonparen_expr AS ty                                 { $$ = mk_node("ExprCast", 2, $1, $3); }
-| BOX nonparen_expr                                   { $$ = mk_node("ExprBox", 1, $2); }
-| %prec BOXPLACE BOX '(' maybe_expr ')' expr          { $$ = mk_node("ExprBox", 1, $3, $5); }
+| BOX expr                                            { $$ = mk_node("ExprBox", 1, $2); }
 | expr_qualified_path
 | block_expr
 | block
@@ -1597,8 +1528,7 @@ expr_nostruct
 |               DOTDOT                                { $$ = mk_node("ExprRange", 2, mk_none(), mk_none()); }
 | expr_nostruct AS ty                                 { $$ = mk_node("ExprCast", 2, $1, $3); }
 | expr_nostruct ':' ty                                { $$ = mk_node("ExprTypeAscr", 2, $1, $3); }
-| BOX nonparen_expr                                   { $$ = mk_node("ExprBox", 1, $2); }
-| %prec BOXPLACE BOX '(' maybe_expr ')' expr_nostruct { $$ = mk_node("ExprBox", 1, $3, $5); }
+| BOX expr                                            { $$ = mk_node("ExprBox", 1, $2); }
 | expr_qualified_path
 | block_expr
 | block
