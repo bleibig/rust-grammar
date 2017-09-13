@@ -186,7 +186,7 @@ extern char *yytext;
 
 // RETURN needs to be lower-precedence than tokens that start
 // prefix_exprs
-%precedence RETURN
+%precedence RETURN YIELD
 
 %right '=' SHLEQ SHREQ MINUSEQ ANDEQ OREQ PLUSEQ STAREQ SLASHEQ CARETEQ PERCENTEQ
 %right LARROW
@@ -1372,6 +1372,8 @@ nonblock_expr
 | RETURN expr                                                   { $$ = mk_node("ExprRet", 1, $2); }
 | BREAK                                                         { $$ = mk_node("ExprBreak", 0); }
 | BREAK lifetime                                                { $$ = mk_node("ExprBreak", 1, $2); }
+| YIELD                                                         { $$ = mk_node("ExprYield", 0); }
+| YIELD expr                                                    { $$ = mk_node("ExprYield", 1, $2); }
 | nonblock_expr LARROW expr                                     { $$ = mk_node("ExprInPlace", 2, $1, $3); }
 | nonblock_expr '=' expr                                        { $$ = mk_node("ExprAssign", 2, $1, $3); }
 | nonblock_expr SHLEQ expr                                      { $$ = mk_node("ExprAssignShl", 2, $1, $3); }
@@ -1432,6 +1434,8 @@ expr
 | RETURN expr                                         { $$ = mk_node("ExprRet", 1, $2); }
 | BREAK                                               { $$ = mk_node("ExprBreak", 0); }
 | BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
+| YIELD                                               { $$ = mk_node("ExprYield", 0); }
+| YIELD expr                                          { $$ = mk_node("ExprYield", 1, $2); }
 | expr LARROW expr                                    { $$ = mk_node("ExprInPlace", 2, $1, $3); }
 | expr '=' expr                                       { $$ = mk_node("ExprAssign", 2, $1, $3); }
 | expr SHLEQ expr                                     { $$ = mk_node("ExprAssignShl", 2, $1, $3); }
@@ -1493,6 +1497,8 @@ expr_nostruct
 | RETURN expr                                         { $$ = mk_node("ExprRet", 1, $2); }
 | BREAK                                               { $$ = mk_node("ExprBreak", 0); }
 | BREAK ident                                         { $$ = mk_node("ExprBreak", 1, $2); }
+| YIELD                                               { $$ = mk_node("ExprYield", 0); }
+| YIELD expr                                          { $$ = mk_node("ExprYield", 1, $2); }
 | expr_nostruct LARROW expr_nostruct                  { $$ = mk_node("ExprInPlace", 2, $1, $3); }
 | expr_nostruct '=' expr_nostruct                     { $$ = mk_node("ExprAssign", 2, $1, $3); }
 | expr_nostruct SHLEQ expr_nostruct                   { $$ = mk_node("ExprAssignShl", 2, $1, $3); }
