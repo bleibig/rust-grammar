@@ -408,6 +408,7 @@ struct_decl_field
 struct_tuple_fields
 : struct_tuple_field                          { $$ = mk_node("StructFields", 1, $1); }
 | struct_tuple_fields ',' struct_tuple_field  { $$ = ext_node($1, 1, $3); }
+| %empty                                      { $$ = mk_none(); }
 ;
 
 struct_tuple_field
@@ -1345,7 +1346,9 @@ path_expr
 // expressions.
 path_generic_args_with_colons
 : ident                                              { $$ = mk_node("components", 1, $1); }
+| SUPER                                              { $$ = mk_atom("Super"); }
 | path_generic_args_with_colons MOD_SEP ident        { $$ = ext_node($1, 1, $3); }
+| path_generic_args_with_colons MOD_SEP SUPER        { $$ = ext_node($1, 1, mk_atom("Super")); }
 | path_generic_args_with_colons MOD_SEP generic_args { $$ = ext_node($1, 1, $3); }
 ;
 
