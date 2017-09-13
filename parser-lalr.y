@@ -1001,6 +1001,7 @@ pat_field
 | BOX binding_mode ident        { $$ = mk_node("PatField", 3, mk_atom("box"), $2, $3); }
 |              ident ':' pat    { $$ = mk_node("PatField", 2, $1, $3); }
 | binding_mode ident ':' pat    { $$ = mk_node("PatField", 3, $1, $2, $4); }
+|        LIT_INTEGER ':' pat    { $$ = mk_node("PatField", 2, mk_atom(yytext), $3); }
 ;
 
 pat_fields
@@ -1639,6 +1640,7 @@ struct_expr_fields
 : field_inits
 | field_inits ','
 | maybe_field_inits default_field_init { $$ = ext_node($1, 1, $2); }
+| %empty                               { $$ = mk_none(); }
 ;
 
 maybe_field_inits
@@ -1653,7 +1655,8 @@ field_inits
 ;
 
 field_init
-: ident ':' expr   { $$ = mk_node("FieldInit", 2, $1, $3); }
+: ident ':' expr       { $$ = mk_node("FieldInit", 2, $1, $3); }
+| LIT_INTEGER ':' expr { $$ = mk_node("FieldInit", 2, mk_atom(yytext), $3); }
 ;
 
 default_field_init
