@@ -501,7 +501,7 @@ visibility
 
 idents_or_self
 : ident_or_self                    { $$ = mk_node("IdentsOrSelf", 1, $1); }
-| ident_or_self AS ident           { $$ = mk_node("IdentsOrSelf", 2, $1, $3); }
+| idents_or_self AS ident          { $$ = mk_node("IdentsOrSelf", 2, $1, $3); }
 | idents_or_self ',' ident_or_self { $$ = ext_node($1, 1, $3); }
 ;
 
@@ -1828,13 +1828,20 @@ unpaired_token
 | LIFETIME                   { $$ = mk_atom(yytext); }
 | SELF                       { $$ = mk_atom(yytext); }
 | STATIC                     { $$ = mk_atom(yytext); }
+| ABSTRACT                   { $$ = mk_atom(yytext); }
+| ALIGNOF                    { $$ = mk_atom(yytext); }
 | AS                         { $$ = mk_atom(yytext); }
+| BECOME                     { $$ = mk_atom(yytext); }
 | BREAK                      { $$ = mk_atom(yytext); }
+| CATCH                      { $$ = mk_atom(yytext); }
 | CRATE                      { $$ = mk_atom(yytext); }
+| DEFAULT                    { $$ = mk_atom(yytext); }
+| DO                         { $$ = mk_atom(yytext); }
 | ELSE                       { $$ = mk_atom(yytext); }
 | ENUM                       { $$ = mk_atom(yytext); }
 | EXTERN                     { $$ = mk_atom(yytext); }
 | FALSE                      { $$ = mk_atom(yytext); }
+| FINAL                      { $$ = mk_atom(yytext); }
 | FN                         { $$ = mk_atom(yytext); }
 | FOR                        { $$ = mk_atom(yytext); }
 | IF                         { $$ = mk_atom(yytext); }
@@ -1842,21 +1849,31 @@ unpaired_token
 | IN                         { $$ = mk_atom(yytext); }
 | LET                        { $$ = mk_atom(yytext); }
 | LOOP                       { $$ = mk_atom(yytext); }
+| MACRO                      { $$ = mk_atom(yytext); }
 | MATCH                      { $$ = mk_atom(yytext); }
 | MOD                        { $$ = mk_atom(yytext); }
 | MOVE                       { $$ = mk_atom(yytext); }
 | MUT                        { $$ = mk_atom(yytext); }
+| OFFSETOF                   { $$ = mk_atom(yytext); }
+| OVERRIDE                   { $$ = mk_atom(yytext); }
 | PRIV                       { $$ = mk_atom(yytext); }
 | PUB                        { $$ = mk_atom(yytext); }
+| PURE                       { $$ = mk_atom(yytext); }
 | REF                        { $$ = mk_atom(yytext); }
 | RETURN                     { $$ = mk_atom(yytext); }
 | STRUCT                     { $$ = mk_atom(yytext); }
+| SIZEOF                     { $$ = mk_atom(yytext); }
+| SUPER                      { $$ = mk_atom(yytext); }
 | TRUE                       { $$ = mk_atom(yytext); }
 | TRAIT                      { $$ = mk_atom(yytext); }
 | TYPE                       { $$ = mk_atom(yytext); }
+| UNION                      { $$ = mk_atom(yytext); }
 | UNSAFE                     { $$ = mk_atom(yytext); }
+| UNSIZED                    { $$ = mk_atom(yytext); }
 | USE                        { $$ = mk_atom(yytext); }
+| VIRTUAL                    { $$ = mk_atom(yytext); }
 | WHILE                      { $$ = mk_atom(yytext); }
+| YIELD                      { $$ = mk_atom(yytext); }
 | CONTINUE                   { $$ = mk_atom(yytext); }
 | PROC                       { $$ = mk_atom(yytext); }
 | BOX                        { $$ = mk_atom(yytext); }
