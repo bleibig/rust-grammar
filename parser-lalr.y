@@ -573,22 +573,30 @@ trait_method
 ;
 
 type_method
-: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause ';'
+: maybe_outer_attrs maybe_unsafe FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause ';'
 {
   $$ = mk_node("TypeMethod", 6, $1, $2, $4, $5, $6, $7);
 }
-| attrs_and_vis maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause ';'
+| maybe_outer_attrs CONST maybe_unsafe FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause ';'
+{
+  $$ = mk_node("TypeMethod", 6, $1, $3, $5, $6, $7, $8);
+}
+| maybe_outer_attrs maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause ';'
 {
   $$ = mk_node("TypeMethod", 7, $1, $2, $4, $6, $7, $8, $9);
 }
 ;
 
 method
-: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause inner_attrs_and_block
+: maybe_outer_attrs maybe_unsafe FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause inner_attrs_and_block
 {
   $$ = mk_node("Method", 7, $1, $2, $4, $5, $6, $7, $8);
 }
-| attrs_and_vis maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause inner_attrs_and_block
+| maybe_outer_attrs CONST maybe_unsafe FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("Method", 7, $1, $3, $5, $6, $7, $8, $9);
+}
+| maybe_outer_attrs maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self_allow_anon_params maybe_where_clause inner_attrs_and_block
 {
   $$ = mk_node("Method", 8, $1, $2, $4, $6, $7, $8, $9, $10);
 }
@@ -598,6 +606,10 @@ impl_method
 : attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
 {
   $$ = mk_node("Method", 7, $1, $2, $4, $5, $6, $7, $8);
+}
+| attrs_and_vis CONST maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("Method", 7, $1, $3, $5, $6, $7, $8, $9);
 }
 | attrs_and_vis maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
 {
@@ -677,12 +689,20 @@ item_fn
 {
   $$ = mk_node("ItemFn", 5, $2, $3, $4, $5, $6);
 }
+| CONST FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("ItemFn", 5, $3, $4, $5, $6, $7);
+}
 ;
 
 item_unsafe_fn
 : UNSAFE FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
 {
   $$ = mk_node("ItemUnsafeFn", 5, $3, $4, $5, $6, $7);
+}
+| CONST UNSAFE FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("ItemUnsafeFn", 5, $4, $5, $6, $7, $8);
 }
 | UNSAFE EXTERN maybe_abi FN ident generic_params fn_decl maybe_where_clause inner_attrs_and_block
 {
