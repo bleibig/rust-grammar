@@ -1305,7 +1305,7 @@ stmts
 ;
 
 stmt
-: let
+: maybe_outer_attrs let     { $$ = $2; }
 |                 stmt_item
 |             PUB stmt_item { $$ = $2; }
 | outer_attrs     stmt_item { $$ = $2; }
