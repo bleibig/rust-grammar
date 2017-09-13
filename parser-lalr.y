@@ -1412,6 +1412,7 @@ nonblock_expr
 |               DOTDOT expr                                     { $$ = mk_node("ExprRange", 2, mk_none(), $2); }
 |               DOTDOT                                          { $$ = mk_node("ExprRange", 2, mk_none(), mk_none()); }
 | nonblock_expr AS ty                                           { $$ = mk_node("ExprCast", 2, $1, $3); }
+| nonblock_expr ':' ty                                          { $$ = mk_node("ExprTypeAscr", 2, $1, $3); }
 | BOX nonparen_expr                                             { $$ = mk_node("ExprBox", 1, $2); }
 | %prec BOXPLACE BOX '(' maybe_expr ')' nonblock_expr           { $$ = mk_node("ExprBox", 2, $3, $5); }
 | expr_qualified_path
@@ -1472,6 +1473,7 @@ expr
 |      DOTDOT expr                                    { $$ = mk_node("ExprRange", 2, mk_none(), $2); }
 |      DOTDOT                                         { $$ = mk_node("ExprRange", 2, mk_none(), mk_none()); }
 | expr AS ty                                          { $$ = mk_node("ExprCast", 2, $1, $3); }
+| expr ':' ty                                         { $$ = mk_node("ExprTypeAscr", 2, $1, $3); }
 | BOX nonparen_expr                                   { $$ = mk_node("ExprBox", 1, $2); }
 | %prec BOXPLACE BOX '(' maybe_expr ')' expr          { $$ = mk_node("ExprBox", 2, $3, $5); }
 | expr_qualified_path
@@ -1594,6 +1596,7 @@ expr_nostruct
 |               DOTDOT expr_nostruct                  { $$ = mk_node("ExprRange", 2, mk_none(), $2); }
 |               DOTDOT                                { $$ = mk_node("ExprRange", 2, mk_none(), mk_none()); }
 | expr_nostruct AS ty                                 { $$ = mk_node("ExprCast", 2, $1, $3); }
+| expr_nostruct ':' ty                                { $$ = mk_node("ExprTypeAscr", 2, $1, $3); }
 | BOX nonparen_expr                                   { $$ = mk_node("ExprBox", 1, $2); }
 | %prec BOXPLACE BOX '(' maybe_expr ')' expr_nostruct { $$ = mk_node("ExprBox", 1, $3, $5); }
 | expr_qualified_path
