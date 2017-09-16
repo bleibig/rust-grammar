@@ -1312,8 +1312,9 @@ stmt
 | outer_attrs     stmt_item { $$ = $2; }
 | outer_attrs PUB stmt_item { $$ = $3; }
 | full_block_expr
-| block
-| nonblock_expr ';'
+| maybe_outer_attrs block   { $$ = $2; }
+|             nonblock_expr ';'
+| outer_attrs nonblock_expr ';' { $$ = $2; }
 | ';'                   { $$ = mk_none(); }
 ;
 
