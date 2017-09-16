@@ -603,17 +603,17 @@ method
 ;
 
 impl_method
-: attrs_and_vis maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
+: attrs_and_vis maybe_default maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
 {
-  $$ = mk_node("Method", 7, $1, $2, $4, $5, $6, $7, $8);
+  $$ = mk_node("Method", 8, $1, $2, $3, $5, $6, $7, $8, $9);
 }
-| attrs_and_vis CONST maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
-{
-  $$ = mk_node("Method", 7, $1, $3, $5, $6, $7, $8, $9);
-}
-| attrs_and_vis maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
+| attrs_and_vis maybe_default CONST maybe_unsafe FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
 {
   $$ = mk_node("Method", 8, $1, $2, $4, $6, $7, $8, $9, $10);
+}
+| attrs_and_vis maybe_default maybe_unsafe EXTERN maybe_abi FN ident generic_params fn_decl_with_self maybe_where_clause inner_attrs_and_block
+{
+  $$ = mk_node("Method", 9, $1, $2, $3, $5, $7, $8, $9, $10, $11);
 }
 ;
 
@@ -676,12 +676,17 @@ impl_item
 | impl_type
 ;
 
+maybe_default
+: DEFAULT { $$ = mk_atom("Default"); }
+| %empty { $$ = mk_none(); }
+;
+
 impl_const
-: attrs_and_vis item_const { $$ = mk_node("ImplConst", 1, $1, $2); }
+: attrs_and_vis maybe_default item_const { $$ = mk_node("ImplConst", 3, $1, $2, $3); }
 ;
 
 impl_type
-: attrs_and_vis TYPE ident generic_params '=' ty_sum ';'  { $$ = mk_node("ImplType", 4, $1, $3, $4, $6); }
+: attrs_and_vis maybe_default TYPE ident generic_params '=' ty_sum ';'  { $$ = mk_node("ImplType", 5, $1, $2, $4, $5, $7); }
 ;
 
 item_fn
