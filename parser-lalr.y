@@ -963,12 +963,10 @@ pat
 | ANDAND pat                                      { $$ = mk_node("PatRegion", 1, mk_node("PatRegion", 1, $2)); }
 | '(' ')'                                         { $$ = mk_atom("PatUnit"); }
 | '(' pat_tup ')'                                 { $$ = mk_node("PatTup", 1, $2); }
-| '(' pat_tup ',' ')'                             { $$ = mk_node("PatTup", 1, $2); }
 | '[' pat_vec ']'                                 { $$ = mk_node("PatVec", 1, $2); }
 | lit_or_path
 | lit_or_path DOTDOTDOT lit_or_path               { $$ = mk_node("PatRange", 2, $1, $3); }
 | path_expr '{' pat_struct '}'                    { $$ = mk_node("PatStruct", 2, $1, $3); }
-| path_expr '(' DOTDOT ')'                        { $$ = mk_node("PatEnum", 1, $1); }
 | path_expr '(' pat_tup ')'                       { $$ = mk_node("PatEnum", 2, $1, $3); }
 | path_expr '!' maybe_ident delimited_token_trees { $$ = mk_node("PatMac", 3, $1, $3, $4); }
 | binding_mode ident                              { $$ = mk_node("PatIdent", 2, $1, $2); }
@@ -1022,8 +1020,22 @@ pat_struct
 ;
 
 pat_tup
-: pat               { $$ = mk_node("pat_tup", 1, $1); }
-| pat_tup ',' pat   { $$ = ext_node($1, 1, $3); }
+: pat_tup_elts                                  { $$ = mk_node("PatTup", 2, $1, mk_none()); }
+| pat_tup_elts                             ','  { $$ = mk_node("PatTup", 2, $1, mk_none()); }
+| pat_tup_elts     DOTDOT                       { $$ = mk_node("PatTup", 2, $1, mk_none()); }
+| pat_tup_elts ',' DOTDOT                       { $$ = mk_node("PatTup", 2, $1, mk_none()); }
+| pat_tup_elts     DOTDOT ',' pat_tup_elts      { $$ = mk_node("PatTup", 2, $1, $4); }
+| pat_tup_elts     DOTDOT ',' pat_tup_elts ','  { $$ = mk_node("PatTup", 2, $1, $4); }
+| pat_tup_elts ',' DOTDOT ',' pat_tup_elts      { $$ = mk_node("PatTup", 2, $1, $5); }
+| pat_tup_elts ',' DOTDOT ',' pat_tup_elts ','  { $$ = mk_node("PatTup", 2, $1, $5); }
+|                  DOTDOT ',' pat_tup_elts      { $$ = mk_node("PatTup", 2, mk_none(), $3); }
+|                  DOTDOT ',' pat_tup_elts ','  { $$ = mk_node("PatTup", 2, mk_none(), $3); }
+|                  DOTDOT                       { $$ = mk_node("PatTup", 2, mk_none(), mk_none()); }
+;
+
+pat_tup_elts
+: pat                    { $$ = mk_node("PatTupElts", 1, $1); }
+| pat_tup_elts ',' pat   { $$ = ext_node($1, 1, $3); }
 ;
 
 pat_vec
