@@ -1711,10 +1711,18 @@ block_expr
 
 full_block_expr
 : block_expr
-| full_block_expr '.' path_generic_args_with_colons %prec IDENT         { $$ = mk_node("ExprField", 2, $1, $3); }
-| full_block_expr '.' path_generic_args_with_colons '[' maybe_expr ']'  { $$ = mk_node("ExprIndex", 3, $1, $3, $5); }
-| full_block_expr '.' path_generic_args_with_colons '(' maybe_exprs ')' { $$ = mk_node("ExprCall", 3, $1, $3, $5); }
-| full_block_expr '.' LIT_INTEGER                                       { $$ = mk_node("ExprTupleIndex", 1, $1); }
+| block_expr_dot
+;
+
+block_expr_dot
+: block_expr     '.' path_generic_args_with_colons %prec IDENT         { $$ = mk_node("ExprField", 2, $1, $3); }
+| block_expr_dot '.' path_generic_args_with_colons %prec IDENT         { $$ = mk_node("ExprField", 2, $1, $3); }
+| block_expr     '.' path_generic_args_with_colons '[' maybe_expr ']'  { $$ = mk_node("ExprIndex", 3, $1, $3, $5); }
+| block_expr_dot '.' path_generic_args_with_colons '[' maybe_expr ']'  { $$ = mk_node("ExprIndex", 3, $1, $3, $5); }
+| block_expr     '.' path_generic_args_with_colons '(' maybe_exprs ')' { $$ = mk_node("ExprCall", 3, $1, $3, $5); }
+| block_expr_dot '.' path_generic_args_with_colons '(' maybe_exprs ')' { $$ = mk_node("ExprCall", 3, $1, $3, $5); }
+| block_expr     '.' LIT_INTEGER                                       { $$ = mk_node("ExprTupleIndex", 1, $1); }
+| block_expr_dot '.' LIT_INTEGER                                       { $$ = mk_node("ExprTupleIndex", 1, $1); }
 ;
 
 expr_match
@@ -1736,12 +1744,13 @@ match_clause
 ;
 
 nonblock_match_clause
-: maybe_outer_attrs pats_or maybe_guard FAT_ARROW nonblock_expr   { $$ = mk_node("Arm", 4, $1, $2, $3, $5); }
-| maybe_outer_attrs pats_or maybe_guard FAT_ARROW full_block_expr { $$ = mk_node("Arm", 4, $1, $2, $3, $5); }
+: maybe_outer_attrs pats_or maybe_guard FAT_ARROW nonblock_expr  { $$ = mk_node("ArmNonblock", 4, $1, $2, $3, $5); }
+| maybe_outer_attrs pats_or maybe_guard FAT_ARROW block_expr_dot { $$ = mk_node("ArmNonblock", 4, $1, $2, $3, $5); }
 ;
 
 block_match_clause
-: maybe_outer_attrs pats_or maybe_guard FAT_ARROW block { $$ = mk_node("Arm", 4, $1, $2, $3, $5); }
+: maybe_outer_attrs pats_or maybe_guard FAT_ARROW block      { $$ = mk_node("ArmBlock", 4, $1, $2, $3, $5); }
+| maybe_outer_attrs pats_or maybe_guard FAT_ARROW block_expr { $$ = mk_node("ArmBlock", 4, $1, $2, $3, $5); }
 ;
 
 maybe_guard
