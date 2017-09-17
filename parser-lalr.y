@@ -181,6 +181,7 @@ extern char *yytext;
 %precedence FOR
 
 // Binops & unops, and their precedences
+%precedence '?'
 %precedence BOX
 %nonassoc DOTDOT
 
@@ -1378,6 +1379,7 @@ nonblock_expr
 | SELF                                                          { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | macro_expr                                                    { $$ = mk_node("ExprMac", 1, $1); }
 | path_expr '{' struct_expr_fields '}'                          { $$ = mk_node("ExprStruct", 2, $1, $3); }
+| nonblock_expr '?'                                             { $$ = mk_node("ExprTry", 1, $1); }
 | nonblock_expr '.' path_generic_args_with_colons               { $$ = mk_node("ExprField", 2, $1, $3); }
 | nonblock_expr '.' LIT_INTEGER                                 { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | nonblock_expr '[' maybe_expr ']'                              { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -1440,6 +1442,7 @@ expr
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | macro_expr                                          { $$ = mk_node("ExprMac", 1, $1); }
 | path_expr '{' struct_expr_fields '}'                { $$ = mk_node("ExprStruct", 2, $1, $3); }
+| expr '?'                                            { $$ = mk_node("ExprTry", 1, $1); }
 | expr '.' path_generic_args_with_colons              { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr '.' LIT_INTEGER                                { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | expr '[' maybe_expr ']'                             { $$ = mk_node("ExprIndex", 2, $1, $3); }
@@ -1503,6 +1506,7 @@ expr_nostruct
   path_expr                                           { $$ = mk_node("ExprPath", 1, $1); }
 | SELF                                                { $$ = mk_node("ExprPath", 1, mk_node("ident", 1, mk_atom("self"))); }
 | macro_expr                                          { $$ = mk_node("ExprMac", 1, $1); }
+| expr_nostruct '?'                                   { $$ = mk_node("ExprTry", 1, $1); }
 | expr_nostruct '.' path_generic_args_with_colons     { $$ = mk_node("ExprField", 2, $1, $3); }
 | expr_nostruct '.' LIT_INTEGER                       { $$ = mk_node("ExprTupleIndex", 1, $1); }
 | expr_nostruct '[' maybe_expr ']'                    { $$ = mk_node("ExprIndex", 2, $1, $3); }
