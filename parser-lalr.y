@@ -836,7 +836,8 @@ ret_ty
 ;
 
 generic_params
-: '<' lifetimes '>'                   { $$ = mk_node("Generics", 2, $2, mk_none()); }
+: '<' '>'                             { $$ = mk_node("Generics", 2, mk_none(), mk_none()); }
+| '<' lifetimes '>'                   { $$ = mk_node("Generics", 2, $2, mk_none()); }
 | '<' lifetimes ',' '>'               { $$ = mk_node("Generics", 2, $2, mk_none()); }
 | '<' lifetimes SHR                   { push_back('>'); $$ = mk_node("Generics", 2, $2, mk_none()); }
 | '<' lifetimes ',' SHR               { push_back('>'); $$ = mk_node("Generics", 2, $2, mk_none()); }
