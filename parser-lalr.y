@@ -1079,22 +1079,24 @@ ty
 ;
 
 ty_prim
-: %prec IDENT path_generic_args_without_colons              { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
-| %prec IDENT MOD_SEP path_generic_args_without_colons      { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
-| %prec IDENT SELF MOD_SEP path_generic_args_without_colons { $$ = mk_node("TyPath", 2, mk_node("self", 1, mk_atom("true")), $3); }
-| BOX ty                                                    { $$ = mk_node("TyBox", 1, $2); }
-| '*' maybe_mut_or_const ty                                 { $$ = mk_node("TyPtr", 2, $2, $3); }
-| '&' ty                                                    { $$ = mk_node("TyRptr", 2, mk_atom("MutImmutable"), $2); }
-| '&' MUT ty                                                { $$ = mk_node("TyRptr", 2, mk_atom("MutMutable"), $3); }
-| ANDAND ty                                                 { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, mk_atom("MutImmutable"), $2)); }
-| ANDAND MUT ty                                             { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, mk_atom("MutMutable"), $3)); }
-| '&' lifetime maybe_mut ty                                 { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
-| ANDAND lifetime maybe_mut ty                              { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 3, $2, $3, $4)); }
-| '[' ty ']'                                                { $$ = mk_node("TyVec", 1, $2); }
-| '[' ty ',' DOTDOT expr ']'                                { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
-| '[' ty ';' expr ']'                                       { $$ = mk_node("TyFixedLengthVec", 2, $2, $4); }
-| TYPEOF '(' expr ')'                                       { $$ = mk_node("TyTypeof", 1, $3); }
-| UNDERSCORE                                                { $$ = mk_atom("TyInfer"); }
+: %prec IDENT path_generic_args_without_colons                                               { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("false")), $1); }
+| %prec IDENT MOD_SEP path_generic_args_without_colons                                       { $$ = mk_node("TyPath", 2, mk_node("global", 1, mk_atom("true")), $2); }
+| %prec IDENT SELF MOD_SEP path_generic_args_without_colons                                  { $$ = mk_node("TyPath", 2, mk_node("self", 1, mk_atom("true")), $3); }
+| %prec IDENT path_generic_args_without_colons '!' maybe_ident delimited_token_trees         { $$ = mk_node("TyMacro", 3, $1, $3, $4); }
+| %prec IDENT MOD_SEP path_generic_args_without_colons '!' maybe_ident delimited_token_trees { $$ = mk_node("TyMacro", 3, $2, $4, $5); }
+| BOX ty                                                                                     { $$ = mk_node("TyBox", 1, $2); }
+| '*' maybe_mut_or_const ty                                                                  { $$ = mk_node("TyPtr", 2, $2, $3); }
+| '&' ty                                                                                     { $$ = mk_node("TyRptr", 2, mk_atom("MutImmutable"), $2); }
+| '&' MUT ty                                                                                 { $$ = mk_node("TyRptr", 2, mk_atom("MutMutable"), $3); }
+| ANDAND ty                                                                                  { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, mk_atom("MutImmutable"), $2)); }
+| ANDAND MUT ty                                                                              { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 2, mk_atom("MutMutable"), $3)); }
+| '&' lifetime maybe_mut ty                                                                  { $$ = mk_node("TyRptr", 3, $2, $3, $4); }
+| ANDAND lifetime maybe_mut ty                                                               { $$ = mk_node("TyRptr", 1, mk_node("TyRptr", 3, $2, $3, $4)); }
+| '[' ty ']'                                                                                 { $$ = mk_node("TyVec", 1, $2); }
+| '[' ty ',' DOTDOT expr ']'                                                                 { $$ = mk_node("TyFixedLengthVec", 2, $2, $5); }
+| '[' ty ';' expr ']'                                                                        { $$ = mk_node("TyFixedLengthVec", 2, $2, $4); }
+| TYPEOF '(' expr ')'                                                                        { $$ = mk_node("TyTypeof", 1, $3); }
+| UNDERSCORE                                                                                 { $$ = mk_atom("TyInfer"); }
 | ty_bare_fn
 | ty_proc
 | for_in_type
