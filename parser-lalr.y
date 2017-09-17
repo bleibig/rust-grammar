@@ -341,6 +341,8 @@ view_path
 | path_no_types_allowed MOD_SEP '{' idents_or_self ',' '}' { $$ = mk_node("ViewPathList", 2, $1, $4); }
 |                       MOD_SEP '{' idents_or_self ',' '}' { $$ = mk_node("ViewPathList", 1, $3); }
 | path_no_types_allowed MOD_SEP '*'                        { $$ = mk_node("ViewPathGlob", 1, $1); }
+|                       MOD_SEP '*'                        { $$ = mk_atom("ViewPathGlob"); }
+|                               '*'                        { $$ = mk_atom("ViewPathGlob"); }
 |                               '{'                '}'     { $$ = mk_atom("ViewPathListEmpty"); }
 |                               '{' idents_or_self '}'     { $$ = mk_node("ViewPathList", 1, $2); }
 |                               '{' idents_or_self ',' '}' { $$ = mk_node("ViewPathList", 1, $2); }
