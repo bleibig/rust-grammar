@@ -971,6 +971,7 @@ pat
 | lit_or_path
 | lit_or_path DOTDOTDOT lit_or_path               { $$ = mk_node("PatRange", 2, $1, $3); }
 | path_expr '{' pat_struct '}'                    { $$ = mk_node("PatStruct", 2, $1, $3); }
+| path_expr '(' ')'                               { $$ = mk_node("PatEnum", 2, $1, mk_none()); }
 | path_expr '(' pat_tup ')'                       { $$ = mk_node("PatEnum", 2, $1, $3); }
 | path_expr '!' maybe_ident delimited_token_trees { $$ = mk_node("PatMac", 3, $1, $3, $4); }
 | binding_mode ident                              { $$ = mk_node("PatIdent", 2, $1, $2); }
@@ -1021,6 +1022,7 @@ pat_struct
 | pat_fields ','             { $$ = mk_node("PatStruct", 2, $1, mk_atom("false")); }
 | pat_fields ',' DOTDOT      { $$ = mk_node("PatStruct", 2, $1, mk_atom("true")); }
 | DOTDOT                     { $$ = mk_node("PatStruct", 1, mk_atom("true")); }
+| %empty                     { $$ = mk_node("PatStruct", 1, mk_none()); }
 ;
 
 pat_tup
@@ -1686,7 +1688,8 @@ field_inits
 ;
 
 field_init
-: ident ':' expr       { $$ = mk_node("FieldInit", 2, $1, $3); }
+: ident                { $$ = mk_node("FieldInit", 1, $1); }
+| ident ':' expr       { $$ = mk_node("FieldInit", 2, $1, $3); }
 | LIT_INTEGER ':' expr { $$ = mk_node("FieldInit", 2, mk_atom(yytext), $3); }
 ;
 
