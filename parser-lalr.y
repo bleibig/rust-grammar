@@ -544,6 +544,7 @@ trait_item
 : trait_const
 | trait_type
 | trait_method
+| maybe_outer_attrs item_macro { $$ = mk_node("TraitMacroItem", 2, $1, $2); }
 ;
 
 trait_const
