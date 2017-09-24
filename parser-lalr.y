@@ -1093,7 +1093,6 @@ ty_prim
 | TYPEOF '(' expr ')'                                                                        { $$ = mk_node("TyTypeof", 1, $3); }
 | UNDERSCORE                                                                                 { $$ = mk_atom("TyInfer"); }
 | ty_bare_fn
-| ty_proc
 | for_in_type
 ;
 
@@ -1115,17 +1114,12 @@ ty_closure
 |        OROR maybe_bounds ret_ty                { $$ = mk_node("TyClosure", 2, $2, $3); }
 ;
 
-ty_proc
-: PROC generic_params fn_params maybe_bounds ret_ty { $$ = mk_node("TyProc", 4, $2, $3, $4, $5); }
-;
-
 for_in_type
 : FOR '<' maybe_lifetimes '>' for_in_type_suffix { $$ = mk_node("ForInType", 2, $3, $5); }
 ;
 
 for_in_type_suffix
-: ty_proc
-| ty_bare_fn
+: ty_bare_fn
 | trait_ref
 | ty_closure
 ;
@@ -1584,7 +1578,6 @@ nonblock_prefix_expr_nostruct
 | ANDAND maybe_mut expr_nostruct            { $$ = mk_node("ExprAddrOf", 1, mk_node("ExprAddrOf", 2, $2, $3)); }
 | lambda_expr_nostruct
 | MOVE lambda_expr_nostruct                 { $$ = $2; }
-| proc_expr_nostruct
 ;
 
 nonblock_prefix_expr
@@ -1595,7 +1588,6 @@ nonblock_prefix_expr
 | ANDAND maybe_mut expr            { $$ = mk_node("ExprAddrOf", 1, mk_node("ExprAddrOf", 2, $2, $3)); }
 | lambda_expr
 | MOVE lambda_expr                 { $$ = $2; }
-| proc_expr
 ;
 
 expr_qualified_path
@@ -1668,20 +1660,6 @@ lambda_expr_nostruct_no_first_bar
   inferrable_params '|' ret_ty expr_nostruct               { $$ = mk_node("ExprFnBlock", 3, $1, $3, $4); }
 | %prec LAMBDA
   inferrable_params OROR lambda_expr_nostruct_no_first_bar { $$ = mk_node("ExprFnBlock", 3, $1, mk_none(), $3); }
-;
-
-proc_expr
-: %prec LAMBDA
-  PROC '(' ')' expr                         { $$ = mk_node("ExprProc", 2, mk_none(), $4); }
-| %prec LAMBDA
-  PROC '(' inferrable_params ')' expr       { $$ = mk_node("ExprProc", 2, $3, $5); }
-;
-
-proc_expr_nostruct
-: %prec LAMBDA
-  PROC '(' ')' expr_nostruct                     { $$ = mk_node("ExprProc", 2, mk_none(), $4); }
-| %prec LAMBDA
-  PROC '(' inferrable_params ')' expr_nostruct   { $$ = mk_node("ExprProc", 2, $3, $5); }
 ;
 
 vec_expr
