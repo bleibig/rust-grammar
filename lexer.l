@@ -206,25 +206,25 @@ yield    { return YIELD; }
 \>\>= { return SHREQ; }
 \>    { return '>'; }
 
-\x27                                  { BEGIN(ltorchar); yymore(); }
-<ltorchar>static                      { BEGIN(INITIAL); return STATIC_LIFETIME; }
-<ltorchar>{ident}                     { BEGIN(INITIAL); return LIFETIME; }
-<ltorchar>\\[nrt\\\x27\x220]\x27      { BEGIN(suffix); return LIT_CHAR; }
-<ltorchar>\\x[0-9a-fA-F]{2}\x27       { BEGIN(suffix); return LIT_CHAR; }
-<ltorchar>\\u\{[0-9a-fA-F]?{6}\}\x27  { BEGIN(suffix); return LIT_CHAR; }
-<ltorchar>.\x27                       { BEGIN(suffix); return LIT_CHAR; }
-<ltorchar>[\x80-\xff]{2,4}\x27        { BEGIN(suffix); return LIT_CHAR; }
-<ltorchar><<EOF>>                     { BEGIN(INITIAL); return -1; }
+\x27                                      { BEGIN(ltorchar); yymore(); }
+<ltorchar>static                          { BEGIN(INITIAL); return STATIC_LIFETIME; }
+<ltorchar>{ident}                         { BEGIN(INITIAL); return LIFETIME; }
+<ltorchar>\\[nrt\\\x27\x220]\x27          { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar>\\x[0-9a-fA-F]{2}\x27           { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar>\\u\{([0-9a-fA-F]_*){1,6}\}\x27 { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar>.\x27                           { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar>[\x80-\xff]{2,4}\x27            { BEGIN(suffix); return LIT_CHAR; }
+<ltorchar><<EOF>>                         { BEGIN(INITIAL); return -1; }
 
 b\x22              { BEGIN(bytestr); yymore(); }
 <bytestr>\x22      { BEGIN(suffix); return LIT_BYTE_STR; }
 
-<bytestr><<EOF>>                { return -1; }
-<bytestr>\\[n\nrt\\\x27\x220]   { yymore(); }
-<bytestr>\\x[0-9a-fA-F]{2}      { yymore(); }
-<bytestr>\\u\{[0-9a-fA-F]?{6}\} { yymore(); }
-<bytestr>\\[^n\nrt\\\x27\x220]  { return -1; }
-<bytestr>(.|\n)                 { yymore(); }
+<bytestr><<EOF>>                     { return -1; }
+<bytestr>\\[n\nrt\\\x27\x220]        { yymore(); }
+<bytestr>\\x[0-9a-fA-F]{2}           { yymore(); }
+<bytestr>\\u\{([0-9a-fA-F]_*){1,6}\} { yymore(); }
+<bytestr>\\[^n\nrt\\\x27\x220]       { return -1; }
+<bytestr>(.|\n)                      { yymore(); }
 
 br\x22                      { BEGIN(rawbytestr_nohash); yymore(); }
 <rawbytestr_nohash>\x22     { BEGIN(suffix); return LIT_BYTE_STR_RAW; }
@@ -269,13 +269,13 @@ br/# {
 }
 <rawbytestr><<EOF>> { return -1; }
 
-b\x27                        { BEGIN(byte); yymore(); }
-<byte>\\[nrt\\\x27\x220]\x27 { BEGIN(INITIAL); return LIT_BYTE; }
-<byte>\\x[0-9a-fA-F]{2}\x27  { BEGIN(INITIAL); return LIT_BYTE; }
-<byte>\\u[0-9a-fA-F]{4}\x27  { BEGIN(INITIAL); return LIT_BYTE; }
-<byte>\\U[0-9a-fA-F]{8}\x27  { BEGIN(INITIAL); return LIT_BYTE; }
-<byte>.\x27                  { BEGIN(INITIAL); return LIT_BYTE; }
-<byte><<EOF>>                { BEGIN(INITIAL); return -1; }
+b\x27                           { BEGIN(byte); yymore(); }
+<byte>\\[nrt\\\x27\x220]\x27    { BEGIN(INITIAL); return LIT_BYTE; }
+<byte>\\x[0-9a-fA-F]{2}\x27     { BEGIN(INITIAL); return LIT_BYTE; }
+<byte>\\u([0-9a-fA-F]_*){4}\x27 { BEGIN(INITIAL); return LIT_BYTE; }
+<byte>\\U([0-9a-fA-F]_*){8}\x27 { BEGIN(INITIAL); return LIT_BYTE; }
+<byte>.\x27                     { BEGIN(INITIAL); return LIT_BYTE; }
+<byte><<EOF>>                   { BEGIN(INITIAL); return -1; }
 
 r\x22           { BEGIN(rawstr); yymore(); }
 <rawstr>\x22    { BEGIN(suffix); return LIT_STR_RAW; }
@@ -327,12 +327,12 @@ r/#             {
 \x22                     { BEGIN(str); yymore(); }
 <str>\x22                { BEGIN(suffix); return LIT_STR; }
 
-<str><<EOF>>                { return -1; }
-<str>\\[n\nr\rt\\\x27\x220] { yymore(); }
-<str>\\x[0-9a-fA-F]{2}      { yymore(); }
-<str>\\u\{[0-9a-fA-F]?{6}\} { yymore(); }
-<str>\\[^n\nrt\\\x27\x220]  { return -1; }
-<str>(.|\n)                 { yymore(); }
+<str><<EOF>>                     { return -1; }
+<str>\\[n\nr\rt\\\x27\x220]      { yymore(); }
+<str>\\x[0-9a-fA-F]{2}           { yymore(); }
+<str>\\u\{([0-9a-fA-F]_*){1,6}\} { yymore(); }
+<str>\\[^n\nrt\\\x27\x220]       { return -1; }
+<str>(.|\n)                      { yymore(); }
 
 \<-  { return LARROW; }
 -\>  { return RARROW; }
