@@ -778,12 +778,6 @@ inferrable_param
 : pat maybe_ty_ascription { $$ = mk_node("InferrableParam", 2, $1, $2); }
 ;
 
-maybe_unboxed_closure_kind
-: %empty
-| ':'
-| '&' maybe_mut ':'
-;
-
 maybe_comma_params
 : ','            { $$ = mk_none(); }
 | ',' params     { $$ = $2; }
@@ -1638,29 +1632,42 @@ maybe_as_trait_ref
 
 lambda_expr
 : %prec LAMBDA
-  OROR ret_ty expr                                        { $$ = mk_node("ExprFnBlock", 3, mk_none(), $2, $3); }
+  OROR ret_ty expr                                    { $$ = mk_node("ExprFnBlock", 3, mk_none(), $2, $3); }
 | %prec LAMBDA
-  '|' maybe_unboxed_closure_kind '|' ret_ty expr          { $$ = mk_node("ExprFnBlock", 3, mk_none(), $4, $5); }
+  '|' '|' ret_ty expr                                 { $$ = mk_node("ExprFnBlock", 3, mk_none(), $3, $4); }
 | %prec LAMBDA
-  '|' inferrable_params '|' ret_ty expr                   { $$ = mk_node("ExprFnBlock", 3, $2, $4, $5); }
+  '|' inferrable_params '|' ret_ty expr               { $$ = mk_node("ExprFnBlock", 3, $2, $4, $5); }
 | %prec LAMBDA
-  '|' '&' maybe_mut ':' inferrable_params '|' ret_ty expr { $$ = mk_node("ExprFnBlock", 3, $5, $7, $8); }
+  '|' inferrable_params OROR lambda_expr_no_first_bar { $$ = mk_node("ExprFnBlock", 3, $2, mk_none(), $4); }
+;
+
+lambda_expr_no_first_bar
+: %prec LAMBDA
+  '|' ret_ty expr                                 { $$ = mk_node("ExprFnBlock", 3, mk_none(), $2, $3); }
 | %prec LAMBDA
-  '|' ':' inferrable_params '|' ret_ty expr               { $$ = mk_node("ExprFnBlock", 3, $3, $5, $6); }
+  inferrable_params '|' ret_ty expr               { $$ = mk_node("ExprFnBlock", 3, $1, $3, $4); }
+| %prec LAMBDA
+  inferrable_params OROR lambda_expr_no_first_bar { $$ = mk_node("ExprFnBlock", 3, $1, mk_none(), $3); }
 ;
 
 lambda_expr_nostruct
 : %prec LAMBDA
-  OROR expr_nostruct                                        { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
+  OROR expr_nostruct                                           { $$ = mk_node("ExprFnBlock", 2, mk_none(), $2); }
 | %prec LAMBDA
-  '|' maybe_unboxed_closure_kind '|'  expr_nostruct         { $$ = mk_node("ExprFnBlock", 2, mk_none(), $4); }
+  '|' '|' ret_ty expr_nostruct                                 { $$ = mk_node("ExprFnBlock", 3, mk_none(), $3, $4); }
 | %prec LAMBDA
-  '|' inferrable_params '|' expr_nostruct                   { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
+  '|' inferrable_params '|' expr_nostruct                      { $$ = mk_node("ExprFnBlock", 2, $2, $4); }
 | %prec LAMBDA
-  '|' '&' maybe_mut ':' inferrable_params '|' expr_nostruct { $$ = mk_node("ExprFnBlock", 2, $5, $7); }
-| %prec LAMBDA
-  '|' ':' inferrable_params '|' expr_nostruct               { $$ = mk_node("ExprFnBlock", 2, $3, $5); }
+  '|' inferrable_params OROR lambda_expr_nostruct_no_first_bar { $$ = mk_node("ExprFnBlock", 3, $2, mk_none(), $4); }
+;
 
+lambda_expr_nostruct_no_first_bar
+: %prec LAMBDA
+  '|' ret_ty expr_nostruct                                 { $$ = mk_node("ExprFnBlock", 3, mk_none(), $2, $3); }
+| %prec LAMBDA
+  inferrable_params '|' ret_ty expr_nostruct               { $$ = mk_node("ExprFnBlock", 3, $1, $3, $4); }
+| %prec LAMBDA
+  inferrable_params OROR lambda_expr_nostruct_no_first_bar { $$ = mk_node("ExprFnBlock", 3, $1, mk_none(), $3); }
 ;
 
 proc_expr
