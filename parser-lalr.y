@@ -940,7 +940,7 @@ generic_args
 ;
 
 generic_values
-: maybe_lifetimes maybe_ty_sums_and_or_bindings { $$ = mk_node("GenericValues", 2, $1, $2); }
+: maybe_ty_sums_and_or_bindings { $$ = mk_node("GenericValues", 1, $1); }
 ;
 
 maybe_ty_sums_and_or_bindings
@@ -1175,13 +1175,23 @@ ty_sums
 ;
 
 ty_sum
-: ty                     { $$ = mk_node("TySum", 1, $1); }
-| ty '+' ty_param_bounds { $$ = mk_node("TySum", 2, $1, $3); }
+: ty_sum_elt            { $$ = mk_node("TySum", 1, $1); }
+| ty_sum '+' ty_sum_elt { $$ = ext_node($1, 1, $3); }
+;
+
+ty_sum_elt
+: ty
+| lifetime
 ;
 
 ty_prim_sum
-: ty_prim                     { $$ = mk_node("TySum", 1, $1); }
-| ty_prim '+' ty_param_bounds { $$ = mk_node("TySum", 2, $1, $3); }
+: ty_prim_sum_elt                 { $$ = mk_node("TySum", 1, $1); }
+| ty_prim_sum '+' ty_prim_sum_elt { $$ = ext_node($1, 1, $3); }
+;
+
+ty_prim_sum_elt
+: ty_prim
+| lifetime
 ;
 
 maybe_ty_param_bounds
